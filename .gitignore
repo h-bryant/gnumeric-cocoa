@@ -1,0 +1,16 @@
+# Build products
+build/
+DerivedData/
+*.xcodeproj/
+*.xcworkspace/
+.build/
+
+# macOS
+.DS_Store
+
+# Editors
+.vscode/
+*.swp
+
+# Local overrides
+.claude/settings.local.json

@@ -1,0 +1,3 @@
+[submodule "upstream/gnumeric"]
+	path = upstream/gnumeric
+	url = https://gitlab.gnome.org/GNOME/gnumeric.git
