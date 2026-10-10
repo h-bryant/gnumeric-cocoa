@@ -2,57 +2,62 @@
 
 Last verified: 2026-10-10 on the MacBook Air (M4, macOS 26.5 "Tahoe", arm64).
 
-## Toolchain present
+## Toolchain
 
-| Tool | Version | Source |
+| Tool | Version | Notes |
 |---|---|---|
-| Xcode Command Line Tools | clang 17.0.0 (clang-1700.6.3.2), Swift 6.2.3 | `/Library/Developer/CommandLineTools` |
-| Xcode.app | **not installed** | `xcodebuild` unavailable; see HANDOFF.md §8 |
+| Xcode Command Line Tools | clang 17.0.0 (clang-1700.6.3.2), Swift 6.2.3 | `/Library/Developer/CommandLineTools`; the SDK has AppKit, SwiftUI, CoreText |
+| Xcode.app | **not installed yet** | Needed for `xcodebuild` and XcodeGen projects. `mas` 7.0.0 is installed; the install needs an administrator password, so Henry runs `sudo mas install 497799835` (or uses the App Store), then `sudo xcode-select -s /Applications/Xcode.app` and `sudo xcodebuild -license accept` |
 | Homebrew | 7.0.9 | `/opt/homebrew` |
-| macOS SDK | MacOSX.sdk in the CLT (AppKit, SwiftUI, CoreText present) | |
 
 ## Homebrew formulae
 
-Installed before this project (versions on 2026-10-10):
+As installed on 2026-10-10 after `brew upgrade goffice gnumeric` and
+`scripts/build-deps.sh` (`brew bundle`):
 
-| Formula | Installed | Formula stable |
+| Formula | Version | Notes |
 |---|---|---|
-| gnumeric | 1.12.60 | 1.12.62 |
-| goffice | 0.10.60 | 0.10.62 |
-| glib | 2.90.1 (2.88.0 also present) | |
-| gtk+3 | 3.24.51, Quartz backend (`-Dquartz_backend=true -Dx11_backend=false`) | |
-| cairo | 1.18.6 (`cairo-quartz`, `cairo-quartz-font` present) | |
-| pango | 1.57.0_2 (CoreText and fontconfig backends; CoreText is the default font map) | |
-| libgsf | 1.14.55 | |
-| libxml2 | 2.15.2 (keg-only) | |
-| librsvg | 2.62.0 | |
+| gnumeric | 1.12.62 | reference `ssconvert`; ships `libspreadsheet-1.12.pc` and headers |
+| goffice | 0.10.62 | the goffice the app links; its 9 plot plugins live in `/opt/homebrew/opt/goffice/lib/goffice/0.10.62/plugins` |
+| glib | 2.90.1 | GSettings uses the NSUserDefaults backend on macOS |
+| gtk+3 | 3.24.52_1 | built with `-Dquartz_backend=true -Dx11_backend=false` |
+| cairo | 1.18.6 | `cairo-quartz` and `cairo-quartz-font` present |
+| pango | 1.58.2 | CoreText and fontconfig backends; CoreText is the default font map |
+| libgsf | 1.14.60 | |
+| libxml2 | 2.15.4 | keg-only (handled in `scripts/env.sh`) |
+| librsvg | 2.63.2 | |
 | gettext | 1.0 | |
-| pkgconf | 2.5.1 | 3.0.7 |
+| harfbuzz | 14.6.0 | |
+| pkgconf | 3.0.7 | |
+| autoconf / automake / libtool | 2.73 / 1.19 / 2.6.2 | `autogen.sh` |
+| intltool / itstool | 0.51.0_2 / 2.0.7_2 | `autogen.sh`, translations |
+| gtk-doc | 1.37.0 | `gtkdocize`, required by `autogen.sh` |
+| yelp-tools | 42.1_3 | `yelp.m4` for `YELP_HELP_INIT` |
+| xcodegen | 2.46.0 | Phase 1 |
+| mas | 7.0.0 | not in `Brewfile`; installed only to fetch Xcode |
 
-Not installed yet (listed in `Brewfile`; Henry installs): `autoconf`,
-`automake`, `libtool`, `intltool`, `itstool`, `gtk-doc`, `yelp-tools`,
-`xcodegen`. `bison` 2.3 and `flex` 2.6.4 come from macOS.
-
-Formula names were verified with `brew info`: `gtk-mac-bundler` is not a
-Homebrew formula; `dylibbundler` 1.0.5 is.
+`bison` 2.3 and `flex` 2.6.4 come from macOS and suffice. `gtk-mac-bundler` is
+not a Homebrew formula; `dylibbundler` 1.0.5 is (Phase 6).
 
 ## Layout
 
-- `upstream/gnumeric`: submodule, pinned to `GNUMERIC_1_12_60`
-  (commit `39152134`, 2026-02-10) to match the installed goffice 0.10.60.
-- `patches/`: applied to a copy of the submodule, never to the submodule.
-- `build/` (ignored): `src/gnumeric` (patched copy), `obj/gnumeric`
-  (out-of-tree objects), `prefix` (install), `smoke` (test outputs).
+- `upstream/gnumeric`: submodule pinned to `GNUMERIC_1_12_62` (commit
+  `221aa930`, 2026-09-20), matching Homebrew's goffice 0.10.62.
+- `patches/`: empty; 1.12.62 builds unpatched. Patches are applied to a copy of
+  the submodule, never to the submodule.
+- `build/` (ignored): `src/gnumeric` (patched copy, 152 MB), `obj/gnumeric`
+  (out-of-tree objects, 72 MB), `prefix` (install, 29 MB), `smoke` (test
+  outputs), `build.log`.
 
 ## Scripts
 
 | Script | Purpose |
 |---|---|
-| `scripts/env.sh` | source it: `PKG_CONFIG_PATH`, `ACLOCAL_PATH`, `PATH`, `GNM_PREFIX`; unsets `DISPLAY` |
-| `scripts/build-deps.sh` | `brew bundle` plus a tool and pkg-config report (Henry runs this) |
-| `scripts/build-gnumeric.sh [configure args]` | copy, patch, `autogen.sh`, configure, make, install to `build/prefix`, compile schemas |
+| `scripts/env.sh` | source it: `PKG_CONFIG_PATH` (`build/prefix` first), `ACLOCAL_PATH`, `PATH`, `GNM_PREFIX`; unsets `DISPLAY` |
+| `scripts/build-deps.sh` | `brew bundle` plus a tool and pkg-config report (installs software; Henry's call) |
+| `scripts/build-gnumeric.sh [configure args]` | copy, patch, `autogen.sh`, configure, `make -j`, install to `build/prefix`, compile schemas |
 | `scripts/apply-patches.sh <dir>` | apply `patches/*.patch` with `patch -p1` |
-| `scripts/smoke-test.sh` | ssconvert conversions of fixed samples plus `Tests/EngineSmoke/run.sh` |
+| `scripts/smoke-test.sh` | ssconvert conversions of fixed samples plus `Tests/EngineSmoke/run.sh`; fails on engine warnings |
 | `Tests/EngineSmoke/run.sh` | compile and run `headless.c` and `render.c` against `pkg-config libspreadsheet-1.12` |
 
 Configure flags used by `build-gnumeric.sh`: Homebrew's
@@ -62,19 +67,29 @@ embedding component would otherwise install into Homebrew's goffice plugin
 directory), `--disable-introspection`, `--disable-gtk-doc`,
 `--without-python`, `--without-perl`.
 
-## Status
+## Engine build result (2026-10-10)
 
-- The submodule build has **not** been run: `autogen.sh` needs the build
-  tools above. Everything else in Phase 0 was done against Homebrew's
-  `libspreadsheet-1.12.60`, whose headers and pkg-config file Homebrew
-  installs, and whose API is identical to the pinned tag.
-- `scripts/smoke-test.sh` passes with Homebrew's engine (2026-10-10): 15
-  ssconvert conversions, and both smoke programs.
+`scripts/build-gnumeric.sh` built 1.12.62 on the first run, in a few minutes
+with `make -j10`. Configure summary: compiler `gcc -std=gnu23` (Apple clang),
+UI Gtk, Perl and Python plugin loaders disabled by request, no GDA, psiconv,
+or PDF docs. 38 Gnumeric plugins were built and installed (the Perl ones are
+excluded); goffice's 9 plot plugins still come from Homebrew.
 
-## Running with the Homebrew engine
+`scripts/smoke-test.sh` then passed against `build/prefix`: 15 ssconvert
+conversions (`.gnumeric`, `.xlsx`, `.csv` from five samples), and the two
+smoke programs linked against `build/prefix/lib/libspreadsheet-1.12.62.dylib`
+(47 plugins available, 44 active; cells and a chart rendered to cairo image
+and cairo-quartz surfaces; `.gnumeric` and `.xlsx` saved).
+
+Rebuild from scratch with `rm -rf build && scripts/build-gnumeric.sh`.
+
+## Using the engine from other code
 
 ```sh
 source scripts/env.sh
-pkg-config --cflags --libs libspreadsheet-1.12 cairo-quartz
+pkg-config --cflags --libs libspreadsheet-1.12 cairo-quartz   # resolves to build/prefix
 Tests/EngineSmoke/run.sh
 ```
+
+Before `build/prefix` exists, the same commands resolve to Homebrew's gnumeric
+keg, whose API matches the pinned tag.

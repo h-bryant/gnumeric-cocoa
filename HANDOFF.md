@@ -1,8 +1,8 @@
 # gnumeric-cocoa — Handoff for Claude Code
 
-Status: Phase 0 reconnaissance done (2026-10-10). No app code yet. The engine
-build from the submodule waits on Henry installing the build tools in `Brewfile`;
-see §8 for the open questions and `docs/progress.md` for the session log.
+Status: Phase 0 complete (2026-10-10): Gnumeric 1.12.62 builds from the submodule
+and passes the smoke suite. No app code yet. Phase 1 waits on Xcode.app (§8,
+question 3). `docs/progress.md` has the session log.
 Owner: Henry.
 Goal: a native macOS (AppKit) front end for Gnumeric that reuses Gnumeric's existing
 C engine (`libspreadsheet`), `goffice`, and `libgsf`, replacing only the GTK user interface.
@@ -22,9 +22,9 @@ This project needs macOS, Xcode, and the AppKit SDK. It **cannot** be built or r
 on the usual isolated Debian VM. Run the session on the MacBook Air (M4, macOS Tahoe,
 arm64). Run Claude Code in **auto mode** (`claude --enable-auto-mode`, then cycle to it
 with Shift+Tab; or `permissionMode` in the repo's `.claude/settings.json`). Auto mode
-worked on Henry's plan on 2026-10-10. Only the Command Line Tools are installed, not
-Xcode.app, so `xcodebuild` and therefore XcodeGen-built projects do not work yet (open
-question 3 in §8). Anthropic still recommends auto mode in isolated
+worked on Henry's plan on 2026-10-10. Xcode.app is required for `xcodebuild` and
+XcodeGen projects; as of 2026-10-10 only the Command Line Tools are installed and the
+Xcode install is pending Henry's `sudo` (§8, question 3). Anthropic still recommends auto mode in isolated
 environments, and there is no VM sandbox here, so do **not** use bypass-permissions mode,
 and even in auto mode stop and ask Henry before doing any of the following:
 
@@ -112,15 +112,15 @@ Each phase ends with a commit-ready state and a short entry in `docs/progress.md
 
 ### Phase 0 — Reconnaissance (no app code)
 
-1. **Done.** Added upstream Gnumeric as a submodule (GNOME GitLab: `GNOME/gnumeric`), pinned to `GNUMERIC_1_12_60` to match the goffice 0.10.60 that is installed. Homebrew's formulae are now at goffice 0.10.62 / gnumeric 1.12.62 (not 0.10.61 as this file first guessed); re-pinning is open question 2 in §8.
+1. **Done.** Added upstream Gnumeric as a submodule (GNOME GitLab: `GNOME/gnumeric`), pinned to `GNUMERIC_1_12_62`, matching Homebrew's goffice 0.10.62 (Henry chose to upgrade from the 0.10.60 / 1.12.60 that was installed). The pairing rule stands: the tag tracks the goffice version Homebrew installs.
 2. Install dependencies with Homebrew:
    - `brew install --only-dependencies gnumeric` gives the runtime and build dependencies upstream's formula needs (glib, cairo, pango, gtk+3, libgsf, libxml2, librsvg, gettext, goffice, …). Read the formula (`brew cat gnumeric`) for the configure flags Homebrew uses on macOS and reuse them.
-   - Add build tools: `autoconf`, `automake`, `libtool`, `pkgconf`, `intltool`, `itstool`, `bison`, `xcodegen`. **Verified** names with `brew info`; two more are required by `autogen.sh`: `gtk-doc` (for `gtkdocize`) and `yelp-tools` (for `yelp.m4`). macOS's bison 2.3 is what Homebrew's own formula uses, so Homebrew `bison` is optional. **Pending Henry** (open question 1); the `Brewfile` is written.
+   - Add build tools: `autoconf`, `automake`, `libtool`, `pkgconf`, `intltool`, `itstool`, `bison`, `xcodegen`. **Verified** names with `brew info`; two more are required by `autogen.sh`: `gtk-doc` (for `gtkdocize`) and `yelp-tools` (for `yelp.m4`). macOS's bison 2.3 is what Homebrew's own formula uses, so Homebrew `bison` is optional. Installed on 2026-10-10 by running `scripts/build-deps.sh` with Henry's approval.
    - Record the final list in a `Brewfile` at the repo root and install with `brew bundle`. Record Homebrew and formula versions in `docs/build.md`. **Done** (`Brewfile`, `docs/build.md`).
    - Set `PKG_CONFIG_PATH` and `ACLOCAL_PATH` for keg-only formulae (e.g., `libxml2`, `gettext`) in `scripts/build-deps.sh`, not in the shell profile. **Done** as `scripts/env.sh` (sourced by every script); `scripts/build-deps.sh` runs `brew bundle` and reports. `libxml2` and `zlib` are keg-only; `gettext` is linked normally now.
    - Confirm Homebrew's `cairo` has the Quartz backend and `pango` has the CoreText font map (`pkg-config --exists cairo-quartz pangocairo`; inspect the pango build). Phase 1 rendering depends on both. **Done**: both present, and GTK is built with the Quartz backend only.
    - Per §1, ask Henry before running `brew` installs.
-3. Build Gnumeric from the submodule with autotools against the Homebrew libraries. Run the built `ssconvert` on a sample `.gnumeric` and `.xlsx` with no display to prove the engine works headless. **Blocked on step 2** (`scripts/build-gnumeric.sh` is written and untested). The headless proof was done instead against Homebrew's `libspreadsheet-1.12.60` (same API as the pinned tag): `scripts/smoke-test.sh` passes, including chart and cell rendering to cairo-quartz.
+3. **Done.** Build Gnumeric from the submodule with autotools against the Homebrew libraries. Run the built `ssconvert` on a sample `.gnumeric` and `.xlsx` with no display to prove the engine works headless. `scripts/build-gnumeric.sh` built 1.12.62 unpatched on the first run; `scripts/smoke-test.sh` passes against `build/prefix` (15 ssconvert conversions plus the C smoke programs, which render cells and a chart to cairo-quartz and save both formats).
 4. **Done.** Produce `docs/architecture.md` covering:
    - the real `WorkbookControl`/`SheetControl` vtables and which methods a new front end must implement,
    - a GTK-dependency map of `src/` (e.g., `grep -l gtk` plus link analysis),
@@ -238,30 +238,25 @@ gnumeric-cocoa/
 
 Add new ones here as they arise, and do not resolve them unilaterally.
 
-1. **Homebrew installs (blocks the submodule build).** `Brewfile` lists `autoconf`,
-   `automake`, `libtool`, `intltool`, `itstool`, `gtk-doc`, `yelp-tools`, and `xcodegen`
-   (plus `gnumeric`, already installed). Henry runs `scripts/build-deps.sh` or
-   `brew bundle` himself, or approves Claude Code running it.
-2. **Version pairing.** This machine has goffice 0.10.60 / gnumeric 1.12.60; Homebrew now
-   offers 0.10.62 / 1.12.62. Options: (a) stay on 0.10.60 and keep the submodule at
-   `GNUMERIC_1_12_60` (no brew action; needs `patches/0001`); (b) `brew upgrade goffice
-   gnumeric` and re-pin to `GNUMERIC_1_12_62` (drops the patch, picks up the 1.12.61
-   GObject refactor of the analysis tools before Phase 5 builds on them). Recommendation:
-   (b), done together with question 1.
-3. **Xcode.** Only the Command Line Tools are installed. XcodeGen produces an
-   `.xcodeproj`, but building it needs `xcodebuild` from Xcode.app (about 15 GB
-   installed). Alternative: a Swift Package Manager layout (`swift build` works with the
-   CLT) plus a script that assembles the `.app` bundle, giving up Xcode's debugger,
-   Instruments, and `xcodebuild`-driven signing. Recommendation: install Xcode before
-   Phase 1 and keep the XcodeGen decision.
+1. **Homebrew installs.** Resolved 2026-10-10: Henry approved, and
+   `scripts/build-deps.sh` was run (`brew bundle` of the `Brewfile`). `mas` was also
+   installed, outside the `Brewfile`, to fetch Xcode.
+2. **Version pairing.** Resolved 2026-10-10: Henry chose to upgrade. Homebrew goffice
+   0.10.62 / gnumeric 1.12.62 are installed, the submodule is pinned to
+   `GNUMERIC_1_12_62`, and `patches/` is empty.
+3. **Xcode.** Decided 2026-10-10: install Xcode.app and keep the XcodeGen decision.
+   **Action pending on Henry**, because the App Store CLI needs an administrator
+   password: `sudo mas install 497799835`, then
+   `sudo xcode-select -s /Applications/Xcode.app` and `sudo xcodebuild -license accept`.
+   Phase 1 starts once `xcodebuild -version` works.
 
 ## 9. First actions for the next session
 
-1. Read `docs/progress.md` and §8. If Henry has answered the open questions, act on
-   them: install via `scripts/build-deps.sh`, re-pin the submodule if chosen, and run
-   `scripts/build-gnumeric.sh` followed by `scripts/smoke-test.sh` (which then uses
-   `build/prefix/bin/ssconvert`). Fix whatever the first real autotools build on macOS
-   turns up and record it in `docs/build.md`.
+1. Read `docs/progress.md` and §8. Check Xcode: `xcode-select -p` should be
+   `/Applications/Xcode.app/Contents/Developer` and `xcodebuild -version` should work.
+   If not, ask Henry to finish §8 question 3 and meanwhile do only work that needs no
+   `xcodebuild` (bridge C/Objective-C code can be compiled with `clang` against
+   `pkg-config libspreadsheet-1.12`, as `Tests/EngineSmoke/run.sh` does).
 2. If Henry has reviewed `docs/upstream-issue.md`, incorporate his edits; he posts it.
 3. With Xcode available, start Phase 1: `project.yml`, the Objective-C bridge target
    with `module.modulemap`, engine init/shutdown in an XCTest, then the GLib main loop
