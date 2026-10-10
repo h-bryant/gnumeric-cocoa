@@ -245,18 +245,29 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    0.10.62 / gnumeric 1.12.62 are installed, the submodule is pinned to
    `GNUMERIC_1_12_62`, and `patches/` is empty.
 3. **Xcode.** Decided 2026-10-10: install Xcode.app and keep the XcodeGen decision.
-   **Action pending on Henry**, because the App Store CLI needs an administrator
-   password: `sudo mas install 497799835`, then
-   `sudo xcode-select -s /Applications/Xcode.app` and `sudo xcodebuild -license accept`.
-   Phase 1 starts once `xcodebuild -version` works.
+   **Blocked on Henry's machine**: the Xcode currently on the App Store requires macOS
+   26.6, and the MacBook Air is on 26.5 (`mas install 497799835` reported this on
+   2026-10-10). Henry picks one of:
+   - (a) update macOS to 26.6 (System Settings → General → Software Update), then
+     install Xcode from the App Store (no `sudo` needed), or
+   - (b) stay on 26.5 and install an earlier Xcode 26.x build from
+     https://developer.apple.com/download/all/?q=xcode (free Apple ID sign-in; the
+     `.xip` expands into `/Applications/Xcode.app`).
+   Either way, afterwards run in Terminal.app (the `!` prefix in Claude Code cannot
+   prompt for a `sudo` password): `sudo xcode-select -s /Applications/Xcode.app` and
+   `sudo xcodebuild -license accept`. Phase 1 starts once `xcodebuild -version` works.
+   Recommendation: (a); it is a point update and keeps the SDK current.
 
 ## 9. First actions for the next session
 
 1. Read `docs/progress.md` and §8. Check Xcode: `xcode-select -p` should be
    `/Applications/Xcode.app/Contents/Developer` and `xcodebuild -version` should work.
-   If not, ask Henry to finish §8 question 3 and meanwhile do only work that needs no
-   `xcodebuild` (bridge C/Objective-C code can be compiled with `clang` against
-   `pkg-config libspreadsheet-1.12`, as `Tests/EngineSmoke/run.sh` does).
+   If not, ask Henry whether §8 question 3 is done and meanwhile do only work that
+   needs no `xcodebuild` (bridge C/Objective-C code can be compiled with `clang`
+   against `pkg-config libspreadsheet-1.12`, as `Tests/EngineSmoke/run.sh` does).
+   Then run `scripts/smoke-test.sh` once to confirm the engine build still works
+   (a `brew upgrade` in between can change library versions; if goffice moved,
+   re-pin per `docs/decisions.md` ADR-003).
 2. If Henry has reviewed `docs/upstream-issue.md`, incorporate his edits; he posts it.
 3. With Xcode available, start Phase 1: `project.yml`, the Objective-C bridge target
    with `module.modulemap`, engine init/shutdown in an XCTest, then the GLib main loop

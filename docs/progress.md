@@ -41,5 +41,19 @@
 - `scripts/build-gnumeric.sh` built the engine unpatched on the first run;
   `scripts/smoke-test.sh` passes against `build/prefix`. Details in
   `docs/build.md`.
-- Xcode: installed `mas` and tried `mas install 497799835`; it needs `sudo`,
-  so Henry runs it (`HANDOFF.md` §8, question 3). Phase 1 starts after that.
+- Xcode: installed `mas`; `mas install 497799835` needs `sudo`, and Henry's
+  attempt showed the App Store's Xcode requires macOS 26.6 while the machine
+  is on 26.5. Options and the follow-up commands are in `HANDOFF.md` §8,
+  question 3. Phase 1 starts after that.
+- Session ended here. Working tree clean; all work committed on `main`,
+  nothing pushed. `build/` (ignored) holds the built engine; `rm -rf build &&
+  scripts/build-gnumeric.sh` recreates it in a few minutes.
+
+## How to resume
+
+1. Henry: settle Xcode (`HANDOFF.md` §8 question 3), then confirm with
+   `xcodebuild -version`.
+2. Henry (optional): review and post `docs/upstream-issue.md`.
+3. Claude Code: `claude --enable-auto-mode` in this directory, then
+   "read HANDOFF.md and docs/progress.md and continue with Phase 1".
+   First command it should run: `scripts/smoke-test.sh`.

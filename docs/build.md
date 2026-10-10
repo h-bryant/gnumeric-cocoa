@@ -7,7 +7,7 @@ Last verified: 2026-10-10 on the MacBook Air (M4, macOS 26.5 "Tahoe", arm64).
 | Tool | Version | Notes |
 |---|---|---|
 | Xcode Command Line Tools | clang 17.0.0 (clang-1700.6.3.2), Swift 6.2.3 | `/Library/Developer/CommandLineTools`; the SDK has AppKit, SwiftUI, CoreText |
-| Xcode.app | **not installed yet** | Needed for `xcodebuild` and XcodeGen projects. `mas` 7.0.0 is installed; the install needs an administrator password, so Henry runs `sudo mas install 497799835` (or uses the App Store), then `sudo xcode-select -s /Applications/Xcode.app` and `sudo xcodebuild -license accept` |
+| Xcode.app | **not installed yet** | Needed for `xcodebuild` and XcodeGen projects. The App Store's current Xcode requires macOS 26.6; this machine is on 26.5. See HANDOFF.md §8 question 3 for the two options. Afterwards: `sudo xcode-select -s /Applications/Xcode.app` and `sudo xcodebuild -license accept` in Terminal.app |
 | Homebrew | 7.0.9 | `/opt/homebrew` |
 
 ## Homebrew formulae
