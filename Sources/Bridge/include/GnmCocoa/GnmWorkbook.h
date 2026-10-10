@@ -17,15 +17,15 @@ NS_ASSUME_NONNULL_BEGIN
 NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(WorkbookDelegate)
 @protocol GnmWorkbookDelegate <NSObject>
 @optional
-- (void)workbook:(GnmWorkbook *)workbook didAddSheet:(GnmSheet *)sheet;
-- (void)workbook:(GnmWorkbook *)workbook willRemoveSheet:(GnmSheet *)sheet;
-- (void)workbookWillRemoveAllSheets:(GnmWorkbook *)workbook;
-- (void)workbook:(GnmWorkbook *)workbook didFocusSheet:(nullable GnmSheet *)sheet;
-- (void)workbook:(GnmWorkbook *)workbook editLineDidChange:(NSString *)text;
-- (void)workbook:(GnmWorkbook *)workbook selectionDescriptionDidChange:(NSString *)text;
+- (void)workbook:(GnmWorkbook *)workbook didAddSheet:(GnmSheet *)sheet NS_SWIFT_NAME(workbook(_:didAdd:));
+- (void)workbook:(GnmWorkbook *)workbook willRemoveSheet:(GnmSheet *)sheet NS_SWIFT_NAME(workbook(_:willRemove:));
+- (void)workbookWillRemoveAllSheets:(GnmWorkbook *)workbook NS_SWIFT_NAME(workbookWillRemoveAllSheets(_:));
+- (void)workbook:(GnmWorkbook *)workbook didFocusSheet:(nullable GnmSheet *)sheet NS_SWIFT_NAME(workbook(_:didFocus:));
+- (void)workbook:(GnmWorkbook *)workbook editLineDidChange:(NSString *)text NS_SWIFT_NAME(workbook(_:editLineDidChange:));
+- (void)workbook:(GnmWorkbook *)workbook selectionDescriptionDidChange:(NSString *)text NS_SWIFT_NAME(workbook(_:selectionDescriptionDidChange:));
 - (void)workbook:(GnmWorkbook *)workbook undoLabelDidChange:(nullable NSString *)undoLabel
-       redoLabel:(nullable NSString *)redoLabel;
-- (void)workbookMenuStateDidChange:(GnmWorkbook *)workbook;
+       redoLabel:(nullable NSString *)redoLabel NS_SWIFT_NAME(workbook(_:undoLabelDidChange:redoLabel:));
+- (void)workbookMenuStateDidChange:(GnmWorkbook *)workbook NS_SWIFT_NAME(workbookMenuStateDidChange(_:));
 @end
 
 NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Workbook)
@@ -35,6 +35,11 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Workbook)
 + (instancetype)new NS_UNAVAILABLE;
 
 @property (nonatomic, weak, nullable) id<GnmWorkbookDelegate> delegate;
+
+/// Deliver the current selection description and edit line to the delegate
+/// again; the engine only sends them on change, and the first ones go out
+/// before a delegate can be attached.
+- (void)resendDelegateState;
 
 /// The document URI as the engine knows it (`go_doc_get_uri`), or nil for a
 /// workbook that has never been saved.
@@ -46,18 +51,18 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Workbook)
 /// the life of the engine sheet.
 @property (nonatomic, readonly, copy) NSArray<GnmSheet *> *sheets;
 @property (nonatomic, readonly, nullable) GnmSheet *currentSheet;
-- (void)selectSheet:(GnmSheet *)sheet;
+- (void)selectSheet:(GnmSheet *)sheet NS_SWIFT_NAME(select(_:));
 
 /// Recalculate cells that need it (`workbook_recalc`).
 - (void)recalculate;
 
 /// Save with the saver goffice picks from the file name (for example
 /// `.gnumeric` or `.xlsx`).  On success the workbook adopts the URL.
-- (BOOL)writeToURL:(NSURL *)url error:(NSError **)error;
+- (BOOL)writeToURL:(NSURL *)url error:(NSError **)error NS_SWIFT_NAME(write(to:));
 
 /// Save with an explicit saver such as `Gnumeric_XmlIO:sax` (uncompressed
 /// Gnumeric XML when the file name ends in `.xml`) or `Gnumeric_Excel:xlsx2`.
-- (BOOL)writeToURL:(NSURL *)url saverIdentifier:(NSString *)saverIdentifier error:(NSError **)error;
+- (BOOL)writeToURL:(NSURL *)url saverIdentifier:(NSString *)saverIdentifier error:(NSError **)error NS_SWIFT_NAME(write(to:saverIdentifier:));
 
 @end
 

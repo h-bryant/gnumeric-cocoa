@@ -48,7 +48,7 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Engine)
 /// command context.  Fails if an engine is already running.  The engine can be
 /// started once per process; `shutdown` is final.
 + (nullable GnmEngine *)startWithConfiguration:(GnmEngineConfiguration *)configuration
-                                         error:(NSError **)error;
+                                         error:(NSError **)error NS_SWIFT_NAME(start(configuration:));
 
 /// `gnm_shutdown` and `gnm_pre_parse_shutdown`.  Every GnmWorkbook must have
 /// been released first.
@@ -67,14 +67,14 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Engine)
 
 /// Opens any format the loaded file openers understand, recalculates, and
 /// returns a workbook with one attached Cocoa control.
-- (nullable GnmWorkbook *)openWorkbookAtURL:(NSURL *)url error:(NSError **)error;
+- (nullable GnmWorkbook *)openWorkbookAtURL:(NSURL *)url error:(NSError **)error NS_SWIFT_NAME(openWorkbook(at:));
 
 /// A new empty workbook with `sheetCount` sheets of the default size.
-- (GnmWorkbook *)newWorkbookWithSheetCount:(NSUInteger)sheetCount;
+- (GnmWorkbook *)newWorkbookWithSheetCount:(NSUInteger)sheetCount NS_SWIFT_NAME(makeWorkbook(sheetCount:));
 
 /// Identifiers of the file savers that can write the given file name, in the
 /// order goffice would choose them (first is the default).
-- (nullable NSString *)saverIdentifierForFileName:(NSString *)fileName;
+- (nullable NSString *)saverIdentifierForFileName:(NSString *)fileName NS_SWIFT_NAME(saverIdentifier(forFileName:));
 
 @end
 

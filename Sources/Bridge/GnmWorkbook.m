@@ -277,6 +277,14 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
     workbook_recalc (_wb);
 }
 
+- (void)resendDelegateState
+{
+    if (_wbv->current_sheet_view == NULL)
+        return;
+    wb_view_selection_desc (_wbv, TRUE, (WorkbookControl *) _wbc);
+    wb_view_edit_line_set (_wbv, (WorkbookControl *) _wbc);
+}
+
 #pragma mark - Saving
 
 - (BOOL)writeToURL:(NSURL *)url error:(NSError **)error
