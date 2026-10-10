@@ -49,11 +49,59 @@
   nothing pushed. `build/` (ignored) holds the built engine; `rm -rf build &&
   scripts/build-gnumeric.sh` recreates it in a few minutes.
 
+## 2026-10-10, third session: Phase 1 bridge and read-only viewer
+
+- Environment: macOS is now 26.7.1 (Henry took option (a) of `HANDOFF.md`
+  §8 question 3), so the App Store's Xcode 27.0 is installable, but Xcode.app
+  is still absent; only the Command Line Tools (Swift 6.3.3) exist.
+  `scripts/smoke-test.sh` passed against `build/prefix` before any new work.
+- Per `HANDOFF.md` §9, did the Phase 1 work that needs no `xcodebuild`:
+  - `Sources/Bridge`: the Objective-C bridge (`GnmEngine`, `GnmWorkbook`,
+    `GnmSheet`, `GnmRunLoopBridge`, `module.modulemap`), compiled with clang
+    by `scripts/build-bridge.sh`. Cocoa subclasses of `WorkbookControl` and
+    `SheetControl` forward every vtable slot to delegates; `GnmSheet` draws
+    cells through a port of `item_grid_draw_region` and sheet objects through
+    `sheet_object_draw_cairo_sized`, both onto a cairo-quartz surface over the
+    caller's `CGContext`. The run loop bridge is the "CFRunLoop in control"
+    half of GTK's `gdkeventloop-quartz.c` (observer plus poll thread).
+  - `Tests/BridgeTests`: four headless programs (XCTest needs Xcode.app):
+    lifecycle and vtable notifications, open/save round trips with error
+    reporting, rendering into flipped `CGBitmapContext`s at 1x and 2x, and
+    the run loop (idles, timeouts on time, GIO completions, cross-thread
+    wake-ups, nested loops). All pass; `scripts/smoke-test.sh` runs them.
+  - `project.yml` (XcodeGen) with `scripts/gen-xcconfig.sh` feeding
+    pkg-config paths into `build/engine.xcconfig`; `xcodegen generate` works
+    without Xcode, `xcodebuild` has not been tried.
+  - `Sources/App`: the Swift 6 viewer (`WorkbookDocument`, window controller,
+    `GridView`, header rulers, sheet tabs, menu). `scripts/build-app.sh`
+    builds it with swiftc into `build/app/GnumericCocoa.app`;
+    `scripts/run-app.sh file` launches it. Verified by `GNM_SNAPSHOT` renders
+    of `chart-tests.gnumeric` (cells, selection, six charts in place) and
+    `format-tests.gnumeric` (number formats, colors, fills, dates).
+- Traps found and recorded (`docs/decisions.md` ADR-004 to ADR-008):
+  engine messages become one `NSError` per operation; every workbook must be
+  released (autorelease pools drained) before `shutdown`; a color-matched
+  `CGColor` shifts its components, so RGB colors pass straight through;
+  `NSStackView`'s default gravity distribution collapses the scroll view;
+  macOS 26's `NSScrollView` blanks its interior in `cacheDisplay`, so
+  snapshots capture the grid view itself; Homebrew bottles target the running
+  macOS, so a 14.0 deployment target only yields linker warnings for now.
+- Not done in Phase 1 yet: frozen panes (single pane only), right-to-left
+  sheets (drawn left-to-right), header clicks to select columns and rows,
+  zoom UI, sheet-tab overflow for many sheets, layer-backed scrolling
+  performance, the Xcode build itself and XCTest wrappers.
+- Working tree clean after this entry; everything committed on `main`,
+  nothing pushed. `build/` (ignored) holds the engine, bridge, tests, and app.
+
 ## How to resume
 
-1. Henry: settle Xcode (`HANDOFF.md` §8 question 3), then confirm with
-   `xcodebuild -version`.
+1. Henry: install Xcode (App Store or `mas install 497799835`), then in
+   Terminal.app `sudo xcode-select -s /Applications/Xcode.app` and
+   `sudo xcodebuild -license accept`; confirm with `xcodebuild -version`.
+   Answer `HANDOFF.md` §8 questions 4 and 5 when convenient.
 2. Henry (optional): review and post `docs/upstream-issue.md`.
-3. Claude Code: `claude --enable-auto-mode` in this directory, then
-   "read HANDOFF.md and docs/progress.md and continue with Phase 1".
-   First command it should run: `scripts/smoke-test.sh`.
+3. Claude Code: `claude --enable-auto-mode` here, then "read HANDOFF.md and
+   docs/progress.md and continue with Phase 1". `scripts/smoke-test.sh` first. With Xcode present:
+   `scripts/gen-xcconfig.sh && xcodegen generate && xcodebuild -scheme
+   GnumericCocoa build`, fix what Xcode finds, add XCTest targets around
+   `Tests/BridgeTests`, then finish the Phase 1 gaps above and start Phase 2.

@@ -1,7 +1,10 @@
 # gnumeric-cocoa — Handoff for Claude Code
 
 Status: Phase 0 complete (2026-10-10): Gnumeric 1.12.62 builds from the submodule
-and passes the smoke suite. No app code yet. Phase 1 waits on Xcode.app (§8,
+and passes the smoke suite. Phase 1 in progress (2026-10-10, third session): the
+Objective-C bridge, the GLib run loop integration, and a Swift read-only viewer
+build with clang and swiftc and render real files; the XcodeGen project generates
+but `xcodebuild` has not run because Xcode.app is still not installed (§8,
 question 3). `docs/progress.md` has the session log.
 Owner: Henry.
 Goal: a native macOS (AppKit) front end for Gnumeric that reuses Gnumeric's existing
@@ -138,6 +141,15 @@ Each phase ends with a commit-ready state and a short entry in `docs/progress.md
   - Native Core Text rendering is a later optimization, not an MVP task.
 - Row and column headers; sheet tabs (a simple segmented control or custom tab bar is fine for now).
 
+Status 2026-10-10: everything above exists and runs from the swiftc build
+(`scripts/run-app.sh`), verified on `chart-tests.gnumeric` and
+`format-tests.gnumeric`: the bridge (`Sources/Bridge`), the run loop
+integration, `WorkbookDocument` opening through the engine's openers, the
+flipped grid view drawing through cairo-quartz with a native selection, mouse
+and keyboard selection, header rulers, and sheet tabs. Not yet: the Xcode build
+itself and XCTest targets (Xcode.app missing), frozen panes, right-to-left
+sheets, header clicks, zoom UI, tab overflow. Details in `docs/progress.md`.
+
 ### Phase 2 — Editing
 
 - Cell editor: an `NSTextView` overlay positioned over the active cell. Commit through `cmd_set_text` (**verified**: `src/wbc-gtk-edit.c:413-424` uses `cmd_set_text`, `cmd_area_set_text`, and `cmd_area_set_array_expr`).
@@ -245,30 +257,45 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    0.10.62 / gnumeric 1.12.62 are installed, the submodule is pinned to
    `GNUMERIC_1_12_62`, and `patches/` is empty.
 3. **Xcode.** Decided 2026-10-10: install Xcode.app and keep the XcodeGen decision.
-   **Blocked on Henry's machine**: the Xcode currently on the App Store requires macOS
-   26.6, and the MacBook Air is on 26.5 (`mas install 497799835` reported this on
-   2026-10-10). Henry picks one of:
-   - (a) update macOS to 26.6 (System Settings → General → Software Update), then
-     install Xcode from the App Store (no `sudo` needed), or
-   - (b) stay on 26.5 and install an earlier Xcode 26.x build from
-     https://developer.apple.com/download/all/?q=xcode (free Apple ID sign-in; the
-     `.xip` expands into `/Applications/Xcode.app`).
-   Either way, afterwards run in Terminal.app (the `!` prefix in Claude Code cannot
-   prompt for a `sudo` password): `sudo xcode-select -s /Applications/Xcode.app` and
-   `sudo xcodebuild -license accept`. Phase 1 starts once `xcodebuild -version` works.
-   Recommendation: (a); it is a point update and keeps the SDK current.
+   Henry took option (a): the machine is on macOS 26.7.1, so the App Store's
+   Xcode 27.0 installs now (App Store, or `mas install 497799835`). Still to do,
+   in Terminal.app (the `!` prefix in Claude Code cannot prompt for a `sudo`
+   password): `sudo xcode-select -s /Applications/Xcode.app` and
+   `sudo xcodebuild -license accept`. Then `xcodebuild -version` works and
+   `scripts/gen-xcconfig.sh && xcodegen generate && xcodebuild -scheme
+   GnumericCocoa build` is the first thing to try. Until then the clang/swiftc
+   scripts (`docs/build.md`) build and run everything.
+4. **Deployment target versus Homebrew bottles.** `project.yml` keeps the decided
+   minimum of macOS 14, but every Homebrew dylib is built for the macOS it was
+   bottled on (26 today), so linking for 14.0 only produces warnings now and a
+   release that really runs on 14 would need the dependency set rebuilt from
+   source with `MACOSX_DEPLOYMENT_TARGET=14.0` (a Phase 6 packaging task).
+   Options: (a) keep 14.0 and plan that rebuild, or (b) raise the minimum to
+   whatever Homebrew's bottles target when Phase 6 starts. No action needed
+   before Phase 6; the clang build passes no deployment flag meanwhile.
+5. **Bundle identifier and preferences domain.** `Sources/App/Info.plist` uses
+   `org.gnumeric.cocoa`. GSettings will store preferences under that
+   `NSUserDefaults` domain once persistence is on; development builds keep it
+   off (`GNM_PERSIST_PREFS=1` opts in, `docs/decisions.md` ADR-008) because the
+   domain should be chosen once and the plist lives outside the repository.
+   Henry confirms or changes the identifier; then persistence goes on by default.
 
 ## 9. First actions for the next session
 
-1. Read `docs/progress.md` and §8. Check Xcode: `xcode-select -p` should be
-   `/Applications/Xcode.app/Contents/Developer` and `xcodebuild -version` should work.
-   If not, ask Henry whether §8 question 3 is done and meanwhile do only work that
-   needs no `xcodebuild` (bridge C/Objective-C code can be compiled with `clang`
-   against `pkg-config libspreadsheet-1.12`, as `Tests/EngineSmoke/run.sh` does).
-   Then run `scripts/smoke-test.sh` once to confirm the engine build still works
-   (a `brew upgrade` in between can change library versions; if goffice moved,
-   re-pin per `docs/decisions.md` ADR-003).
-2. If Henry has reviewed `docs/upstream-issue.md`, incorporate his edits; he posts it.
-3. With Xcode available, start Phase 1: `project.yml`, the Objective-C bridge target
-   with `module.modulemap`, engine init/shutdown in an XCTest, then the GLib main loop
-   integration. The rendering path is already proven by `Tests/EngineSmoke/render.c`.
+1. Read `docs/progress.md` (latest entry) and §8. Run `scripts/smoke-test.sh`
+   (ssconvert, engine programs, bridge tests). If goffice moved under a `brew
+   upgrade`, re-pin per `docs/decisions.md` ADR-003 and re-run
+   `scripts/gen-xcconfig.sh`.
+2. Check Xcode: `xcode-select -p` should be
+   `/Applications/Xcode.app/Contents/Developer` and `xcodebuild -version` should
+   work. If so: `scripts/gen-xcconfig.sh && xcodegen generate && xcodebuild
+   -scheme GnumericCocoa build`, fix what Xcode reports (the swiftc build in
+   `scripts/build-app.sh` is the reference), and add XCTest targets to
+   `project.yml` wrapping `Tests/BridgeTests`. If not, ask Henry whether §8
+   question 3 is done and keep using the scripts.
+3. If Henry has reviewed `docs/upstream-issue.md`, incorporate his edits; he posts it.
+4. Finish Phase 1 (see the gaps in `docs/progress.md`): frozen panes, header
+   clicks selecting columns and rows, zoom UI, right-to-left sheets, sheet-tab
+   overflow, and a scrolling-performance check (layer backing, ADR-007). Then
+   Phase 2 starts with the cell editor and `cmd_set_text`, which first needs
+   the seven decoupling patches of `docs/architecture.md` §5 in `patches/`.

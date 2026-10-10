@@ -1,13 +1,13 @@
 # Build notes
 
-Last verified: 2026-10-10 on the MacBook Air (M4, macOS 26.5 "Tahoe", arm64).
+Last verified: 2026-10-10 on the MacBook Air (M4, macOS 26.7.1 "Tahoe", arm64).
 
 ## Toolchain
 
 | Tool | Version | Notes |
 |---|---|---|
-| Xcode Command Line Tools | clang 17.0.0 (clang-1700.6.3.2), Swift 6.2.3 | `/Library/Developer/CommandLineTools`; the SDK has AppKit, SwiftUI, CoreText |
-| Xcode.app | **not installed yet** | Needed for `xcodebuild` and XcodeGen projects. The App Store's current Xcode requires macOS 26.6; this machine is on 26.5. See HANDOFF.md §8 question 3 for the two options. Afterwards: `sudo xcode-select -s /Applications/Xcode.app` and `sudo xcodebuild -license accept` in Terminal.app |
+| Xcode Command Line Tools | clang 17 (clang-2100.1.1.101), Swift 6.3.3, SDK macOS 26.5 | `/Library/Developer/CommandLineTools`; the SDK has AppKit, SwiftUI, CoreText; `swiftc` builds the app, but XCTest is not included |
+| Xcode.app | **not installed yet** | Needed for `xcodebuild`, XCTest, and building the XcodeGen project. macOS is now 26.7.1, so the App Store's Xcode 27.0 installs; afterwards `sudo xcode-select -s /Applications/Xcode.app` and `sudo xcodebuild -license accept` in Terminal.app (HANDOFF.md §8 question 3) |
 | Homebrew | 7.0.9 | `/opt/homebrew` |
 
 ## Homebrew formulae
@@ -57,8 +57,13 @@ not a Homebrew formula; `dylibbundler` 1.0.5 is (Phase 6).
 | `scripts/build-deps.sh` | `brew bundle` plus a tool and pkg-config report (installs software; Henry's call) |
 | `scripts/build-gnumeric.sh [configure args]` | copy, patch, `autogen.sh`, configure, `make -j`, install to `build/prefix`, compile schemas |
 | `scripts/apply-patches.sh <dir>` | apply `patches/*.patch` with `patch -p1` |
-| `scripts/smoke-test.sh` | ssconvert conversions of fixed samples plus `Tests/EngineSmoke/run.sh`; fails on engine warnings |
+| `scripts/smoke-test.sh` | ssconvert conversions of fixed samples, `Tests/EngineSmoke/run.sh`, then `Tests/BridgeTests/run.sh`; fails on engine warnings |
 | `Tests/EngineSmoke/run.sh` | compile and run `headless.c` and `render.c` against `pkg-config libspreadsheet-1.12` |
+| `scripts/build-bridge.sh` | clang build of `Sources/Bridge` into `build/bridge/libGnmCocoa.a`; `--flags` prints the compile flags |
+| `Tests/BridgeTests/run.sh` | build the bridge, then compile and run each test program against it (no Xcode needed) |
+| `scripts/gen-xcconfig.sh` | write `build/engine.xcconfig` from pkg-config for `project.yml`; then `xcodegen generate` |
+| `scripts/build-app.sh` | swiftc build of `Sources/App` plus the bridge into `build/app/GnumericCocoa.app` (ad-hoc signed) |
+| `scripts/run-app.sh [file ...]` | launch that app directly; `GNM_SNAPSHOT=out.png` renders the grid to a PNG and quits, `GNM_DEBUG_LAYOUT=1` logs view frames and grid draws |
 
 Configure flags used by `build-gnumeric.sh`: Homebrew's
 (`--disable-schemas-compile --disable-silent-rules
@@ -82,6 +87,33 @@ smoke programs linked against `build/prefix/lib/libspreadsheet-1.12.62.dylib`
 and cairo-quartz surfaces; `.gnumeric` and `.xlsx` saved).
 
 Rebuild from scratch with `rm -rf build && scripts/build-gnumeric.sh`.
+
+## Bridge and app builds (no Xcode)
+
+```sh
+scripts/build-bridge.sh          # build/bridge/libGnmCocoa.a
+Tests/BridgeTests/run.sh         # four headless test programs; outputs in build/bridge-tests
+scripts/build-app.sh             # build/app/GnumericCocoa.app
+scripts/run-app.sh upstream/gnumeric/samples/chart-tests.gnumeric
+GNM_SNAPSHOT=/tmp/grid.png scripts/run-app.sh upstream/gnumeric/samples/format-tests.gnumeric
+```
+
+The app finds the engine's compiled GSettings schemas through `GNM_PREFIX`
+(exported by `scripts/env.sh`) or the `GnmEnginePrefix` key that
+`build-app.sh` writes into the bundle's `Info.plist`; lib, data, and plugin
+directories are compile-time constants in the engine and point at
+`build/prefix` already. Preferences are not persisted in development builds
+unless `GNM_PERSIST_PREFS=1` is set (HANDOFF.md §8 question 5).
+
+Linking shows "building for macOS-14.0, but linking with dylib ... built for
+newer version 26.0" warnings whenever a deployment target below the running
+macOS is requested, because Homebrew bottles target the OS they were built
+on. `build-bridge.sh` therefore passes no `-mmacosx-version-min`;
+`project.yml` keeps 14.0 pending HANDOFF.md §8 question 4.
+
+With Xcode installed: `scripts/gen-xcconfig.sh && xcodegen generate &&
+xcodebuild -scheme GnumericCocoa build` (untested until then; `xcodegen
+generate` itself works without Xcode).
 
 ## Using the engine from other code
 
