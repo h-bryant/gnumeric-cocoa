@@ -1,0 +1,8 @@
+// Clang module for the Objective-C bridge (HANDOFF.md §6: expose the bridge to
+// Swift as a module, not a bridging header, so test targets can import it too).
+// The umbrella header must not include any GLib, goffice, or Gnumeric header.
+module GnmCocoa {
+    umbrella header "GnmCocoa/GnmCocoa.h"
+    export *
+    module * { export * }
+}
