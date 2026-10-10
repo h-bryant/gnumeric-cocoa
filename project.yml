@@ -1,0 +1,73 @@
+# XcodeGen spec (HANDOFF.md §4, Phase 1).  Generate with:
+#   scripts/gen-xcconfig.sh && xcodegen generate
+# The .xcodeproj is ignored by git; this file and build/engine.xcconfig are
+# the source of truth.  Test targets are added once Xcode.app (and with it
+# XCTest) is installed; until then Tests/BridgeTests/run.sh is the harness.
+name: GnumericCocoa
+options:
+  bundleIdPrefix: org.gnumeric
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+  xcodeVersion: "26.0"
+configFiles:
+  Debug: build/engine.xcconfig
+  Release: build/engine.xcconfig
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    CLANG_ENABLE_OBJC_ARC: YES
+    CLANG_ENABLE_OBJC_WEAK: YES
+    CLANG_ENABLE_MODULES: YES
+    GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS: NO
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "-"
+targets:
+  GnmCocoa:
+    type: library.static
+    platform: macOS
+    sources:
+      - path: Sources/Bridge
+        excludes:
+          - "include/**"
+      - path: Sources/Bridge/include
+        buildPhase: none
+    settings:
+      base:
+        PRODUCT_NAME: GnmCocoa
+        HEADER_SEARCH_PATHS: "$(SRCROOT)/Sources/Bridge/include $(SRCROOT)/Sources/Bridge $(GNM_HEADER_SEARCH_PATHS)"
+        OTHER_CFLAGS: "$(GNM_OTHER_CFLAGS)"
+        PUBLIC_HEADERS_FOLDER_PATH: include
+  GnumericCocoa:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/App
+        excludes:
+          - "Info.plist"
+    dependencies:
+      - target: GnmCocoa
+    settings:
+      base:
+        PRODUCT_NAME: GnumericCocoa
+        PRODUCT_BUNDLE_IDENTIFIER: org.gnumeric.cocoa
+        INFOPLIST_FILE: Sources/App/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        SWIFT_INCLUDE_PATHS: "$(SRCROOT)/Sources/Bridge/include"
+        HEADER_SEARCH_PATHS: "$(SRCROOT)/Sources/Bridge/include"
+        LIBRARY_SEARCH_PATHS: "$(GNM_LIBRARY_SEARCH_PATHS)"
+        OTHER_LDFLAGS: "$(GNM_OTHER_LDFLAGS)"
+        # Development builds run the engine from build/prefix (Phase 6 moves
+        # it into the bundle); AppDelegate reads this key.
+        INFOPLIST_PREPROCESS: NO
+schemes:
+  GnumericCocoa:
+    build:
+      targets:
+        GnumericCocoa: all
+    run:
+      config: Debug
+      environmentVariables:
+        GNM_PREFIX: "$(GNM_PREFIX)"
