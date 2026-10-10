@@ -1,7 +1,8 @@
 #!/bin/bash
 # Engine smoke suite (HANDOFF.md §5): open, recalc, and convert a fixed set of
-# upstream sample workbooks headless with ssconvert, then build and run the two
-# C programs in Tests/EngineSmoke.  Run after every dependency change.
+# upstream sample workbooks headless with ssconvert, build and run the two C
+# programs in Tests/EngineSmoke, then the Objective-C bridge tests in
+# Tests/BridgeTests.  Run after every dependency change.
 #
 # Uses build/prefix/bin/ssconvert when the submodule build exists, otherwise
 # Homebrew's.  Override with SSCONVERT=/path/to/ssconvert.
@@ -30,6 +31,9 @@ done
 
 echo "== engine smoke programs"
 Tests/EngineSmoke/run.sh "$OUT" || fail=1
+
+echo "== bridge tests"
+Tests/BridgeTests/run.sh "$PWD/build/bridge-tests" || fail=1
 
 [ $fail -eq 0 ] && echo "SMOKE OK" || echo "SMOKE FAILED"
 exit $fail
