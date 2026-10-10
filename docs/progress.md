@@ -93,15 +93,33 @@
 - Working tree clean after this entry; everything committed on `main`,
   nothing pushed. `build/` (ignored) holds the engine, bridge, tests, and app.
 
+## 2026-10-10, fourth session: Xcode works, questions 4 and 5 decided
+
+- Henry installed Xcode 27.0 and ran `xcodebuild -runFirstLaunch` (needed:
+  without it `xcodebuild` cannot load its plug-ins).
+- Decisions (`docs/decisions.md` ADR-009, ADR-010): minimum macOS follows
+  Homebrew's oldest supported release (15 today; every Homebrew dylib here
+  has a 26.0 minimum, and Homebrew no longer supports 14); bundle identifier
+  `io.github.h-bryant.gnumeric-cocoa`; preferences persist by default.
+  Verified: the app writes
+  `~/Library/Preferences/io.github.h-bryant.gnumeric-cocoa.plist` with the
+  plugin file states and active list, and a second launch still loads the
+  plot plugins (identical chart render).
+- First `xcodebuild` of the XcodeGen project: two fixes were needed. The
+  bridge target now builds without Clang modules (Homebrew include paths
+  broke the SDK's Darwin and CoreFoundation module builds), and
+  `scripts/gen-xcconfig.sh` rewrites the libffi include path, which pkg-config
+  reports inside the Command Line Tools SDK, to `$(SDKROOT)`. After that:
+  `** BUILD SUCCEEDED **`, no diagnostics in our sources, and the Xcode-built
+  app (identifier and 15.0 minimum confirmed) renders `chart-tests.gnumeric`
+  byte-identically to the swiftc build. `scripts/smoke-test.sh` passes.
+- Working tree clean; committed on `main`, nothing pushed.
+
 ## How to resume
 
-1. Henry: install Xcode (App Store or `mas install 497799835`), then in
-   Terminal.app `sudo xcode-select -s /Applications/Xcode.app` and
-   `sudo xcodebuild -license accept`; confirm with `xcodebuild -version`.
-   Answer `HANDOFF.md` §8 questions 4 and 5 when convenient.
-2. Henry (optional): review and post `docs/upstream-issue.md`.
-3. Claude Code: `claude --enable-auto-mode` here, then "read HANDOFF.md and
-   docs/progress.md and continue with Phase 1". `scripts/smoke-test.sh` first. With Xcode present:
-   `scripts/gen-xcconfig.sh && xcodegen generate && xcodebuild -scheme
-   GnumericCocoa build`, fix what Xcode finds, add XCTest targets around
-   `Tests/BridgeTests`, then finish the Phase 1 gaps above and start Phase 2.
+1. Henry (optional): review and post `docs/upstream-issue.md`.
+2. Claude Code: `claude --enable-auto-mode` here, then "read HANDOFF.md and
+   docs/progress.md and continue with Phase 1". `scripts/smoke-test.sh` first,
+   then `scripts/gen-xcconfig.sh && xcodegen generate && xcodebuild -scheme
+   GnumericCocoa build`. Next work: XCTest targets around `Tests/BridgeTests`,
+   the Phase 1 gaps listed above, then Phase 2.

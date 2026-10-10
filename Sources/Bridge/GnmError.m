@@ -1,3 +1,3 @@
 #import <GnmCocoa/GnmError.h>
 
-NSErrorDomain const GnmErrorDomain = @"org.gnumeric.cocoa.GnmErrorDomain";
+NSErrorDomain const GnmErrorDomain = @"io.github.h-bryant.gnumeric-cocoa.GnmErrorDomain";

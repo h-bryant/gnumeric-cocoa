@@ -128,6 +128,8 @@ layer content; revisit if scrolling performance needs it.
 
 ## ADR-008 (2026-10-10): Development builds do not persist preferences
 
+Superseded by ADR-010 the same day, once Henry confirmed the identifier.
+
 Context: GSettings on macOS writes to `NSUserDefaults` under the bundle
 identifier, and the identifier (`org.gnumeric.cocoa` in `Info.plist`) has
 not been confirmed by Henry (`HANDOFF.md` §8 question 5). Writing outside
@@ -139,3 +141,44 @@ list when persistence is on, so turning it on later is safe.
 
 Consequences: preferences changes are lost between launches in development;
 no `~/Library/Preferences/org.gnumeric.cocoa.plist` is created yet.
+
+## ADR-009 (2026-10-10): Minimum macOS follows Homebrew's oldest supported release
+
+Context: `HANDOFF.md` §2 chose macOS 14. Every Homebrew dylib on the build
+machine carries a minimum OS of 26.0 (bottles target the OS they were built
+on), Homebrew's oldest supported release is now 15, and no macOS 14 machine
+exists for testing. A direct-download bundle needs libraries built for the
+product's minimum either way.
+
+Decision (Henry, 2026-10-10): the minimum macOS is Homebrew's oldest
+supported release at the time of each release; 15.0 today, set in
+`project.yml` (`MACOSX_DEPLOYMENT_TARGET`) and `Info.plist`
+(`LSMinimumSystemVersion`). The clang/swiftc development scripts pass no
+deployment flag because they link the host's bottles.
+
+Consequences: APIs newer than the floor need `#available` guards. Phase 6 can
+assemble the bundle from Homebrew's own bottles for the floor release (for
+example the `arm64_sequoia` bottle tag) instead of rebuilding the stack from
+source, though the Intel and universal question stays open there. When
+Homebrew drops a release, the next version of this app may drop it too.
+
+## ADR-010 (2026-10-10): Bundle identifier and preferences domain
+
+Context: the identifier names the app to Launch Services and code signing and
+is the NSUserDefaults domain GSettings writes to (GNextstepSettingsBackend),
+so it should be chosen once. `org.gnumeric.cocoa` was a placeholder in
+upstream's namespace (upstream uses `org.gnumeric.gnumeric` for its desktop
+and appdata ids, `org.gnome.gnumeric` for its schemas), and the project is not
+presented as official.
+
+Decision (Henry, 2026-10-10): `io.github.h-bryant.gnumeric-cocoa`, the
+reverse-DNS form of the GitHub repository. Preference persistence is on by
+default; `GNM_PERSIST_PREFS=0` turns it off for a run, and the bridge tests
+always run without it.
+
+Consequences: preferences live in
+`~/Library/Preferences/io.github.h-bryant.gnumeric-cocoa.plist`, separate from
+the GTK build's `gnumeric.plist`. `GnmEngine.shutdown` stores the active
+plugin list so later launches keep their plugins (docs/architecture.md §2).
+Renaming later would orphan that file and any "Open With" defaults; if
+upstream adopts the port, that rename happens with the adopting release.

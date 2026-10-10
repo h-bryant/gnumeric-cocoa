@@ -14,7 +14,10 @@ mkdir -p build
 # -I dirs become HEADER_SEARCH_PATHS, -L dirs LIBRARY_SEARCH_PATHS; everything
 # else stays as flags.  Xcode wants paths space-separated and unquoted (none
 # of ours contain spaces).
-includes=$(pkg-config --cflags-only-I $PKGS | tr ' ' '\n' | sed -n 's/^-I//p' | tr '\n' ' ')
+# pkg-config can name a directory inside the Command Line Tools SDK (libffi
+# does); Xcode must not mix that SDK with its own, so point it at $(SDKROOT).
+includes=$(pkg-config --cflags-only-I $PKGS | tr ' ' '\n' | sed -n 's/^-I//p' \
+	| sed -E 's|^/Library/Developer/CommandLineTools/SDKs/[^/]+|$(SDKROOT)|' | tr '\n' ' ')
 cflags=$(pkg-config --cflags-only-other $PKGS)
 libdirs=$(pkg-config --libs-only-L $PKGS | tr ' ' '\n' | sed -n 's/^-L//p' | tr '\n' ' ')
 ldflags=$(pkg-config --libs-only-l --libs-only-other $PKGS | sed 's/-Wl,-framework,/-framework /g')

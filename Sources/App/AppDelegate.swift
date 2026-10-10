@@ -66,9 +66,10 @@ enum EngineLocator {
     static func configuration() -> EngineConfiguration {
         let configuration = EngineConfiguration()
         configuration.programName = "gnumeric-cocoa"
-        // Preferences stay in memory until the preferences domain (the bundle
-        // identifier) is settled; GNM_PERSIST_PREFS=1 opts in (HANDOFF.md §8).
-        configuration.persistsPreferences = ProcessInfo.processInfo.environment["GNM_PERSIST_PREFS"] == "1"
+        // GSettings persists through NSUserDefaults under the bundle
+        // identifier (docs/decisions.md ADR-010); GNM_PERSIST_PREFS=0 keeps a
+        // run from touching ~/Library/Preferences.
+        configuration.persistsPreferences = ProcessInfo.processInfo.environment["GNM_PERSIST_PREFS"] != "0"
         if let prefix {
             configuration.settingsSchemaDirectory = prefix + "/share/glib-2.0/schemas"
         }

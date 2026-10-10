@@ -3,9 +3,8 @@
 Status: Phase 0 complete (2026-10-10): Gnumeric 1.12.62 builds from the submodule
 and passes the smoke suite. Phase 1 in progress (2026-10-10, third session): the
 Objective-C bridge, the GLib run loop integration, and a Swift read-only viewer
-build with clang and swiftc and render real files; the XcodeGen project generates
-but `xcodebuild` has not run because Xcode.app is still not installed (§8,
-question 3). `docs/progress.md` has the session log.
+build (with Xcode 27 and with the clang/swiftc scripts) and render real files.
+§8 questions 1 to 5 are resolved. `docs/progress.md` has the session log.
 Owner: Henry.
 Goal: a native macOS (AppKit) front end for Gnumeric that reuses Gnumeric's existing
 C engine (`libspreadsheet`), `goffice`, and `libgsf`, replacing only the GTK user interface.
@@ -25,9 +24,7 @@ This project needs macOS, Xcode, and the AppKit SDK. It **cannot** be built or r
 on the usual isolated Debian VM. Run the session on the MacBook Air (M4, macOS Tahoe,
 arm64). Run Claude Code in **auto mode** (`claude --enable-auto-mode`, then cycle to it
 with Shift+Tab; or `permissionMode` in the repo's `.claude/settings.json`). Auto mode
-worked on Henry's plan on 2026-10-10. Xcode.app is required for `xcodebuild` and
-XcodeGen projects; as of 2026-10-10 only the Command Line Tools are installed and the
-Xcode install is pending Henry's `sudo` (§8, question 3). Anthropic still recommends auto mode in isolated
+worked on Henry's plan on 2026-10-10. Xcode.app 27 is installed (2026-10-10). Anthropic still recommends auto mode in isolated
 environments, and there is no VM sandbox here, so do **not** use bypass-permissions mode,
 and even in auto mode stop and ask Henry before doing any of the following:
 
@@ -45,7 +42,7 @@ and even in auto mode stop and ask Henry before doing any of the following:
 | Language for app/UI layer | Swift, from Phase 1 | Dialogs can be SwiftUI hosted in AppKit via `NSHostingView`, shrinking Phase 5; value types and `let` bindings fit Henry's functional style; current AppKit docs and new APIs are Swift-first. Starting in Objective-C and switching later would discard the MVP UI code. |
 | Scope | Full feature parity with GTK Gnumeric, eventually. MVP = viewer/editor + read-only chart rendering + basic Format Cells dialog (see Phase 2b). | Ships something usable early, tests the SwiftUI-dialog pattern before Phase 5, and keeps the fallback to the GTK build for everything else until parity is reached. |
 | Upstream engagement | Open a GNOME GitLab issue after Phase 0, with concrete findings and a specific request; no general announcement before working code exists. Henry posts it; Claude Code drafts it. | Maintainers can confirm or correct architecture assumptions and may accept small decoupling patches, keeping the patch series short. Contacting them before Phase 0 would mean announcing a project with no code. |
-| Minimum macOS | 14 (Sonoma) | Sets the AppKit and SwiftUI feature level for dialogs. Set `MACOSX_DEPLOYMENT_TARGET = 14.0` in `project.yml`. |
+| Minimum macOS | Homebrew's oldest supported release at release time; 15 (Sequoia) as of 2026-10-10 | Dependencies come from Homebrew, whose bottles target the OS they are built on; 14 is no longer supported there. `MACOSX_DEPLOYMENT_TARGET = 15.0` in `project.yml` and `LSMinimumSystemVersion` in `Info.plist` (`docs/decisions.md` ADR-009). |
 | Repo name | `gnumeric-cocoa` | Matches convention (Qt, SDL, wxWidgets name Mac backends "cocoa"). |
 | License | Same as Gnumeric: GPL-2.0-only OR GPL-3.0-only (confirmed: upstream ships `COPYING`, `COPYING-gpl2`, `COPYING-gpl3`) | Combined work links the GPL engine. AppKit linking is allowed under the GPL system-library exceptions. |
 | Distribution | Direct download / Homebrew / MacPorts. **Not** the Mac App Store. | App Store terms are generally considered incompatible with the GPL. |
@@ -265,20 +262,13 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    `scripts/gen-xcconfig.sh && xcodegen generate && xcodebuild -scheme
    GnumericCocoa build` is the first thing to try. Until then the clang/swiftc
    scripts (`docs/build.md`) build and run everything.
-4. **Deployment target versus Homebrew bottles.** `project.yml` keeps the decided
-   minimum of macOS 14, but every Homebrew dylib is built for the macOS it was
-   bottled on (26 today), so linking for 14.0 only produces warnings now and a
-   release that really runs on 14 would need the dependency set rebuilt from
-   source with `MACOSX_DEPLOYMENT_TARGET=14.0` (a Phase 6 packaging task).
-   Options: (a) keep 14.0 and plan that rebuild, or (b) raise the minimum to
-   whatever Homebrew's bottles target when Phase 6 starts. No action needed
-   before Phase 6; the clang build passes no deployment flag meanwhile.
-5. **Bundle identifier and preferences domain.** `Sources/App/Info.plist` uses
-   `org.gnumeric.cocoa`. GSettings will store preferences under that
-   `NSUserDefaults` domain once persistence is on; development builds keep it
-   off (`GNM_PERSIST_PREFS=1` opts in, `docs/decisions.md` ADR-008) because the
-   domain should be chosen once and the plist lives outside the repository.
-   Henry confirms or changes the identifier; then persistence goes on by default.
+4. **Deployment target versus Homebrew bottles.** Resolved 2026-10-10: the minimum
+   macOS follows Homebrew's oldest supported release (15 today); `project.yml` and
+   `Info.plist` say 15.0. See `docs/decisions.md` ADR-009.
+5. **Bundle identifier and preferences domain.** Resolved 2026-10-10:
+   `io.github.h-bryant.gnumeric-cocoa`; preferences persist by default in
+   `~/Library/Preferences/io.github.h-bryant.gnumeric-cocoa.plist`
+   (`GNM_PERSIST_PREFS=0` for a run without). See ADR-010.
 
 ## 9. First actions for the next session
 
@@ -286,13 +276,10 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    (ssconvert, engine programs, bridge tests). If goffice moved under a `brew
    upgrade`, re-pin per `docs/decisions.md` ADR-003 and re-run
    `scripts/gen-xcconfig.sh`.
-2. Check Xcode: `xcode-select -p` should be
-   `/Applications/Xcode.app/Contents/Developer` and `xcodebuild -version` should
-   work. If so: `scripts/gen-xcconfig.sh && xcodegen generate && xcodebuild
-   -scheme GnumericCocoa build`, fix what Xcode reports (the swiftc build in
-   `scripts/build-app.sh` is the reference), and add XCTest targets to
-   `project.yml` wrapping `Tests/BridgeTests`. If not, ask Henry whether §8
-   question 3 is done and keep using the scripts.
+2. Build with Xcode: `scripts/gen-xcconfig.sh && xcodegen generate && xcodebuild
+   -scheme GnumericCocoa build` (works since 2026-10-10; `docs/build.md`). Add
+   XCTest targets to `project.yml` wrapping `Tests/BridgeTests`, keeping
+   `Tests/BridgeTests/run.sh` as the no-Xcode path.
 3. If Henry has reviewed `docs/upstream-issue.md`, incorporate his edits; he posts it.
 4. Finish Phase 1 (see the gaps in `docs/progress.md`): frozen panes, header
    clicks selecting columns and rows, zoom UI, right-to-left sheets, sheet-tab

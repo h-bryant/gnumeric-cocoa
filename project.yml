@@ -5,9 +5,11 @@
 # XCTest) is installed; until then Tests/BridgeTests/run.sh is the harness.
 name: GnumericCocoa
 options:
-  bundleIdPrefix: org.gnumeric
+  bundleIdPrefix: io.github.h-bryant
+  # Minimum macOS = Homebrew's oldest supported release at release time
+  # (docs/decisions.md ADR-009); 15 as of 2026-10-10.
   deploymentTarget:
-    macOS: "14.0"
+    macOS: "15.0"
   createIntermediateGroups: true
   xcodeVersion: "26.0"
 configFiles:
@@ -21,7 +23,7 @@ settings:
     CLANG_ENABLE_OBJC_WEAK: YES
     CLANG_ENABLE_MODULES: YES
     GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS: NO
-    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    MACOSX_DEPLOYMENT_TARGET: "15.0"
     CODE_SIGN_STYLE: Manual
     CODE_SIGN_IDENTITY: "-"
 targets:
@@ -40,6 +42,11 @@ targets:
         HEADER_SEARCH_PATHS: "$(SRCROOT)/Sources/Bridge/include $(SRCROOT)/Sources/Bridge $(GNM_HEADER_SEARCH_PATHS)"
         OTHER_CFLAGS: "$(GNM_OTHER_CFLAGS)"
         PUBLIC_HEADERS_FOLDER_PATH: include
+        # The bridge imports plain headers; with modules on, the Homebrew
+        # include paths break the SDK's own module builds (Darwin,
+        # CoreFoundation).  The Swift target still builds the GnmCocoa module
+        # from the umbrella header, which has no Homebrew includes.
+        CLANG_ENABLE_MODULES: NO
   GnumericCocoa:
     type: application
     platform: macOS
@@ -52,7 +59,7 @@ targets:
     settings:
       base:
         PRODUCT_NAME: GnumericCocoa
-        PRODUCT_BUNDLE_IDENTIFIER: org.gnumeric.cocoa
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.h-bryant.gnumeric-cocoa
         INFOPLIST_FILE: Sources/App/Info.plist
         GENERATE_INFOPLIST_FILE: NO
         SWIFT_INCLUDE_PATHS: "$(SRCROOT)/Sources/Bridge/include"

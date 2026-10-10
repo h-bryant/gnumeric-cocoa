@@ -7,7 +7,7 @@ Last verified: 2026-10-10 on the MacBook Air (M4, macOS 26.7.1 "Tahoe", arm64).
 | Tool | Version | Notes |
 |---|---|---|
 | Xcode Command Line Tools | clang 17 (clang-2100.1.1.101), Swift 6.3.3, SDK macOS 26.5 | `/Library/Developer/CommandLineTools`; the SDK has AppKit, SwiftUI, CoreText; `swiftc` builds the app, but XCTest is not included |
-| Xcode.app | **not installed yet** | Needed for `xcodebuild`, XCTest, and building the XcodeGen project. macOS is now 26.7.1, so the App Store's Xcode 27.0 installs; afterwards `sudo xcode-select -s /Applications/Xcode.app` and `sudo xcodebuild -license accept` in Terminal.app (HANDOFF.md §8 question 3) |
+| Xcode.app | 27.0 (27A266a), SDK macOS 27.0 | Installed 2026-10-10; `xcodebuild -runFirstLaunch` was required once. `xcodebuild -scheme GnumericCocoa build` works on the XcodeGen project |
 | Homebrew | 7.0.9 | `/opt/homebrew` |
 
 ## Homebrew formulae
@@ -102,18 +102,30 @@ The app finds the engine's compiled GSettings schemas through `GNM_PREFIX`
 (exported by `scripts/env.sh`) or the `GnmEnginePrefix` key that
 `build-app.sh` writes into the bundle's `Info.plist`; lib, data, and plugin
 directories are compile-time constants in the engine and point at
-`build/prefix` already. Preferences are not persisted in development builds
-unless `GNM_PERSIST_PREFS=1` is set (HANDOFF.md §8 question 5).
+`build/prefix` already. Preferences persist through NSUserDefaults in
+`~/Library/Preferences/io.github.h-bryant.gnumeric-cocoa.plist` (ADR-010);
+`GNM_PERSIST_PREFS=0` keeps a run from writing there.
 
-Linking shows "building for macOS-14.0, but linking with dylib ... built for
+Linking shows "building for macOS-15.0, but linking with dylib ... built for
 newer version 26.0" warnings whenever a deployment target below the running
 macOS is requested, because Homebrew bottles target the OS they were built
 on. `build-bridge.sh` therefore passes no `-mmacosx-version-min`;
-`project.yml` keeps 14.0 pending HANDOFF.md §8 question 4.
+`project.yml` and `Info.plist` carry the product minimum, macOS 15.0, which
+follows Homebrew's oldest supported release (ADR-009).
 
-With Xcode installed: `scripts/gen-xcconfig.sh && xcodegen generate &&
-xcodebuild -scheme GnumericCocoa build` (untested until then; `xcodegen
-generate` itself works without Xcode).
+## Xcode build
+
+```sh
+scripts/gen-xcconfig.sh && xcodegen generate
+xcodebuild -scheme GnumericCocoa -configuration Debug -derivedDataPath build/DerivedData build
+GNM_PREFIX=$PWD/build/prefix build/DerivedData/Build/Products/Debug/GnumericCocoa.app/Contents/MacOS/GnumericCocoa file.gnumeric
+```
+
+Two settings matter: the bridge target has `CLANG_ENABLE_MODULES = NO`
+(with modules on, Homebrew's include paths break the SDK's own module
+builds), and `gen-xcconfig.sh` maps any include path pkg-config reports
+inside the Command Line Tools SDK (libffi's) to `$(SDKROOT)`. The scheme's
+run action exports `GNM_PREFIX` so the app finds the compiled schemas.
 
 ## Using the engine from other code
 

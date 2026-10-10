@@ -23,7 +23,8 @@ scripts/build-bridge.sh          # Objective-C bridge with clang (no Xcode neede
 Tests/BridgeTests/run.sh         # just the bridge tests
 scripts/build-app.sh             # Swift app with swiftc into build/app/GnumericCocoa.app
 scripts/run-app.sh [file]        # launch it; GNM_SNAPSHOT=out.png renders the grid and quits
-scripts/gen-xcconfig.sh && xcodegen generate   # the Xcode project (needs Xcode.app to build)
+scripts/gen-xcconfig.sh && xcodegen generate   # regenerate the Xcode project
+xcodebuild -scheme GnumericCocoa -derivedDataPath build/DerivedData build
 ```
 
 Bridge rules: public headers under `Sources/Bridge/include/GnmCocoa/` never

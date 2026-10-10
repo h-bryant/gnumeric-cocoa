@@ -16,7 +16,8 @@ PKGS="libspreadsheet-1.12 cairo-quartz"
 cflags=(-I "$PWD/Sources/Bridge/include" $(pkg-config --cflags $PKGS) \
 	-fobjc-arc -fobjc-weak -Wall -Wno-deprecated-declarations -Wno-unused-function -g)
 # No -mmacosx-version-min: Homebrew bottles are built for the running macOS,
-# and a lower target only produces linker warnings (HANDOFF.md §8, question 4).
+# and a lower target only produces linker warnings here.  The product's
+# minimum (15.0, docs/decisions.md ADR-009) is set in project.yml and Info.plist.
 if [ "${1:-}" = "--flags" ]; then
 	printf '%s\n' "${cflags[@]}"
 	exit 0
