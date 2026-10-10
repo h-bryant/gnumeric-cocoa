@@ -1,7 +1,8 @@
 # Architecture notes (Phase 0 reconnaissance)
 
-Date: 2026-10-10. Source examined: upstream Gnumeric tag `GNUMERIC_1_12_60`
-(submodule `upstream/gnumeric`), goffice 0.10.60 headers from Homebrew. All
+Date: 2026-10-10, revised the same day for 1.12.62. Source examined: upstream
+Gnumeric tag `GNUMERIC_1_12_62` (submodule `upstream/gnumeric`, commit
+`221aa930`, 2026-09-20), goffice 0.10.62 headers from Homebrew. All
 `file:line` references below are relative to `upstream/gnumeric/src/` unless
 stated otherwise.
 
@@ -29,14 +30,14 @@ handoff was updated.
   `cairo_t *` and work on a cairo-quartz surface with Pango's CoreText backend.
   Verified by `Tests/EngineSmoke/render.c` (§6).
 - A GTK-free `libspreadsheet` is explicitly unsupported upstream:
-  `configure.ac:200` aborts on `--without-gtk`. GTK stays linked; see §9 for the
+  `configure.ac:201` aborts on `--without-gtk`. GTK stays linked; see §9 for the
   bundle cost.
 
 ## 2. Engine lifecycle (from `ssconvert.c`)
 
 `ssconvert.c` is Latin-1 encoded; grep it with `LC_ALL=C`.
 
-Startup, in order (`ssconvert.c:1433-1495`):
+Startup, in order (`ssconvert.c:1601-1663`):
 
 1. `gnm_pre_parse_init (argc, argv)` (`libgnumeric.c:232`): raises the stack
    limit to 64 MiB, sets `G_ENABLE_DIAGNOSTIC=0`, records `argv[0]`, sets the
@@ -46,6 +47,9 @@ Startup, in order (`ssconvert.c:1433-1495`):
 2. `gnm_conf_set_persistence (FALSE)` so the run does not write preferences
    back. The Cocoa app will want persistence on.
 3. Optional: `g_option_context_add_group (ctx, gnm_get_option_group ())`.
+   Since 1.12.62 ssconvert also adds `gtk_get_option_group (FALSE)` (line
+   1622), which registers GTK's command-line options without opening a
+   display; there is still no `gtk_init`.
 4. `gnm_init ()` (`libgnumeric.c:314`): `libgoffice_init()`, resource
    registration, plugin-service registration, creation of the `GnmApp`
    singleton, then the `*_init()` functions for math, styles, config
@@ -64,10 +68,14 @@ Startup, in order (`ssconvert.c:1433-1495`):
    dir, the config key `plugins/extra-dirs`, and the `GNUMERIC_PLUGIN_PATH`
    environment variable (path-separated), then calls `go_plugins_init()` with
    the config's plugin file states and active list. Plugins are GModules; with
-   Homebrew's install 50 are available and all activate headless.
+   Homebrew's 1.12.62 install 49 are available and 44 activate headless. The
+   five that stay inactive (`fn-tsa`, the Perl loader and Perl function
+   plugin, the sample data source, the `uihello` example) carry
+   `<require_explicit_enabling/>` in their `plugin.xml`, so they only activate
+   when listed in the config's active-plugin list.
 7. `go_component_set_default_command_context (cc)`.
 
-Opening and saving (`ssconvert.c:1205-1344`): `ioc = go_io_context_new (cc)`;
+Opening and saving (`ssconvert.c:1374-1512`): `ioc = go_io_context_new (cc)`;
 `wbv = workbook_view_new_from_uri (uri, optional_opener, ioc, optional_encoding)`;
 `wb = wb_view_get_workbook (wbv)`; `workbook_recalc_all (wb)`;
 `workbook_view_save_as (wbv, saver, uri, cc)` or `workbook_view_save_to_uri`.
@@ -75,7 +83,7 @@ File arguments must be URIs; use `go_shell_arg_to_uri()` on paths. Savers are
 looked up with `go_file_saver_for_id ("Gnumeric_XmlIO:sax")` or
 `go_file_saver_for_file_name (name)`.
 
-Shutdown (`ssconvert.c:1530-1533`): `go_component_set_default_command_context
+Shutdown (`ssconvert.c:1698-1701`): `go_component_set_default_command_context
 (NULL)`, `g_object_unref (cc)`, `gnm_shutdown ()`, `gnm_pre_parse_shutdown ()`.
 `gnm_shutdown()` shuts plugins down first and stores their states in config.
 
@@ -83,7 +91,7 @@ The GTK front end (`main-application.c`, also Latin-1) differs only in calling
 `gtk_init()` at line 133 before `gnm_init()` at 240, creating a `GOIOContext`
 subclass with a splash screen, and running `gtk_main()`.
 
-Path resolution (`gutils.c:48-135`): lib, data, locale, and extern-plugin
+Path resolution (`gutils.c:49-139`): lib, data, locale, and extern-plugin
 directories are compile-time constants (`GNUMERIC_LIBDIR` etc. from
 `configure --prefix`), overridden only when running inside the build tree
 (`running_in_tree()` and `GNM_TEST_TOP_BUILDDIR`). There is no general
@@ -127,7 +135,7 @@ Instance: `GODocControl base; WorkbookView *wb_view; gulong
 clipboard_changed_signal`. `GODocControl` (goffice `app/go-doc-control-impl.h`)
 is a trivial GObject holding a `GODoc *`.
 
-Class vtable, with the GTK implementation for reference (`wbc-gtk.c:5000-5030`):
+Class vtable, with the GTK implementation for reference (`wbc-gtk.c:5040-5062`):
 
 | Slot | Purpose | GTK impl |
 |---|---|---|
@@ -177,7 +185,7 @@ and the list of controls (`gnm_sheet_view_attach_control`,
 `gnm_sheet_view_detach_control`); `SHEET_FOREACH_CONTROL` fans model changes out
 to every control.
 
-Class vtable; `SheetControlGUI` implements all 17 (`sheet-control-gui.c:3923-3939`):
+Class vtable; `SheetControlGUI` implements all 17 (`sheet-control-gui.c:3932-3948`):
 
 | Slot | What the Cocoa grid must do |
 |---|---|
@@ -203,11 +211,11 @@ NULL-checks every virtual.
 
 ### `GnmApp` signals the app should observe
 
-`application.c:846-895`: `workbook_added`, `workbook_removed`,
+`application.c:845-894`: `workbook_added`, `workbook_removed`,
 `window-list-changed`, `custom-ui-added`, `custom-ui-removed`,
 `clipboard_modified`, `recalc_finished`, `recalc_clear_caches`. The GTK recent
 file manager is only created when `gdk_display_get_default()` is non-NULL
-(`application.c:914`); the Cocoa app uses `NSDocumentController` recents.
+(`application.c:913`); the Cocoa app uses `NSDocumentController` recents.
 
 ## 4. GTK dependency map of `src/`
 
@@ -227,37 +235,38 @@ mstyle number-match outoflinedocs parse-util position print-cell
 rangefunc rangefunc-strings ranges rendered-value search selection session
 sf-bessel sf-dpq sf-gamma sf-trig sheet-autofill sheet-conditions
 sheet-control sheet-diff sheet-filter sheet-merge sheet-style sheet-utils
-sheet-view sort ssconvert ssdiff ssgrep ssindex sstest stf-export stf-parse
+sheet-view sort ssdiff ssgrep ssindex sstest stf-export stf-parse
 style-conditions validation value value-sheet workbook workbook-cmd-format
-workbook-control workbook-view xml-sax-read xml-sax-write`, plus `parser.y`.
-`src/tools/`: 24 of 26 files are GTK-free and take `WorkbookControl *` or
+workbook-control workbook-view xml-sax-read xml-sax-write`, plus `parser.y`
+(82 of the 128 `.c` files in `src/`).
+`src/tools/`: 28 of 30 files are GTK-free and take `WorkbookControl *` or
 `GOCmdContext *` (`random-generator.c` and `gnm-solver.c` reference `WBCGtk`).
 
 **Engine files with incidental GTK use** (each assessed; none needs a display):
 
 | File | Use | Assessment |
 |---|---|---|
-| `application.c:545-737, 914` | `GtkFileFilter`, `GtkRecentManager` | recent-file history only; skipped without a display |
-| `cell-draw.c:22, 345-373` | `GdkRGBA` in `GnmCellDrawStyle`, `gdk_cairo_set_source_rgba` | plain struct and a cairo helper; no display |
-| `commands.c:7689-7702` | `GtkAdjustment` for widget sheet objects | GObject only |
+| `application.c:544-736, 913` | `GtkFileFilter`, `GtkRecentManager` | recent-file history only; skipped without a display |
+| `cell-draw.c:23, 346-374` | `GdkRGBA` in `GnmCellDrawStyle`, `gdk_cairo_set_source_rgba` | plain struct and a cairo helper; no display |
+| `commands.c:7973-7986` | `GtkAdjustment` for widget sheet objects | GObject only |
 | `gnumeric-conf.c` | 14 `gtk_*` refs | `GtkPrintSettings`/`GtkPageSetup` serialization for print config |
-| `gutils.c:1012` | `gtk_check_version` | benign |
+| `gutils.c:1165` | `gtk_check_version` | benign |
 | `libgnumeric.c:326-329` | icon theme | guarded by `gdk_screen_get_default()` |
-| `pattern.c:79, 94` | `gtk_style_context_get_background_color` | only when `is_selected`; pass `FALSE` and NULL |
-| `preview-grid.c:251` | `gtk_render_background` | the GTK format-preview canvas; not used |
+| `pattern.c:78, 93` | `gtk_style_context_get_background_color` | only when `is_selected`; pass `FALSE` and NULL |
+| `preview-grid.c:252` | `gtk_render_background` | the GTK format-preview canvas; not used |
 | `print-info.c`, `print.c` | `GtkPrintOperation`, `GtkPageSetup` | GTK printing; Cocoa printing is a later phase (§7) |
-| `sheet.c:816` | `gtk_widget_get_default_direction` | static global; under `#ifdef GNM_WITH_GTK` |
-| `style.c:403-413` | `gdk_screen_get_default`, `gtk_get_default_language` | **windowless fallback exists**: creates a `pango_cairo_font_map_new()` context at 96 dpi when there is no screen |
+| `sheet.c:828` | `gtk_widget_get_default_direction` | static global; under `#ifdef GNM_WITH_GTK` |
+| `style.c:454-464` | `gdk_screen_get_default`, `gtk_get_default_language` | **windowless fallback exists**: creates a `pango_cairo_font_map_new()` context at 96 dpi when there is no screen |
 | `style-border.c:29` | `#include <gdk/gdk.h>` | header only |
-| `style-color.c:120-125` | `style_color_grid (GtkStyleContext *)` | returns `#c7c7c7` when passed NULL |
+| `style-color.c:182-191` | `style_color_grid (GtkStyleContext *)` | returns `#c7c7c7` when passed NULL |
 | `sheet-style.c` | `sheet_style_update_grid_color (sheet, ctxt)` | passes `ctxt` to `style_color_grid`; NULL is fine |
 | `undo.c:217-222` | see §5 | unguarded SCG cast |
-| `stf.c:191, 296`, `stf-export.c:663` | text import/export dialogs | guarded by `GNM_IS_WBC_GTK`; non-GTK controls get an error string ("This importer can only be used with a GUI.") or no dialog |
+| `stf.c:191, 296`, `stf-export.c:685` | text import/export dialogs | guarded by `GNM_IS_WBC_GTK`; non-GTK controls get an error string ("This importer can only be used with a GUI.") or no dialog |
 
-**GTK front end** (replaced by Cocoa code): `wbc-gtk.c` (5478 lines),
-`wbc-gtk-actions.c` (4531), `wbc-gtk-edit.c` (1296), `sheet-control-gui.c`
-(4535), `gnm-pane.c` (3195), `item-grid.c` (1317), `item-bar.c` (1262),
-`item-cursor.c` (1549), `item-edit.c` (753), `gnm-graph-window.c`,
+**GTK front end** (replaced by Cocoa code): `wbc-gtk.c` (5499 lines),
+`wbc-gtk-actions.c` (4532), `wbc-gtk-edit.c` (1332), `sheet-control-gui.c`
+(4544), `gnm-pane.c` (3199), `item-grid.c` (1314), `item-bar.c` (1245),
+`item-cursor.c` (1548), `item-edit.c` (754), `gnm-graph-window.c`,
 `gnumeric-simple-canvas.c`, `gui-clipboard.c`, `gui-file.c`, `gui-util.c`,
 `io-context-gtk.c`, `sheet-object-widget.c` (GTK widgets on the canvas),
 `src/dialogs/` (69 `.c`, 85 GtkBuilder `.ui`, 83 entry points, every one
@@ -280,20 +289,20 @@ yields garbage and the call crashes. "Guarded" means a `GNM_IS_WBC_GTK` /
 
 | Site | Function | Behavior | Status |
 |---|---|---|---|
-| `commands.c:1457` | `cmd_insert_cols` | error dialog when data would be pushed off the sheet | unguarded |
-| `commands.c:1486` | `cmd_insert_rows` | same | unguarded |
-| `commands.c:2347` | `cmd_selection_colrow_hide` | yes/no confirmation when hiding all rows or columns | unguarded |
-| `commands.c:3208` | `cmd_paste_copy` | yes/no confirmation for pastes of more than 10000 copies | unguarded |
-| `commands.c:3051` | `cmd_paste_copy_impl` | select the pasted objects through `wbcg_get_nth_scg` | guarded |
-| `cmd-edit.c:418` | `cmd_shift_rows` | error dialog | unguarded |
-| `cmd-edit.c:467` | `cmd_shift_cols` | error dialog | unguarded |
+| `commands.c:1497` | `cmd_insert_cols` | error dialog when data would be pushed off the sheet | unguarded |
+| `commands.c:1535` | `cmd_insert_rows` | same | unguarded |
+| `commands.c:2461` | `cmd_selection_colrow_hide` | yes/no confirmation when hiding all rows or columns | unguarded |
+| `commands.c:3355` | `cmd_paste_copy` | yes/no confirmation for pastes of more than 10000 copies | unguarded |
+| `commands.c:3200` | `cmd_paste_copy_impl` | select the pasted objects through `wbcg_get_nth_scg` | guarded |
+| `cmd-edit.c:420` | `cmd_shift_rows` | error dialog | unguarded |
+| `cmd-edit.c:469` | `cmd_shift_cols` | error dialog | unguarded |
 | `undo.c:217-222` | `cb_filter_set_condition_undo_set_pb` via `SHEET_FOREACH_CONTROL` (line 266) | writes "%d rows match" into `wbcg->progress_bar` | unguarded `(SheetControlGUI *)` cast |
-| `sheet-object.c:131-140, 203-214` | `cb_so_size_position` | detach the object guru | guarded (`g_return_if_fail (GNM_IS_SCG)`) |
-| `sheet-object-graph.c:320-372, 491, 718-818` | image save, "open in new window", chart guru | take `WBCGtk *` explicitly (`sheet_object_graph_guru` is public) |
-| `sheet-object-image.c:294-317`, `sheet-object-component.c:189-384` | image save dialogs, component editing | `scg_wbcg (GNM_SCG (sc))` |
-| `hlink.c:66, 309, 510, 563` | `gnm_hlink_activate (GnmHLink *, WBCGtk *)` | hyperlink activation | public API takes `WBCGtk *` |
-| `print.c:1244-2022` | print progress, page setup | guarded by `GNM_IS_WBC_GTK` |
-| `stf.c:68, 191, 208, 296, 316`; `stf-export.c:663` | text import/export dialogs | guarded |
+| `sheet-object.c:145-156, 224-238` | `cb_so_size_position`, `sheet_object_get_editor` | detach the object guru | guarded (`g_return_if_fail (GNM_IS_SCG)`) |
+| `sheet-object-graph.c:320-372, 491, 718-826` | image save, "open in new window", chart guru | take `WBCGtk *` explicitly (`sheet_object_graph_guru` is public) |
+| `sheet-object-image.c:316-339`, `sheet-object-component.c:189-384` | image save dialogs, component editing | `scg_wbcg (GNM_SCG (sc))` |
+| `hlink.c:66, 309, 509, 562` | `gnm_hlink_activate (GnmHLink *, WBCGtk *)` | hyperlink activation | public API takes `WBCGtk *` |
+| `print.c:1259-2047` | print progress, page setup | guarded by `GNM_IS_WBC_GTK` |
+| `stf.c:68, 191, 208, 296, 316`; `stf-export.c:685` | text import/export dialogs | guarded |
 | `gnm-plugin.c:592` | `cb_load_and_functional (GnmSolverFactory *, WBCGtk *, ...)` | solver factory callback signature | signature only |
 
 The four error dialogs and two confirmations in `commands.c`/`cmd-edit.c` can
@@ -311,10 +320,10 @@ are needed before the MVP.
 ## 6. Rendering
 
 Verified with `Tests/EngineSmoke/render.c` on 2026-10-10 against Homebrew's
-`libspreadsheet-1.12.60.dylib`, with no display:
+`libspreadsheet-1.12.60.dylib` and again against 1.12.62, with no display:
 
 - Pango's default cairo font map on this machine is
-  `PangoCairoCoreTextFontMap`; `gnm_pango_context_get()` (`style.c:399`)
+  `PangoCairoCoreTextFontMap`; `gnm_pango_context_get()` (`style.c:451`)
   creates a windowless context from it at 96 dpi.
 - Cells: `cell_draw (cell, cr, x, y, height, width, h_center,
   show_extension_markers, &style)` (`cell-draw.h`) rendered text, alignment,
@@ -357,7 +366,7 @@ from config (default 96) and feeds `go_image_set_default_dpi`.
 
 ## 7. Editing, undo, printing
 
-- Edit commit path (`wbc-gtk-edit.c:380-424`): `wbcg_edit_finish` calls
+- Edit commit path (`wbc-gtk-edit.c:384-425`): `wbcg_edit_finish` calls
   `sheet_cell_set_text` for the in-place case and otherwise
   `cmd_area_set_array_expr (wbc, sv, texpr)`, `cmd_set_text (wbc, sheet,
   &sv->edit_pos, text, markup, autocorrect)`, or `cmd_area_set_text (wbc, sv,
@@ -379,21 +388,21 @@ from config (default 96) and feeds `go_image_set_default_dpi`.
 ## 8. Build facts
 
 - `libspreadsheet.la` is one library containing engine, GTK front end,
-  dialogs, and tools (`src/Makefile.am:347-493`). The binaries `gnumeric`,
+  dialogs, and tools (`src/Makefile.am:354-500`). The binaries `gnumeric`,
   `ssconvert`, `ssindex`, `ssgrep`, `ssdiff`, `sstest` link it.
-- `configure.ac:196-215`: `--without-gtk` exists but errors out
+- `configure.ac:196-216`: `--without-gtk` exists but errors out
   ("configuration without gtk+ currently does not work"); `GNM_WITH_GTK` is
   always defined.
 - `autogen.sh` requires `aclocal`, `glib-gettextize`, `gtkdocize`,
   `intltoolize`, `autoreconf` and expects `yelp.m4` for `YELP_HELP_INIT`
-  (`configure.ac:1005`). `AC_PROG_YACC` requires bison; the git tree has only
+  (`configure.ac:1007`). `AC_PROG_YACC` requires bison; the git tree has only
   `parser.y`. Homebrew's formula builds the release tarball with macOS bison
   2.3.
-- Homebrew's formula applies upstream commit `0de4c0a4` (`sstest.c` `bool` to
-  `gboolean`) to 1.12.60; it is in `patches/0001-*.patch` here and is part of
-  1.12.62.
+- 1.12.60 needed upstream commit `0de4c0a4` (`sstest.c` `bool` to `gboolean`),
+  which Homebrew applies to its bottle; 1.12.62 includes it, so `patches/` is
+  empty.
 - Homebrew's gnumeric keg ships `include/libspreadsheet-1.12/`,
-  `lib/libspreadsheet-1.12.60.dylib`, and `lib/pkgconfig/libspreadsheet-1.12.pc`
+  `lib/libspreadsheet-1.12.62.dylib`, and `lib/pkgconfig/libspreadsheet-1.12.pc`
   (`Requires: glib-2.0 gobject-2.0 libgsf-1 libxml-2.0 gtk+-3.0
   libgoffice-0.10`). The bridge can be compiled against it with plain
   `pkg-config --cflags --libs libspreadsheet-1.12`, which is how the smoke
@@ -401,23 +410,23 @@ from config (default 96) and feeds `go_image_set_default_dpi`.
 
 ## 9. Bundle-size cost of shipping GTK
 
-Transitive `otool -L` closure of `libspreadsheet`, the 41 Gnumeric plugins,
+Transitive `otool -L` closure of `libspreadsheet`, the 40 Gnumeric plugins,
 the 9 goffice plugins, and the gdk-pixbuf loaders, restricted to
 `/opt/homebrew` (system frameworks excluded):
 
 | Component | Size |
 |---|---|
-| 45 dylibs | 37.1 MB |
-| Gnumeric plugins (`.so`) | 4.7 MB |
-| goffice plugins | 1.2 MB |
-| gdk-pixbuf loaders | 0.8 MB |
+| 46 dylibs | 37.6 MB |
+| Gnumeric plugins (`.so`) | 3.9 MB |
+| goffice plugins | 1.1 MB |
+| gdk-pixbuf loaders | 0.6 MB |
 | Gnumeric + goffice data (`share/`) | 0.6 MB |
-| Gnumeric + goffice locale | 22.6 MB (trim to a language subset) |
+| Gnumeric + goffice locale | 23.7 MB (trim to a language subset) |
 | Adwaita icons | 15 MB (not needed; GTK never draws) |
 | GLib schemas | 56 KB |
 
-Largest dylib contributors: gtk+3 7.9 MB, librsvg 6.1 MB, libspreadsheet 4.8
-MB, glib 3.9 MB, goffice 1.5 MB. The closure also drags in libx11, libxcb,
+Largest dylib contributors: gtk+3 7.9 MB, librsvg 6.2 MB, libspreadsheet 4.9
+MB, glib 3.9 MB, goffice 1.6 MB. The closure also drags in libx11, libxcb,
 libepoxy, and freetype/fontconfig through gtk+3 and pango (about 3.5 MB); none
 is used at runtime. Roughly 45 MB of binaries before locale data, which is
 acceptable.

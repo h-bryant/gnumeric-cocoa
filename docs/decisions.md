@@ -32,15 +32,18 @@ Consequences: no work is blocked on the build tools; the switch to the
 submodule build is a `PKG_CONFIG_PATH` change. Patches to the engine (§5 of
 `docs/architecture.md`) cannot be exercised until the submodule build exists.
 
-## ADR-003 (2026-10-10): Submodule pinned to the installed goffice pairing
+## ADR-003 (2026-10-10): Submodule pinned to Homebrew's current goffice pairing
 
-Context: Homebrew's formulae moved to goffice 0.10.62 / gnumeric 1.12.62, but
-this machine has 0.10.60 / 1.12.60 installed. Upgrading is a system-wide
-change that Henry decides (HANDOFF.md §1).
+Context: Homebrew's formulae had moved to goffice 0.10.62 / gnumeric 1.12.62
+while this machine had 0.10.60 / 1.12.60 installed. Staying would have meant
+carrying a patch for 1.12.60 and later absorbing the 1.12.61 GObject refactor
+of the analysis tools in the middle of Phase 5.
 
-Decision: pin to `GNUMERIC_1_12_60` now. Re-pin to `GNUMERIC_1_12_62` and drop
-`patches/0001-*.patch` if Henry upgrades (HANDOFF.md §8, question 2).
+Decision (Henry, 2026-10-10): upgrade Homebrew's goffice and gnumeric and pin
+the submodule to `GNUMERIC_1_12_62`. The pairing rule stays: the submodule tag
+tracks the goffice version Homebrew installs.
 
-Consequences: the API the bridge targets is 1.12.60; the 1.12.61 refactor of
-the analysis tools to GObject (upstream NEWS) will affect Phase 5 if the pin
-moves, so it should move before Phase 5 at the latest.
+Consequences: `patches/` is empty; all line references in
+`docs/architecture.md` and `docs/upstream-issue.md` are for 1.12.62. When
+Homebrew moves goffice again, re-pin, re-run `scripts/smoke-test.sh`, and
+re-check the cited lines.

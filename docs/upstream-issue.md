@@ -16,7 +16,7 @@ render correctly to cairo-quartz surfaces with Pango's CoreText backend. There
 is no releasable code yet, so this is not an announcement, only a question
 about a small set of patches.
 
-Findings from reading 1.12.60 (`src/`):
+Findings from reading 1.12.62 (`src/`):
 
 The `WorkbookControlClass` and `SheetControlClass` vtables are complete enough
 to build another front end on, and `commands.c` takes `WorkbookControl *`
@@ -26,15 +26,15 @@ control crashes there:
 
 | Site | Function | What it does |
 |---|---|---|
-| `commands.c:1457` | `cmd_insert_cols` | `go_gtk_notice_dialog (wbcg_toplevel (WBC_GTK (wbc)), ...)` when data would be pushed off the sheet |
-| `commands.c:1486` | `cmd_insert_rows` | same |
-| `commands.c:2347` | `cmd_selection_colrow_hide` | `go_gtk_query_yes_no` before hiding all rows/columns |
-| `commands.c:3208` | `cmd_paste_copy` | `go_gtk_query_yes_no` for more than 10000 copies |
-| `cmd-edit.c:418` | `cmd_shift_rows` | `go_gtk_notice_dialog` |
-| `cmd-edit.c:467` | `cmd_shift_cols` | `go_gtk_notice_dialog` |
+| `commands.c:1497` | `cmd_insert_cols` | `go_gtk_notice_dialog (wbcg_toplevel (WBC_GTK (wbc)), ...)` when data would be pushed off the sheet |
+| `commands.c:1535` | `cmd_insert_rows` | same |
+| `commands.c:2461` | `cmd_selection_colrow_hide` | `go_gtk_query_yes_no` before hiding all rows/columns |
+| `commands.c:3355` | `cmd_paste_copy` | `go_gtk_query_yes_no` for more than 10000 copies |
+| `cmd-edit.c:420` | `cmd_shift_rows` | `go_gtk_notice_dialog` |
+| `cmd-edit.c:469` | `cmd_shift_cols` | `go_gtk_notice_dialog` |
 | `undo.c:217-222` | `cb_filter_set_condition_undo_set_pb` (via `SHEET_FOREACH_CONTROL` at line 266) | casts `SheetControl *` to `SheetControlGUI *` to set the progress-bar text |
 
-Other sites (`commands.c:3051`, `sheet-object.c:131`, `print.c`, `stf.c`,
+Other sites (`commands.c:3200`, `sheet-object.c:145`, `print.c`, `stf.c`,
 `stf-export.c`) already guard with `GNM_IS_WBC_GTK` / `GNM_IS_SCG`, and
 `hlink.c`, `sheet-object-graph.c`, and the dialogs take `WBCGtk *` explicitly,
 which is fine for a front end that supplies its own.
