@@ -1,5 +1,6 @@
 // GnmWorkbook and the Cocoa WorkbookControl (docs/architecture.md §3).
 #import "GnmPrivate.h"
+#import <AppKit/NSPasteboard.h>
 #include <workbook-priv.h>
 
 /* ------------------------------------------------------------------------
@@ -64,6 +65,23 @@ static void
 cwbc_menu_state_update (WorkbookControl *wbc, int flags)
 {
     [wbc_owner (wbc) _controlMenuStateDidChange:flags];
+}
+
+/* The system pasteboard half of the engine's clipboard (gui-clipboard.c for
+ * GTK): claim_selection mirrors the engine's region as text so other
+ * applications can paste it; paste_from_selection imports text from other
+ * applications when the engine's own clipboard is empty. */
+static gboolean
+cwbc_claim_selection (WorkbookControl *wbc)
+{
+    GnmWorkbook *owner = wbc_owner (wbc);
+    return owner ? [owner _controlClaimSelection] : TRUE;
+}
+
+static void
+cwbc_paste_from_selection (WorkbookControl *wbc, GnmPasteTarget const *pt)
+{
+    [wbc_owner (wbc) _controlPasteFromSelection:pt];
 }
 
 /* patches/0001: commands ask through the control instead of a GTK dialog. */
@@ -151,6 +169,8 @@ cwbc_class_init (GObjectClass *object_class)
     wbc_class->undo_redo.labels = cwbc_undo_redo_labels;
     wbc_class->menu_state.update = cwbc_menu_state_update;
     wbc_class->query_yes_no = cwbc_query_yes_no;
+    wbc_class->claim_selection = cwbc_claim_selection;
+    wbc_class->paste_from_selection = cwbc_paste_from_selection;
 }
 
 static void
@@ -174,6 +194,7 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
     NSMutableArray<GnmSheet *> *_sheetWrappers;   /* one per attached SheetView */
     gulong _dirtyHandler;
     NSString *_undoLabel, *_redoLabel;
+    NSInteger _claimedPasteboardChangeCount;   /* -1: the pasteboard is not ours */
 }
 
 - (instancetype)initWithWorkbookView:(WorkbookView *)view engine:(GnmEngine *)engine
@@ -184,6 +205,7 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
     _wbv = view;
     _wb = wb_view_get_workbook (view);
     _sheetWrappers = [NSMutableArray array];
+    _claimedPasteboardChangeCount = -1;
 
     /* The wbc_gtk_new sequence minus the widgets. */
     _wbc = g_object_new (gnm_cocoa_workbook_control_get_type (), NULL);
@@ -457,6 +479,73 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
 {
     if ([self.delegate respondsToSelector:@selector(workbookMenuStateDidChange:)])
         [self.delegate workbookMenuStateDidChange:self];
+}
+
+#pragma mark - Clipboard
+
+- (BOOL)_controlClaimSelection
+{
+    GnmCellRegion *content = gnm_app_clipboard_contents_get ();
+    NSPasteboard *pasteboard = NSPasteboard.generalPasteboard;
+    [pasteboard clearContents];
+    if (content != NULL && content->cols > 0 && content->rows > 0) {
+        GString *text = cellregion_to_string (content, TRUE, workbook_date_conv (_wb));
+        if (text) {
+            [pasteboard setString:GnmString (text->str) forType:NSPasteboardTypeString];
+            g_string_free (text, TRUE);
+        }
+    }
+    _claimedPasteboardChangeCount = pasteboard.changeCount;
+    return TRUE;
+}
+
+- (void)_dropStaleEngineClipboard
+{
+    if (gnm_app_clipboard_is_empty ())
+        return;
+    if (_claimedPasteboardChangeCount < 0 || NSPasteboard.generalPasteboard.changeCount != _claimedPasteboardChangeCount) {
+        gnm_app_clipboard_clear (TRUE);
+        _claimedPasteboardChangeCount = -1;
+    }
+}
+
+/* text_to_cell_region (gui-clipboard.c) without the import dialog: one
+ * value is matched like typed input, anything else goes through the text
+ * importer with guessed options. */
+static GnmCellRegion *
+region_from_text (Workbook *wb, NSString *string)
+{
+    const char *data = string.UTF8String;
+    GnmCellRegion *cr;
+    if (strchr (data, '\n') == NULL && strchr (data, '\t') == NULL && strchr (data, '\r') == NULL) {
+        GnmCellCopy *cc = gnm_cell_copy_new ((cr = gnm_cell_region_new (NULL)), 0, 0);
+        char *tmp = g_strdup (data);
+        cc->val = format_match (tmp, NULL, workbook_date_conv (wb));
+        if (cc->val)
+            g_free (tmp);
+        else
+            cc->val = value_new_string_nocopy (tmp);
+        cc->texpr = NULL;
+        cr->cols = cr->rows = 1;
+    } else {
+        GnmStfParseOptions *options = stf_parse_options_guess (data);
+        cr = stf_parse_region (options, data, NULL, wb);
+        g_object_unref (options);   /* a GObject since 1.12.61 */
+        if (cr == NULL)
+            cr = gnm_cell_region_new (NULL);
+    }
+    return cr;
+}
+
+- (void)_controlPasteFromSelection:(GnmPasteTarget const *)target
+{
+    NSString *string = [NSPasteboard.generalPasteboard stringForType:NSPasteboardTypeString];
+    if (string == nil)
+        return;
+    GnmCellRegion *cr = region_from_text (_wb, string);
+    if (cr->cols > 0 && cr->rows > 0)
+        cmd_paste_copy ((WorkbookControl *) _wbc, target, cr);
+    cellregion_unref (cr);
 }
 
 - (BOOL)_controlAskYesNo:(const char *)question defaultAnswer:(BOOL)defaultAnswer

@@ -173,10 +173,21 @@
   typing, undo, redo; a pasted block appears at E5; the NSDocument save
   writes a file ssconvert reads back with the edits and clears the edited
   state.
-- Still to do in Phase 2: paste as one undoable region (engine clipboard
-  format, `claim_selection`/`paste_from_selection`), range selection with
-  the keyboard while editing a formula, autocomplete, and the editor using
-  the cell's own font.
+- Clipboard, second pass: Copy and Cut go through `gnm_app_clipboard_cut_copy`
+  (the engine keeps the cell region with formulas and formats and marks the
+  source with marching ants, drawn as a static dashed outline), the
+  control's `claim_selection` slot mirrors the region as tab-separated text
+  on `NSPasteboard`, and Paste runs `cmd_paste_to_selection`: one undoable
+  command ("Pasting into E5"), relative references adjust, a cut moves. Text
+  from other applications comes in through `paste_from_selection`: one
+  value is matched like typed input (dates included), several cells go
+  through the engine's text importer with guessed options (formulas stay
+  text, as in the GTK front end). A pasteboard change by another app
+  retires the engine's clipboard. `Tests/BridgeTests/editing.m` covers it.
+- Save As offers Gnumeric, Gnumeric XML uncompressed (`.xml`, the engine's
+  `Gnumeric_XmlIO:sax:0` saver, declared as an exported UTI), and Excel.
+- Still to do in Phase 2: range selection with the keyboard while editing
+  a formula, autocomplete, and the editor using the cell's own font.
 
 ## How to resume
 

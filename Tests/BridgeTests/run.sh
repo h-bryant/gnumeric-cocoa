@@ -14,7 +14,7 @@ scripts/build-bridge.sh >/dev/null || { echo "bridge build failed"; exit 1; }
 cflags=()
 while IFS= read -r line; do cflags+=("$line"); done < <(scripts/build-bridge.sh --flags)
 # shellcheck disable=SC2046
-libs=($(pkg-config --libs libspreadsheet-1.12 cairo-quartz) -framework Foundation -framework CoreGraphics -framework ImageIO -framework CoreServices)
+libs=($(pkg-config --libs libspreadsheet-1.12 cairo-quartz) -framework Foundation -framework AppKit -framework CoreGraphics -framework ImageIO -framework CoreServices)
 
 export GNM_TEST_SCHEMA_DIR="$(pkg-config --variable=prefix libspreadsheet-1.12)/share/glib-2.0/schemas"
 [ -f "$GNM_TEST_SCHEMA_DIR/gschemas.compiled" ] || export GNM_TEST_SCHEMA_DIR="$HOMEBREW_PREFIX/share/glib-2.0/schemas"

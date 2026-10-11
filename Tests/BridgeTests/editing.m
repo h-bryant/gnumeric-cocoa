@@ -3,6 +3,7 @@
 // patches/0001 decouples from GTK (an insert that would push data off the
 // sheet, and a hide-all question answered by the delegate).
 #import "GnmTest.h"
+#import <AppKit/NSPasteboard.h>
 
 @interface EditRecorder : NSObject <GnmWorkbookDelegate>
 @property (nonatomic) NSMutableArray<NSString *> *events;
@@ -115,6 +116,47 @@ int main (void)
         wb.delegate = nil;
         error = nil;
         GNM_ASSERT (![s setSelectedColumns:NO hidden:YES error:&error], @"default answer refuses");
+
+        /* clipboard: copy puts tab-separated text on the pasteboard, paste is
+         * one undoable command, cut moves, and foreign text imports */
+        wb.delegate = rec;
+        [s setText:@"a" atColumn:20 row:20 autocorrect:NO error:NULL];
+        [s setText:@"=F6" atColumn:21 row:20 autocorrect:NO error:NULL];
+        [s setText:@"42" atColumn:5 row:5 autocorrect:NO error:NULL];
+        [s selectRange:GnmCellRangeMake (20, 20, 21, 20) editPosition:GnmCellCoordinateMake (20, 20)];
+        [s copySelection];
+        GNM_ASSERT (s.marchingAntsFrames.count == 1, @"ants after copy: %lu", (unsigned long) s.marchingAntsFrames.count);
+        NSString *pasted = [NSPasteboard.generalPasteboard stringForType:NSPasteboardTypeString];
+        GNM_ASSERT ([pasted hasPrefix:@"a\t42"], @"pasteboard text '%@'", pasted);
+        [s selectCellAtColumn:20 row:25];
+        [s paste];
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:20 row:25] ?: @"", @"a");
+        GNM_ASSERT ([s cellHasFormulaAtColumn:21 row:25], @"formula pasted as a formula, not text");
+        GNM_ASSERT_EQ_STR ([s editingTextOfCellAtColumn:21 row:25] ?: @"", @"=F11");   /* relative reference moved with the paste */
+        [wb undo];
+        GNM_ASSERT ([s displayTextOfCellAtColumn:20 row:25] == nil, @"paste is one undoable command");
+        [s selectRange:GnmCellRangeMake (20, 20, 21, 20) editPosition:GnmCellCoordinateMake (20, 20)];
+        [s cutSelection];
+        [s selectCellAtColumn:20 row:30];
+        [s paste];
+        GNM_ASSERT ([s displayTextOfCellAtColumn:20 row:20] == nil && [[s displayTextOfCellAtColumn:20 row:30] isEqualToString:@"a"], @"cut moved the cells");
+        /* text from another application replaces the engine's clipboard */
+        [NSPasteboard.generalPasteboard clearContents];
+        [NSPasteboard.generalPasteboard setString:@"1\t2.5\nx\t=1+1" forType:NSPasteboardTypeString];
+        [s selectCellAtColumn:0 row:40];
+        [s paste];
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:1 row:40] ?: @"", @"2.5");
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:0 row:41] ?: @"", @"x");
+        /* Text import matches values, not formulas; "=1+1" stays text, as
+         * it does when pasted into the GTK front end. */
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:1 row:41] ?: @"", @"=1+1");
+        GNM_ASSERT (![s cellHasFormulaAtColumn:1 row:41], @"imported text is not a formula");
+        [NSPasteboard.generalPasteboard clearContents];
+        [NSPasteboard.generalPasteboard setString:@"2026-10-11" forType:NSPasteboardTypeString];
+        [s selectCellAtColumn:0 row:42];
+        [s paste];
+        NSLog (@"single-cell paste of a date shows '%@'", [s displayTextOfCellAtColumn:0 row:42]);
+        GNM_ASSERT ([s displayTextOfCellAtColumn:0 row:42].length > 0, @"single value pasted");
 
         /* save the edited file and reopen */
         [s setText:@"saved" atColumn:3 row:3 autocorrect:NO error:NULL];

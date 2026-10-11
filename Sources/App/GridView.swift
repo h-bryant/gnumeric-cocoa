@@ -102,6 +102,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         }
         sheet.drawCells(in: dirtyRect, context: context, backgroundColor: NSColor.white.cgColor)
         sheet.drawSheetObjects(in: dirtyRect, context: context)
+        drawMarchingAnts(of: sheet, dirtyRect: dirtyRect)
         drawSelection(of: sheet, dirtyRect: dirtyRect)
     }
 
@@ -121,6 +122,20 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         let outline = NSBezierPath(rect: selection.insetBy(dx: -0.5, dy: -0.5))
         outline.lineWidth = 2
         outline.stroke()
+    }
+
+    /// The source of the last copy or cut, outlined with dashes (static for
+    /// now; the GTK front end animates them).
+    private func drawMarchingAnts(of sheet: Sheet, dirtyRect: NSRect) {
+        for value in sheet.marchingAntsFrames {
+            let frame = value.rectValue
+            guard frame.intersects(dirtyRect) else { continue }
+            let path = NSBezierPath(rect: frame.insetBy(dx: 0.5, dy: 0.5))
+            path.lineWidth = 1
+            path.setLineDash([4, 3], count: 2, phase: 0)
+            NSColor.labelColor.setStroke()
+            path.stroke()
+        }
     }
 
     private func invalidateSelection(_ sheet: Sheet) {
@@ -220,51 +235,21 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         sheet?.workbook?.redo()
     }
 
-    /// Tab-separated display text of the selection.
-    private func selectionAsText() -> String? {
-        guard let sheet else { return nil }
-        let r = sheet.selectedRange
-        guard (r.end.row - r.start.row + 1) * (r.end.column - r.start.column + 1) <= 1_000_000 else { return nil }
-        var lines: [String] = []
-        for row in r.start.row...r.end.row {
-            let cells = (r.start.column...r.end.column).map { sheet.displayTextOfCell(atColumn: $0, row: row) ?? "" }
-            lines.append(cells.joined(separator: "\t"))
-        }
-        return lines.joined(separator: "\n")
-    }
-
     @objc func copy(_ sender: Any?) {
-        guard let text = selectionAsText() else { NSSound.beep(); return }
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(text, forType: .string)
+        if isEditing { commitEditing(text: editor.stringValue, movement: .none) }
+        sheet?.copySelection()
     }
 
     @objc func cut(_ sender: Any?) {
-        copy(sender)
-        clearSelectionValues()
+        if isEditing { commitEditing(text: editor.stringValue, movement: .none) }
+        sheet?.cutSelection()
     }
 
-    /// Paste text: one value goes into the edit cell; tab- and
-    /// newline-separated text fills a block from the edit cell, one engine
-    /// command per cell for now (a single region paste comes with the
-    /// engine's clipboard format).
+    /// The engine's clipboard when it is current, else text from the system
+    /// pasteboard through the engine's text importer; one undoable command.
     @objc func paste(_ sender: Any?) {
-        guard let sheet, let text = NSPasteboard.general.string(forType: .string) else { NSSound.beep(); return }
-        let origin = sheet.editPosition
-        var lines = text.components(separatedBy: .newlines)
-        if lines.last == "" { lines.removeLast() }
-        do {
-            for (dr, line) in lines.enumerated() {
-                for (dc, value) in line.components(separatedBy: "\t").enumerated() {
-                    let column = origin.column + dc, row = origin.row + dr
-                    guard column < sheet.columnCount, row < sheet.rowCount else { continue }
-                    try sheet.setText(value, atColumn: column, row: row, autocorrect: false)
-                }
-            }
-        } catch {
-            presentError?(error)
-        }
+        if isEditing { commitEditing(text: editor.stringValue, movement: .none) }
+        sheet?.paste()
     }
 
     @objc func delete(_ sender: Any?) {
@@ -483,6 +468,10 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
 
     func sheet(_ sheet: Sheet, cursorDidMoveTo range: CellRange) {
         invalidateSelection(sheet)
+    }
+
+    func sheetMarchingAntsDidChange(_ sheet: Sheet) {
+        needsDisplay = true
     }
 
     func sheet(_ sheet: Sheet, scrollToColumn column: Int, row: Int) {

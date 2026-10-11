@@ -157,12 +157,11 @@ XCTest bundle. Not yet: frozen panes (Phase 3) and right-to-left sheets
 - Save, including uncompressed `.gnumeric` XML (Henry's preferred version-control-friendly format).
 
 Status 2026-10-11: cell editor, formula bar editing, undo/redo on the engine's
-stack, Delete, text clipboard (paste cell by cell), and saving `.gnumeric` and
-`.xlsx` through `NSDocument` exist (`docs/progress.md`). Not yet: region paste
-with the engine clipboard format, uncompressed `.gnumeric` XML as a save choice
-(the bridge supports `Gnumeric_XmlIO:sax` with an `.xml` name; the document
-offers only `.gnumeric` and `.xlsx`), autocomplete, keyboard range selection
-inside formulas.
+stack, Delete, the engine's clipboard (region copy/cut/paste with marching
+ants, text import from other applications), and saving `.gnumeric`,
+uncompressed `.xml`, and `.xlsx` through `NSDocument` exist
+(`docs/progress.md`). Not yet: autocomplete, keyboard range selection inside
+formulas, the editor in the cell's own font.
 
 ### Phase 2b — MVP completion
 
@@ -291,6 +290,6 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    waits on Henry enabling developer mode: `sudo DevToolsSecurity -enable`).
 3. Upstream engagement is deferred (§2, ADR-011): do not post or extend
    `docs/upstream-issue.md`; keep any engine patch minimal and upstreamable.
-4. Continue Phase 2 (see its status note in §4): region paste through the
-   engine's clipboard, then Phase 2b (read-only charts already draw; the
-   Format Cells dialog and `docs/mvp-known-gaps.md` remain).
+4. Phase 2b (read-only charts already draw): the Format Cells dialog as the
+   first SwiftUI form in an `NSHostingController`, then `v0.1.0` and
+   `docs/mvp-known-gaps.md`.

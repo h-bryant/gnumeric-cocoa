@@ -44,7 +44,7 @@ targetTemplates:
         HEADER_SEARCH_PATHS: "$(SRCROOT)/Sources/Bridge/include $(GNM_HEADER_SEARCH_PATHS)"
         OTHER_CFLAGS: "$(GNM_OTHER_CFLAGS)"
         LIBRARY_SEARCH_PATHS: "$(GNM_LIBRARY_SEARCH_PATHS)"
-        OTHER_LDFLAGS: "$(GNM_OTHER_LDFLAGS) -framework Foundation -framework CoreGraphics -framework ImageIO -framework CoreServices"
+        OTHER_LDFLAGS: "$(GNM_OTHER_LDFLAGS) -framework Foundation -framework AppKit -framework CoreGraphics -framework ImageIO -framework CoreServices"
 targets:
   engine_lifecycle:
     templates: [BridgeTestProgram]

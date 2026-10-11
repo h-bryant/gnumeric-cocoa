@@ -116,6 +116,17 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 - (BOOL)insertRows:(NSInteger)count atRow:(NSInteger)row error:(NSError **)error NS_SWIFT_NAME(insertRows(_:at:));
 - (BOOL)deleteColumns:(NSRange)columns error:(NSError **)error NS_SWIFT_NAME(deleteColumns(_:));
 - (BOOL)deleteRows:(NSRange)rows error:(NSError **)error NS_SWIFT_NAME(deleteRows(_:));
+/// Copy or cut the selection into the engine's clipboard, which also puts a
+/// tab-separated text version on the system pasteboard; a cut becomes a move
+/// when pasted.  Paste takes the engine's clipboard when it is current,
+/// otherwise text from the system pasteboard (one value is matched like typed
+/// input; several cells go through the engine's text importer).
+- (void)copySelection;
+- (void)cutSelection;
+- (void)paste;
+/// Frames (sheet pixels) of the ranges carrying marching ants: the source
+/// of the last copy or cut, until it is pasted or cleared.
+@property (nonatomic, readonly) NSArray<NSValue *> *marchingAntsFrames;
 /// Hide or show the selected columns or rows (`cmd_selection_colrow_hide`).
 - (BOOL)setSelectedColumns:(BOOL)columns hidden:(BOOL)hidden error:(NSError **)error NS_SWIFT_NAME(setSelected(columns:hidden:));
 

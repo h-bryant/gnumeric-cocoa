@@ -31,6 +31,11 @@
 #include <selection.h>
 #include <parse-util.h>
 #include <commands.h>
+#include <cmd-edit.h>
+#include <clipboard.h>
+#include <number-match.h>
+#include <stf-parse.h>
+#include <value.h>
 #include <goffice/goffice.h>
 #include <goffice/app/go-cmd-context-impl.h>
 #include <gsf/gsf-impl-utils.h>
@@ -90,6 +95,11 @@ GType gnm_cocoa_sheet_control_get_type (void);
 - (void)_controlUndoLabelDidChange:(nullable const char *)undo redoLabel:(nullable const char *)redo;
 - (void)_controlMenuStateDidChange:(int)flags;
 - (BOOL)_controlAskYesNo:(nullable const char *)question defaultAnswer:(BOOL)defaultAnswer;
+- (BOOL)_controlClaimSelection;
+- (void)_controlPasteFromSelection:(GnmPasteTarget const *)target;
+/// Drop the engine's clipboard when another application has replaced the
+/// system pasteboard since the control claimed it.
+- (void)_dropStaleEngineClipboard;
 /// Run an engine command that returns TRUE on failure, turning messages it
 /// reported into `error`.
 - (BOOL)_runCommand:(gboolean (NS_NOESCAPE ^)(WorkbookControl *wbc))command

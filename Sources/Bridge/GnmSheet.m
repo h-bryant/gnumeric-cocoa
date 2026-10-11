@@ -959,6 +959,48 @@ cell_range_from (GnmRange const *r)
     } description:@"Could not delete rows." error:error];
 }
 
+- (void)copySelection
+{
+    GnmRange const *r = _sv ? selection_first_range (_sv, NULL, NULL) : NULL;
+    if (r)
+        gnm_app_clipboard_cut_copy (self.workbook.control, FALSE, _sv, r, TRUE);
+}
+
+- (void)cutSelection
+{
+    GnmRange const *r = _sv ? selection_first_range (_sv, NULL, NULL) : NULL;
+    if (r)
+        gnm_app_clipboard_cut_copy (self.workbook.control, TRUE, _sv, r, TRUE);
+}
+
+- (void)paste
+{
+    if (_sv == NULL)
+        return;
+    [self.workbook _dropStaleEngineClipboard];
+    /* void: problems are reported through the command context */
+    [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        cmd_paste_to_selection (wbc, _sv, PASTE_DEFAULT);
+        return FALSE;
+    } description:@"Could not paste." error:NULL];
+}
+
+- (NSArray<NSValue *> *)marchingAntsFrames
+{
+    NSMutableArray *frames = [NSMutableArray array];
+    if (_sv == NULL)
+        return frames;
+    for (GList *l = _sv->ants; l; l = l->next) {
+        GnmRange const *r = l->data;
+        CGFloat x = colrow_distance (_sheet, TRUE, 0, r->start.col);
+        CGFloat y = colrow_distance (_sheet, FALSE, 0, r->start.row);
+        CGFloat w = colrow_distance (_sheet, TRUE, r->start.col, r->end.col + 1);
+        CGFloat h = colrow_distance (_sheet, FALSE, r->start.row, r->end.row + 1);
+        [frames addObject:[NSValue valueWithRect:NSMakeRect (x, y, w, h)]];
+    }
+    return frames;
+}
+
 - (BOOL)setSelectedColumns:(BOOL)columns hidden:(BOOL)hidden error:(NSError **)error
 {
     return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {

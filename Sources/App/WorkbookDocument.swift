@@ -11,6 +11,10 @@ final class WorkbookDocument: NSDocument {
 
     nonisolated static let gnumericType = "org.gnome.gnumeric.spreadsheet"
     nonisolated static let xlsxType = "org.openxmlformats.spreadsheetml.sheet"
+    /// Gnumeric's uncompressed XML (the engine's `Gnumeric_XmlIO:sax:0`
+    /// saver, chosen by the `.xml` extension): diffable, Henry's preferred
+    /// form for version control.
+    nonisolated static let xmlType = "io.github.h-bryant.gnumeric-cocoa.gnumeric-xml"
 
     override init() {
         super.init()
@@ -42,12 +46,13 @@ final class WorkbookDocument: NSDocument {
     // MARK: Saving
 
     override func writableTypes(for saveOperation: NSDocument.SaveOperationType) -> [String] {
-        [Self.gnumericType, Self.xlsxType]
+        [Self.gnumericType, Self.xmlType, Self.xlsxType]
     }
 
     override func fileNameExtension(forType typeName: String, saveOperation: NSDocument.SaveOperationType) -> String? {
         switch typeName {
         case Self.gnumericType: return "gnumeric"
+        case Self.xmlType: return "xml"
         case Self.xlsxType: return "xlsx"
         default: return super.fileNameExtension(forType: typeName, saveOperation: saveOperation)
         }
