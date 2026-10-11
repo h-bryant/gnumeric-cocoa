@@ -295,9 +295,18 @@
   capture. Snapshot runs now mark documents clean before terminating: the
   unsaved-documents review blocked headless and its alert kept the
   document (so a workbook) alive past the engine's shutdown.
-- `docs/mvp-known-gaps.md` updated. Next in Phase 3: the status bar with
-  the auto-expression, freeze panes, sheet management (insert, rename,
-  remove, reorder), Paste Special, sort, and the filtered Clear variants.
+- Status bar: the engine's auto-expression (`WorkbookView` properties
+  `auto-expr-func`, `auto-expr-descr`, `auto-expr-value`) as a pull-down at
+  the right of the tab bar showing "Sum = 42" over the selection, with
+  Sum, Min, Max, Average, and Count to choose from (GTK's list). The bridge
+  formats the value with `format_value` and the workbook's date
+  convention, forwards `notify::auto-expr-value` to the delegate, and
+  offers `recomputeAutoExpression` because the engine's own trigger after a
+  selection change is a GLib timeout (the recalc lag) that test programs
+  never pump.
+- `docs/mvp-known-gaps.md` updated. Next in Phase 3: freeze panes, sheet
+  management (insert, rename, remove, reorder), Paste Special, sort, and
+  the filtered Clear variants.
 
 ## How to resume
 

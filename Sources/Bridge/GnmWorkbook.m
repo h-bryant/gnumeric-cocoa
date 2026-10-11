@@ -181,6 +181,14 @@ cb_dirty_changed (GObject *doc, GParamSpec *pspec, gpointer owner)
         [wb.delegate workbookModifiedStateDidChange:wb];
 }
 
+static void
+cb_auto_expr_value_changed (GObject *view, GParamSpec *pspec, gpointer owner)
+{
+    GnmWorkbook *wb = (__bridge GnmWorkbook *) owner;
+    if ([wb.delegate respondsToSelector:@selector(workbook:autoExpressionDidChange:)])
+        [wb.delegate workbook:wb autoExpressionDidChange:wb.autoExpressionText];
+}
+
 GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
                 NULL, NULL, cwbc_class_init, NULL, NULL, GNM_WBC_TYPE, 0,
                 GSF_INTERFACE (cwbc_cmd_context_init, GO_TYPE_CMD_CONTEXT))
@@ -193,6 +201,7 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
     GnmCocoaWorkbookControl *_wbc;
     NSMutableArray<GnmSheet *> *_sheetWrappers;   /* one per attached SheetView */
     gulong _dirtyHandler;
+    gulong _autoExprHandler;
     NSString *_undoLabel, *_redoLabel;
     NSInteger _claimedPasteboardChangeCount;   /* -1: the pasteboard is not ours */
 }
@@ -220,6 +229,8 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
     wb_control_init_state (wbc);   /* sheet.add for every existing SheetView */
     _dirtyHandler = g_signal_connect (G_OBJECT (_wb), "notify::dirty",
                                       G_CALLBACK (cb_dirty_changed), (__bridge void *) self);
+    _autoExprHandler = g_signal_connect (G_OBJECT (_wbv), "notify::auto-expr-value",
+                                         G_CALLBACK (cb_auto_expr_value_changed), (__bridge void *) self);
     [engine _registerWorkbook:self];
     return self;
 }
@@ -234,6 +245,8 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
     }
     if (_dirtyHandler)
         g_signal_handler_disconnect (G_OBJECT (_wb), _dirtyHandler);
+    if (_autoExprHandler)
+        g_signal_handler_disconnect (G_OBJECT (_wbv), _autoExprHandler);
     for (GnmSheet *sheet in _sheetWrappers)
         [sheet _detachFromEngine];
     [_sheetWrappers removeAllObjects];
@@ -327,6 +340,42 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
     workbook_recalc_all (_wb);
 }
 
+#pragma mark - Auto-expression
+
+- (NSString *)autoExpressionText
+{
+    GnmValue const *v = _wbv->auto_expr.value;
+    if (v == NULL)
+        return @"";
+    NSMutableString *text = [NSMutableString string];
+    if (_wbv->auto_expr.descr)
+        [text appendFormat:@"%s = ", _wbv->auto_expr.descr];
+    GOFormat const *format = VALUE_FMT (v);
+    char *formatted = format ? format_value (format, v, -1, workbook_date_conv (_wb)) : value_get_as_string (v);
+    [text appendString:formatted ? @(formatted) : @""];
+    g_free (formatted);
+    return text;
+}
+
+- (void)setAutoExpressionFunction:(NSString *)name label:(NSString *)label
+{
+    GnmFunc *func = gnm_func_lookup (name.UTF8String, _wb);
+    if (func == NULL)
+        return;
+    g_object_set (_wbv, "auto-expr-func", func, "auto-expr-descr", label.UTF8String, NULL);
+}
+
+- (void)recomputeAutoExpression
+{
+    wb_view_auto_expr_recalc (_wbv);
+}
+
+- (NSString *)autoExpressionFunction
+{
+    GnmFunc *func = _wbv->auto_expr.func;
+    return func ? @(gnm_func_get_name (func, FALSE)) : @"";
+}
+
 #pragma mark - Commands, undo, redo
 
 - (BOOL)_runCommand:(gboolean (NS_NOESCAPE ^)(WorkbookControl *wbc))command
@@ -368,6 +417,8 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
 
 - (void)resendDelegateState
 {
+    if ([self.delegate respondsToSelector:@selector(workbook:autoExpressionDidChange:)])
+        [self.delegate workbook:self autoExpressionDidChange:self.autoExpressionText];
     if (_wbv->current_sheet_view == NULL)
         return;
     wb_view_selection_desc (_wbv, TRUE, (WorkbookControl *) _wbc);

@@ -14,6 +14,12 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     private let nameBox = NSTextField(labelWithString: "")
     private let formulaField = NSTextField(labelWithString: "")
     private let tabs = NSSegmentedControl()
+    /// The status bar's auto-expression: a pull-down showing "Sum = 42"
+    /// whose items choose the function, as the GTK status bar does.
+    private let autoExpression = NSPopUpButton(frame: .zero, pullsDown: true)
+    private static let autoExpressionChoices: [(label: String, function: String)] = [
+        ("Sum", "sum"), ("Min", "min"), ("Max", "max"), ("Average", "average"), ("Count", "count"),
+    ]
     private let tabScroller = NSScrollView()
     private var tabSheets: [Sheet] = []
     /// Zoom steps for the View menu, as percentages.
@@ -121,9 +127,22 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         tabScroller.drawsBackground = false
         tabScroller.borderType = .noBorder
         tabScroller.heightAnchor.constraint(equalToConstant: 30).isActive = true
-        let tabBar = NSStackView(views: [tabScroller])
+        autoExpression.bezelStyle = .texturedRounded
+        autoExpression.controlSize = .small
+        autoExpression.font = .monospacedDigitSystemFont(ofSize: NSFont.smallSystemFontSize, weight: .regular)
+        autoExpression.addItem(withTitle: "")   // the pull-down's title item
+        for choice in Self.autoExpressionChoices {
+            autoExpression.addItem(withTitle: choice.label)
+            autoExpression.lastItem?.representedObject = choice.function
+            autoExpression.lastItem?.target = self
+            autoExpression.lastItem?.action = #selector(autoExpressionChosen(_:))
+        }
+        autoExpression.setContentHuggingPriority(.required, for: .horizontal)
+        autoExpression.setContentCompressionResistancePriority(.required, for: .horizontal)
+        let tabBar = NSStackView(views: [tabScroller, autoExpression])
         tabBar.orientation = .horizontal
         tabBar.distribution = .fill
+        tabBar.spacing = 8
         tabBar.edgeInsets = NSEdgeInsets(top: 0, left: 8, bottom: 0, right: 8)
         tabScroller.setContentHuggingPriority(NSLayoutConstraint.Priority(1), for: .horizontal)
 
@@ -382,6 +401,11 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         }
     }
 
+    @objc private func autoExpressionChosen(_ sender: NSMenuItem) {
+        guard let function = sender.representedObject as? String else { return }
+        workbook.setAutoExpression(function: function, label: sender.title)
+    }
+
     @objc private func tabChanged(_ sender: NSSegmentedControl) {
         guard sender.selectedSegment >= 0, sender.selectedSegment < tabSheets.count else { return }
         workbook.select(tabSheets[sender.selectedSegment])
@@ -410,6 +434,14 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
 
     func workbook(_ workbook: Workbook, editLineDidChange text: String) {
         formulaField.stringValue = text
+    }
+
+    func workbook(_ workbook: Workbook, autoExpressionDidChange text: String) {
+        autoExpression.setTitle(text)
+        autoExpression.isHidden = text.isEmpty
+        for item in autoExpression.itemArray {
+            item.state = (item.representedObject as? String) == workbook.autoExpressionFunction ? .on : .off
+        }
     }
 
     func workbook(_ workbook: Workbook, selectionDescriptionDidChange text: String) {

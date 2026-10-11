@@ -18,6 +18,9 @@
 - (void)workbook:(GnmWorkbook *)workbook undoLabelDidChange:(NSString *)undo redoLabel:(NSString *)redo {
     [_events addObject:[NSString stringWithFormat:@"labels:%@/%@", undo ?: @"-", redo ?: @"-"]];
 }
+- (void)workbook:(GnmWorkbook *)workbook autoExpressionDidChange:(NSString *)text {
+    [_events addObject:[@"auto:" stringByAppendingString:text]];
+}
 - (BOOL)workbook:(GnmWorkbook *)workbook askYesNo:(NSString *)question defaultAnswer:(BOOL)defaultAnswer {
     _lastQuestion = question;
     [_events addObject:@"asked"];
@@ -223,6 +226,20 @@ int main (void)
                        defaultIncrement:NO error:&error], @"inverse autofill: %@", error);
         GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:40 row:56] ?: @"", @"\u22123");
         [wb undo];
+
+        /* the auto-expression follows the selection and the chosen function */
+        [s setText:@"10" atColumn:60 row:80 autocorrect:NO error:NULL];
+        [s setText:@"32" atColumn:60 row:81 autocorrect:NO error:NULL];
+        [s selectRange:GnmCellRangeMake (60, 80, 60, 81) editPosition:GnmCellCoordinateMake (60, 80)];
+        [wb recomputeAutoExpression];   /* the engine's own trigger is a timeout, unpumped here */
+        GNM_ASSERT_EQ_STR (wb.autoExpressionFunction, @"sum");
+        GNM_ASSERT_EQ_STR (wb.autoExpressionText, @"Sum = 42");
+        GNM_ASSERT ([rec.events containsObject:@"auto:Sum = 42"], @"delegate saw the sum: %@", rec.events.lastObject);
+        [wb setAutoExpressionFunction:@"average" label:@"Average"];
+        GNM_ASSERT_EQ_STR (wb.autoExpressionText, @"Average = 21");
+        [wb setAutoExpressionFunction:@"no-such-function" label:@"x"];
+        GNM_ASSERT_EQ_STR (wb.autoExpressionFunction, @"average");
+        [wb setAutoExpressionFunction:@"sum" label:@"Sum"];
 
         /* merge and unmerge */
         [s selectRange:GnmCellRangeMake (50, 70, 52, 71) editPosition:GnmCellCoordinateMake (50, 70)];

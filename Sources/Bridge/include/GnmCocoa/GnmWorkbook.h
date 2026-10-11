@@ -28,6 +28,9 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(WorkbookDelegate)
 - (void)workbookMenuStateDidChange:(GnmWorkbook *)workbook NS_SWIFT_NAME(workbookMenuStateDidChange(_:));
 /// The document's dirty flag changed (`go_doc_set_dirty`).
 - (void)workbookModifiedStateDidChange:(GnmWorkbook *)workbook NS_SWIFT_NAME(workbookModifiedStateDidChange(_:));
+/// The auto-expression over the selection (for example "Sum = 42") was
+/// recomputed; `text` is empty when there is nothing to show.
+- (void)workbook:(GnmWorkbook *)workbook autoExpressionDidChange:(NSString *)text NS_SWIFT_NAME(workbook(_:autoExpressionDidChange:));
 /// A command needs a yes/no answer (for example hiding every row, or
 /// pasting more than ten thousand copies).  Return the answer; when the
 /// delegate does not implement this, the command gets `defaultAnswer`.
@@ -58,6 +61,19 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Workbook)
 @property (nonatomic, readonly, copy) NSArray<GnmSheet *> *sheets;
 @property (nonatomic, readonly, nullable) GnmSheet *currentSheet;
 - (void)selectSheet:(GnmSheet *)sheet NS_SWIFT_NAME(select(_:));
+
+/// The status bar's auto-expression: the function's label, " = ", and the
+/// value over the current selection, formatted as the engine suggests
+/// (the GTK status bar); empty when there is no value.
+@property (nonatomic, readonly, copy) NSString *autoExpressionText;
+/// The engine function the auto-expression applies to the selection
+/// ("sum" by default; "min", "max", "average", "count" are the GTK
+/// choices) and the label shown for it.  An unknown name is ignored.
+- (void)setAutoExpressionFunction:(NSString *)name label:(NSString *)label NS_SWIFT_NAME(setAutoExpression(function:label:));
+@property (nonatomic, readonly, copy) NSString *autoExpressionFunction;
+/// Recompute the auto-expression now; the engine otherwise does it a
+/// recalc lag (a GLib timeout) after the selection changes.
+- (void)recomputeAutoExpression;
 
 /// Recalculate cells that need it (`workbook_recalc`).
 - (void)recalculate;

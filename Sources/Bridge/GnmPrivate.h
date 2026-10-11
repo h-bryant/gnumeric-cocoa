@@ -38,6 +38,8 @@
 #include <number-match.h>
 #include <stf-parse.h>
 #include <value.h>
+#include <gnm-format.h>
+#include <func.h>
 #include <goffice/goffice.h>
 #include <goffice/app/go-cmd-context-impl.h>
 #include <gsf/gsf-impl-utils.h>

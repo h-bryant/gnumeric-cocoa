@@ -295,7 +295,6 @@ Add new ones here as they arise, and do not resolve them unilaterally.
 4. Phase 3 (`docs/mvp-known-gaps.md` says what the MVP lacks). Done on
    2026-10-11: insert/delete rows and columns, hide and unhide, clear
    variants, fill and autofill (fill handle), column and row sizes with
-   header drag-resizing, merge, recalc. Next: the status bar with the
-   auto-expression (`WorkbookView` `notify::auto-expr-value`), freeze panes
-   (`gnm_sheet_view_freeze_panes` plus a four-pane grid), sheet management,
-   Paste Special, sort.
+   header drag-resizing, merge, recalc, the auto-expression in the tab bar.
+   Next: freeze panes (`gnm_sheet_view_freeze_panes` plus a four-pane
+   grid), sheet management, Paste Special, sort.

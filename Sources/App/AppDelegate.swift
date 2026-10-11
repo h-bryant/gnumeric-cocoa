@@ -214,6 +214,12 @@ enum Snapshot {
                 grid.selectColumn(nil)
                 grid.autofitColumns(nil)
                 NSLog("phase3: column A width %g undo=%@", sheet.width(ofColumn: 0), sheet.workbook?.undoLabel ?? "nil")
+                sheet.selectRange(CellRange(start: CellCoordinate(column: 6, row: 4), end: CellCoordinate(column: 6, row: 9)),
+                                  editPosition: CellCoordinate(column: 6, row: 4))
+                sheet.workbook?.recomputeAutoExpression()   // the engine's own trigger is a lag timer
+                NSLog("phase3: auto-expression '%@'", sheet.workbook?.autoExpressionText ?? "nil")
+                sheet.workbook?.setAutoExpression(function: "average", label: "Average")
+                NSLog("phase3: auto-expression '%@'", sheet.workbook?.autoExpressionText ?? "nil")
                 sheet.selectCell(atColumn: 2, row: 2)
                 grid.recalculate(nil)
                 view.layoutSubtreeIfNeeded()

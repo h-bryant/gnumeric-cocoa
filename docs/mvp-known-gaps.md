@@ -52,7 +52,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 |---|---|---|
 | ViewNew | no | second window on one workbook (`control_new` slot), Phase 3 |
 | ViewFreezeThawPanes | no | Phase 3; frozen panes in files draw as one pane |
-| ViewStatusbar | no | no status bar or auto-expression yet, Phase 3 |
+| ViewStatusbar | partial | the auto-expression (Sum/Min/Max/Average/Count of the selection) sits at the right of the tab bar; no hide toggle, no other status fields |
 | ViewFullScreen | no | enable the window's full-screen behavior, Phase 3 |
 | FormatWorkbook (workbook properties) | no | Phase 5 |
 | ViewZoom | partial | fixed steps via View menu; no zoom dialog or percentage entry |
@@ -116,7 +116,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | Feature | Status | Notes / Phase |
 |---|---|---|
 | Toolbars (standard, format, object) | no | Phase 3 |
-| Status bar, auto-expression (sum/average of selection) | no | Phase 3 |
+| Status bar, auto-expression (sum/average of selection) | partial | auto-expression pull-down 2026-10-11; no progress or zoom fields |
 | Name box navigation (type a reference) | no | Phase 3 |
 | Formula bar: multi-line editing, function tooltips | no | Phase 3 |
 | In-cell editor: cell's own font and alignment, autocomplete, range selection by mouse or keyboard while typing a formula, array formulas (Ctrl-Shift-Enter) | no | Phase 3 (`cmd_area_set_array_expr` is not wrapped yet) |
