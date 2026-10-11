@@ -110,6 +110,13 @@ enum Snapshot {
                 NSLog("snapshot: no visible window")
                 return
             }
+            if let zoom = ProcessInfo.processInfo.environment["GNM_SNAPSHOT_ZOOM"].flatMap(Double.init),
+               let controller = window.windowController as? WorkbookWindowController {
+                controller.gridView.sheet?.zoomFactor = zoom
+                controller.gridView.selectColumns(from: 1, to: 2, anchor: 1)
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_DEBUG_LAYOUT"] != nil {
                 dump(view: view, depth: 0)
             }

@@ -4,14 +4,17 @@ import GnmCocoa
 /// The document window: name box and formula line on top, the grid in a
 /// scroll view with header rulers, and sheet tabs at the bottom.
 @MainActor
-final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWindowDelegate {
+final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWindowDelegate, NSUserInterfaceValidations {
     let workbook: Workbook
-    private let gridView = GridView()
+    let gridView = GridView()
     private let scrollView = NSScrollView()
     private let nameBox = NSTextField(labelWithString: "")
     private let formulaField = NSTextField(labelWithString: "")
     private let tabs = NSSegmentedControl()
+    private let tabScroller = NSScrollView()
     private var tabSheets: [Sheet] = []
+    /// Zoom steps for the View menu, as percentages.
+    private static let zoomSteps: [Double] = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4]
 
     init(workbook: Workbook) {
         self.workbook = workbook
@@ -75,10 +78,20 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         tabs.trackingMode = .selectOne
         tabs.target = self
         tabs.action = #selector(tabChanged(_:))
-        let tabBar = NSStackView(views: [tabs])
+        // Many sheets overflow the window: the tabs sit in a horizontally
+        // scrolling strip (trackpad scroll, no visible scroller).
+        tabScroller.documentView = tabs
+        tabScroller.hasHorizontalScroller = false
+        tabScroller.hasVerticalScroller = false
+        tabScroller.verticalScrollElasticity = .none
+        tabScroller.drawsBackground = false
+        tabScroller.borderType = .noBorder
+        tabScroller.heightAnchor.constraint(equalToConstant: 30).isActive = true
+        let tabBar = NSStackView(views: [tabScroller])
         tabBar.orientation = .horizontal
-        tabBar.alignment = .centerY
-        tabBar.edgeInsets = NSEdgeInsets(top: 3, left: 8, bottom: 3, right: 8)
+        tabBar.distribution = .fill
+        tabBar.edgeInsets = NSEdgeInsets(top: 0, left: 8, bottom: 0, right: 8)
+        tabScroller.setContentHuggingPriority(NSLayoutConstraint.Priority(1), for: .horizontal)
 
         let column = NSStackView(views: [formulaBar, scrollView, tabBar])
         column.orientation = .vertical
@@ -99,6 +112,13 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         ])
         window.contentView = content
         window.initialFirstResponder = gridView
+        gridView.geometryDidChange = { [weak self] in self?.updateSubtitle() }
+    }
+
+    private func updateSubtitle() {
+        guard let sheet = gridView.sheet else { return }
+        let percent = Int((sheet.zoomFactor * 100).rounded())
+        window?.subtitle = percent == 100 ? "" : "\(percent)%"
     }
 
     // MARK: Sheets
@@ -113,16 +133,77 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         if let current = gridView.sheet, let index = tabSheets.firstIndex(of: current) {
             tabs.selectedSegment = index
         }
+        // As a scroll view's document the control keeps its natural width,
+        // so a long sheet list scrolls instead of being squeezed.
+        tabs.translatesAutoresizingMaskIntoConstraints = true
+        tabs.autoresizingMask = []
+        tabs.sizeToFit()
+        tabs.frame = NSRect(x: 0, y: 3, width: max(tabs.fittingSize.width, tabs.intrinsicContentSize.width), height: 24)
+        if ProcessInfo.processInfo.environment["GNM_DEBUG_LAYOUT"] != nil {
+            NSLog("tabs: %d segments, natural width %.1f", tabs.segmentCount, tabs.frame.width)
+        }
+    }
+
+    private func revealSelectedTab() {
+        guard tabs.selectedSegment >= 0 else { return }
+        var x: CGFloat = 0
+        for i in 0..<tabs.selectedSegment { x += tabs.width(forSegment: i) }
+        // width(forSegment:) is 0 for auto-sized segments; fall back to a
+        // proportional estimate.
+        if x == 0 && tabs.selectedSegment > 0 {
+            x = tabs.frame.width * CGFloat(tabs.selectedSegment) / CGFloat(max(tabs.segmentCount, 1))
+        }
+        tabs.scrollToVisible(NSRect(x: x, y: 0, width: tabs.frame.width / CGFloat(max(tabs.segmentCount, 1)), height: 24))
     }
 
     private func show(sheet: Sheet?) {
         gridView.sheet = sheet
         if let sheet, let index = tabSheets.firstIndex(of: sheet) {
             tabs.selectedSegment = index
+            revealSelectedTab()
         }
         scrollView.horizontalRulerView?.needsDisplay = true
         scrollView.verticalRulerView?.needsDisplay = true
         window?.makeFirstResponder(gridView)
+        updateSubtitle()
+    }
+
+    // MARK: Zoom (View menu, through the responder chain)
+
+    private func setZoom(_ factor: Double) {
+        guard let sheet = gridView.sheet else { return }
+        sheet.zoomFactor = factor
+    }
+
+    @objc func zoomIn(_ sender: Any?) {
+        guard let sheet = gridView.sheet else { return }
+        if let next = Self.zoomSteps.first(where: { $0 > sheet.zoomFactor + 1e-6 }) { setZoom(next) }
+    }
+
+    @objc func zoomOut(_ sender: Any?) {
+        guard let sheet = gridView.sheet else { return }
+        if let prev = Self.zoomSteps.last(where: { $0 < sheet.zoomFactor - 1e-6 }) { setZoom(prev) }
+    }
+
+    @objc func zoomActualSize(_ sender: Any?) {
+        setZoom(1)
+    }
+
+    func validateUserInterfaceItem(_ item: any NSValidatedUserInterfaceItem) -> Bool {
+        let zoom = gridView.sheet?.zoomFactor
+        switch item.action {
+        case #selector(zoomIn(_:)):
+            guard let zoom else { return false }
+            return zoom < Self.zoomSteps.last! - 1e-6
+        case #selector(zoomOut(_:)):
+            guard let zoom else { return false }
+            return zoom > Self.zoomSteps.first! + 1e-6
+        case #selector(zoomActualSize(_:)):
+            guard let zoom else { return false }
+            return abs(zoom - 1) > 1e-6
+        default:
+            return true
+        }
     }
 
     @objc private func tabChanged(_ sender: NSSegmentedControl) {

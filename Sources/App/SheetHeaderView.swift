@@ -3,6 +3,8 @@ import GnmCocoa
 
 /// Column and row headers as ruler views, so NSScrollView keeps them in step
 /// with the grid.  Drawn natively; the engine only supplies sizes and names.
+/// Clicking selects whole columns or rows, dragging or shift-clicking extends,
+/// and the corner above the row header selects everything.
 @MainActor
 class SheetHeaderView: NSRulerView {
     static let thickness: CGFloat = 20
@@ -10,6 +12,8 @@ class SheetHeaderView: NSRulerView {
 
     var gridView: GridView? { clientView as? GridView }
     var sheet: Sheet? { gridView?.sheet }
+    /// Index (column or row) where the current header drag started.
+    var dragAnchor: Int?
 
     override init(scrollView: NSScrollView?, orientation: NSRulerView.Orientation) {
         super.init(scrollView: scrollView, orientation: orientation)
@@ -23,13 +27,17 @@ class SheetHeaderView: NSRulerView {
 
     override var isFlipped: Bool { true }
 
-    static let font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+    /// Header text follows the sheet zoom like the GTK item bar does.
+    var font: NSFont {
+        let zoom = sheet?.zoomFactor ?? 1
+        return NSFont.systemFont(ofSize: max(7, min(NSFont.smallSystemFontSize * zoom, 40)))
+    }
 
     func attributes(selected: Bool) -> [NSAttributedString.Key: Any] {
         let style = NSMutableParagraphStyle()
         style.alignment = .center
         style.lineBreakMode = .byClipping
-        return [.font: Self.font,
+        return [.font: font,
                 .foregroundColor: selected ? NSColor.labelColor : NSColor.secondaryLabelColor,
                 .paragraphStyle: style]
     }
@@ -38,10 +46,53 @@ class SheetHeaderView: NSRulerView {
         (selected ? NSColor.selectedContentBackgroundColor.withAlphaComponent(0.25) : NSColor.windowBackgroundColor).setFill()
         rect.fill()
     }
+
+    /// The column or row under a point in this view's coordinates.
+    func index(at point: NSPoint) -> Int? { nil }
+
+    /// Select from the anchor to `index` (whole columns or rows).
+    func select(from anchor: Int, to index: Int) {}
+
+    override func mouseDown(with event: NSEvent) {
+        guard let gridView else { return }
+        window?.makeFirstResponder(gridView)
+        let point = convert(event.locationInWindow, from: nil)
+        guard let index = index(at: point) else {
+            cornerClicked()
+            return
+        }
+        if event.modifierFlags.contains(.shift), let anchor = dragAnchor {
+            select(from: anchor, to: index)
+        } else {
+            dragAnchor = index
+            select(from: index, to: index)
+        }
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let anchor = dragAnchor else { return }
+        let point = convert(event.locationInWindow, from: nil)
+        if let index = index(at: point) {
+            select(from: anchor, to: index)
+        }
+        gridView?.autoscroll(with: event)
+    }
+
+    func cornerClicked() {}
 }
 
 @MainActor
 final class ColumnHeaderView: SheetHeaderView {
+    override func index(at point: NSPoint) -> Int? {
+        guard let gridView, let sheet else { return nil }
+        let x = convert(point, to: gridView).x
+        return x >= 0 ? sheet.column(atX: x) : 0
+    }
+
+    override func select(from anchor: Int, to index: Int) {
+        gridView?.selectColumns(from: min(anchor, index), to: max(anchor, index), anchor: anchor)
+    }
+
     override func draw(_ dirtyRect: NSRect) {
         NSColor.windowBackgroundColor.setFill()
         dirtyRect.fill()
@@ -78,6 +129,26 @@ final class ColumnHeaderView: SheetHeaderView {
 
 @MainActor
 final class RowHeaderView: SheetHeaderView {
+    /// The strip above the first row, beside the column header: the
+    /// select-all corner.
+    private var cornerHeight: CGFloat {
+        scrollView?.horizontalRulerView?.frame.height ?? SheetHeaderView.thickness
+    }
+
+    override func index(at point: NSPoint) -> Int? {
+        guard let gridView, let sheet, point.y >= cornerHeight else { return nil }
+        let y = convert(point, to: gridView).y
+        return y >= 0 ? sheet.row(atY: y) : 0
+    }
+
+    override func select(from anchor: Int, to index: Int) {
+        gridView?.selectRows(from: min(anchor, index), to: max(anchor, index), anchor: anchor)
+    }
+
+    override func cornerClicked() {
+        gridView?.selectAll(nil)
+    }
+
     override func draw(_ dirtyRect: NSRect) {
         NSColor.windowBackgroundColor.setFill()
         dirtyRect.fill()
@@ -106,6 +177,21 @@ final class RowHeaderView: SheetHeaderView {
                 }
             }
             row += 1
+        }
+        // The select-all corner: a small triangle pointing at A1.
+        let corner = NSRect(x: 0, y: 0, width: width, height: cornerHeight)
+        if corner.intersects(dirtyRect) {
+            NSColor.windowBackgroundColor.setFill()
+            corner.fill()
+            let triangle = NSBezierPath()
+            triangle.move(to: NSPoint(x: width - 4, y: cornerHeight - 4))
+            triangle.line(to: NSPoint(x: width - 14, y: cornerHeight - 4))
+            triangle.line(to: NSPoint(x: width - 4, y: cornerHeight - 14))
+            triangle.close()
+            NSColor.tertiaryLabelColor.setFill()
+            triangle.fill()
+            NSColor.separatorColor.setFill()
+            NSRect(x: 0, y: cornerHeight - 1, width: width, height: 1).fill()
         }
         NSRect(x: width - 1, y: 0, width: 1, height: bounds.height).fill()
     }

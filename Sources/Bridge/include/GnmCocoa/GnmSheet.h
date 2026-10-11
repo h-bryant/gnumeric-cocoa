@@ -42,7 +42,10 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 @property (nonatomic, readonly) BOOL hidesGridLines;
 @property (nonatomic, readonly) BOOL hidesColumnHeader;
 @property (nonatomic, readonly) BOOL hidesRowHeader;
-@property (nonatomic, readonly) double zoomFactor;
+/// The sheet's zoom (1.0 = 100%).  Setting it re-lays out the engine's
+/// column and row sizes and rendered values; the control reports back
+/// through `sheetGeometryDidChange:`.
+@property (nonatomic) double zoomFactor;
 
 /// Sheet dimensions in cells.
 @property (nonatomic, readonly) NSInteger columnCount;

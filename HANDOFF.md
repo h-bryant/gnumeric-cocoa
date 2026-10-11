@@ -143,9 +143,10 @@ Status 2026-10-10: everything above exists and runs from the swiftc build
 `format-tests.gnumeric`: the bridge (`Sources/Bridge`), the run loop
 integration, `WorkbookDocument` opening through the engine's openers, the
 flipped grid view drawing through cairo-quartz with a native selection, mouse
-and keyboard selection, header rulers, and sheet tabs. Not yet: the Xcode build
-itself and XCTest targets (Xcode.app missing), frozen panes, right-to-left
-sheets, header clicks, zoom UI, tab overflow. Details in `docs/progress.md`.
+and keyboard selection, header rulers with click-to-select and a select-all
+corner, zoom (View menu), and scrolling sheet tabs; Xcode builds it and runs the
+XCTest bundle. Not yet: frozen panes (Phase 3) and right-to-left sheets
+(Phase 7). Details in `docs/progress.md`.
 
 ### Phase 2 — Editing
 
@@ -282,9 +283,6 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    waits on Henry enabling developer mode: `sudo DevToolsSecurity -enable`).
 3. Upstream engagement is deferred (§2, ADR-011): do not post or extend
    `docs/upstream-issue.md`; keep any engine patch minimal and upstreamable.
-4. Finish Phase 1 (see the gaps in `docs/progress.md`): frozen panes, header
-   clicks selecting columns and rows, zoom UI, right-to-left sheets, sheet-tab
-   overflow, and a scrolling-performance check (layer backing, ADR-007). Then
-   Phase 2 starts with the cell editor and `cmd_set_text`, which first needs
+4. Phase 2 starts with the cell editor and `cmd_set_text`, which first needs
    the seven decoupling patches of `docs/architecture.md` §5 in `patches/`
    (carried locally, ADR-011; `scripts/build-gnumeric.sh` applies them).

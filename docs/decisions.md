@@ -124,7 +124,8 @@ rendering tests can use flipped `CGBitmapContext`s; selection highlighting
 through the engine's `is_selected` path (which needs a `GtkStyleContext`) is
 bypassed. The grid view is not layer-backed for now because
 `cacheDisplay(in:to:)`, used for snapshots and future golden images, skips
-layer content; revisit if scrolling performance needs it.
+layer content; measured on 2026-10-11, full-window redraws take 3 to 10 ms
+(first draw of a sheet 55 to 85 ms), so scrolling does not need it.
 
 ## ADR-008 (2026-10-10): Development builds do not persist preferences
 

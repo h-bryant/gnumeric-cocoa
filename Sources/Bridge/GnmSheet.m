@@ -772,6 +772,13 @@ cairo_for_context (CGContextRef context, CGRect rect, cairo_surface_t **surface_
 - (BOOL)hidesColumnHeader { return _sheet->hide_col_header; }
 - (BOOL)hidesRowHeader { return _sheet->hide_row_header; }
 - (double)zoomFactor { return _sheet->last_zoom_factor_used; }
+
+- (void)setZoomFactor:(double)zoomFactor
+{
+    /* sheet_set_zoom_factor is private to sheet.c; the property is public. */
+    g_object_set (G_OBJECT (_sheet), "zoom-factor", MIN (MAX (zoomFactor, 0.1), 5.0), NULL);
+    sheet_update (_sheet);
+}
 - (NSInteger)columnCount { return gnm_sheet_get_max_cols (_sheet); }
 - (NSInteger)rowCount { return gnm_sheet_get_max_rows (_sheet); }
 

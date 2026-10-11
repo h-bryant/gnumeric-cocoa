@@ -133,6 +133,20 @@
   "while preparing to run tests" because developer mode is disabled on the
   machine (`DevToolsSecurity -status`); enabling it is Henry's `sudo`.
 
+## 2026-10-11: Phase 1 gaps closed, except panes and right-to-left
+
+- Clicking a column or row header selects the whole column or row (drag or
+  shift-click extends; the corner above the row header selects all), the
+  View menu zooms (Zoom In/Out/Actual Size; the bridge sets the engine's
+  `zoom-factor` property and the control's `scale_changed` drives the
+  re-layout; the window subtitle shows the percentage), and the sheet tabs
+  live in a horizontally scrolling strip (verified with a 60-sheet workbook).
+- Draw timing (`GNM_DEBUG_LAYOUT=1`): the first draw of a sheet takes 55 to
+  85 ms (one-time text layout), full-window redraws 3 to 10 ms, so the grid
+  stays a plain `drawRect` view (ADR-007).
+- Still open from Phase 1: frozen panes (Phase 3 in `HANDOFF.md` anyway)
+  and right-to-left sheets (drawn left-to-right; Phase 7).
+
 ## How to resume
 
 1. Upstream engagement is deferred; see ADR-011 before touching

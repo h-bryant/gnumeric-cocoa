@@ -19,6 +19,8 @@ final class GridView: NSView, SheetDelegate {
         }
     }
     var headerViews: [SheetHeaderView] = []
+    /// Called after the engine reports a geometry change (zoom, sizes).
+    var geometryDidChange: (() -> Void)?
     private var dragAnchor: CellCoordinate?
     private var lastSelectionRect: NSRect = .zero
 
@@ -73,8 +75,13 @@ final class GridView: NSView, SheetDelegate {
     // MARK: Drawing
 
     override func draw(_ dirtyRect: NSRect) {
-        if ProcessInfo.processInfo.environment["GNM_DEBUG_LAYOUT"] != nil {
-            NSLog("GridView.draw %@ sheet=%@", NSStringFromRect(dirtyRect), sheet?.name ?? "nil")
+        let debug = ProcessInfo.processInfo.environment["GNM_DEBUG_LAYOUT"] != nil
+        let started = debug ? CFAbsoluteTimeGetCurrent() : 0
+        defer {
+            if debug {
+                NSLog("GridView.draw %@ sheet=%@ took %.1f ms", NSStringFromRect(dirtyRect), sheet?.name ?? "nil",
+                      (CFAbsoluteTimeGetCurrent() - started) * 1000)
+            }
         }
         guard let sheet, let context = NSGraphicsContext.current?.cgContext else {
             NSColor.white.setFill()
@@ -142,6 +149,47 @@ final class GridView: NSView, SheetDelegate {
     private static func range(from a: CellCoordinate, to b: CellCoordinate) -> CellRange {
         CellRange(start: CellCoordinate(column: min(a.column, b.column), row: min(a.row, b.row)),
                   end: CellCoordinate(column: max(a.column, b.column), row: max(a.row, b.row)))
+    }
+
+    // MARK: Whole columns, rows, and the sheet
+
+    /// The first visible row, where the edit cursor lands for a column
+    /// selection (what the GTK pane does).
+    private var topVisibleRow: Int {
+        guard let sheet else { return 0 }
+        return sheet.row(atY: visibleRect.minY)
+    }
+
+    private var leftVisibleColumn: Int {
+        guard let sheet else { return 0 }
+        return sheet.column(atX: visibleRect.minX)
+    }
+
+    func selectColumns(from first: Int, to last: Int, anchor: Int) {
+        guard let sheet else { return }
+        let edit = CellCoordinate(column: anchor, row: topVisibleRow)
+        dragAnchor = edit
+        sheet.selectRange(CellRange(start: CellCoordinate(column: first, row: 0),
+                                    end: CellCoordinate(column: last, row: sheet.rowCount - 1)),
+                          editPosition: edit)
+    }
+
+    func selectRows(from first: Int, to last: Int, anchor: Int) {
+        guard let sheet else { return }
+        let edit = CellCoordinate(column: leftVisibleColumn, row: anchor)
+        dragAnchor = edit
+        sheet.selectRange(CellRange(start: CellCoordinate(column: 0, row: first),
+                                    end: CellCoordinate(column: sheet.columnCount - 1, row: last)),
+                          editPosition: edit)
+    }
+
+    override func selectAll(_ sender: Any?) {
+        guard let sheet else { return }
+        let edit = CellCoordinate(column: leftVisibleColumn, row: topVisibleRow)
+        dragAnchor = edit
+        sheet.selectRange(CellRange(start: CellCoordinate(column: 0, row: 0),
+                                    end: CellCoordinate(column: sheet.columnCount - 1, row: sheet.rowCount - 1)),
+                          editPosition: edit)
     }
 
     // MARK: Keyboard
@@ -237,6 +285,7 @@ final class GridView: NSView, SheetDelegate {
         updateFrameSize()
         needsDisplay = true
         headerViews.forEach { $0.needsDisplay = true }
+        geometryDidChange?()
     }
 
     func sheet(_ sheet: Sheet, cursorDidMoveTo range: CellRange) {
