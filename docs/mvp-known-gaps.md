@@ -40,7 +40,9 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | EditDeleteColumns, EditDeleteRows | ported | Edit menu; the selection's columns or rows |
 | EditDeleteCells | no | Phase 3 |
 | EditClearHyperlinks, EditComment, EditHyperlink, EditNames | no | Phase 5 |
-| SheetReorder, InsertSheet, InsertSheetAtEnd, EditDuplicateSheet, SheetRemove, SheetChangeName, SheetResize | no | Phase 3 (sheet management) |
+| InsertSheet, InsertSheetAtEnd, EditDuplicateSheet, SheetRemove, SheetChangeName | ported | Edit → Sheet and the tab context menu; rename through a prompt |
+| SheetReorder | partial | Move Left / Move Right; no Manage Sheets dialog or drag |
+| SheetResize | no | Phase 3 (`cmd_resize_sheets`) |
 | EditSelectAll | ported | ⌘A and the header corner |
 | EditSelectColumn, EditSelectRow | ported | header clicks and Edit → Select |
 | EditSelectArray, EditSelectDepends, EditSelectInputs, EditSelectObject | no | Phase 3/4 |
@@ -63,7 +65,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 |---|---|---|
 | InsertCells | no | Phase 3 |
 | InsertColumns, InsertRows | ported | Insert menu; as many as the selection spans, before it |
-| SheetInsert | no | Phase 3 |
+| SheetInsert | ported | Edit → Sheet → Insert |
 | ChartGuru, InsertComponent, InsertShapedComponent, NewGOComponent, GOComponentFromFile, InsertImage | no | Phase 4; existing charts and images draw read-only |
 | InsertFormula (function selector), InsertNames | no | Phase 5 |
 | InsertComment, InsertHyperlink | no | Phase 5 |
@@ -126,9 +128,9 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | Frozen panes | ported | 2026-10-11: frozen strips painted as overlays on one document view, scrolling clamped to the first unfrozen cell |
 | Right-to-left sheets | no | Phase 7; drawn left-to-right |
 | Marching ants animation | partial | static dashed outline |
-| Drag and drop (cells, files, sheet tabs) | no | Phase 3 |
+| Drag and drop (cells, files, sheet tabs) | no | Phase 3; sheets move through the menu for now |
 | Column and row header drag resizing, double-click autosize | ported | 2026-10-11; resizes every selected column (row) when the dragged one is selected |
-| Sheet tab context menu, tab colors | no | Phase 3 |
+| Sheet tab context menu, tab colors | partial | context menu 2026-10-11 (right-click selects the tab); no tab colors |
 | Printing and page setup | no | Phase 3+ (`NSPrintOperation` with the engine's `print-cell.c`) |
 | Preferences window | no | Phase 5 |
 | Plugin manager | no | Phase 5 |

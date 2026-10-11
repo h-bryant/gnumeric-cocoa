@@ -226,6 +226,27 @@ enum Snapshot {
                 view.displayIfNeeded()
             }
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_SHEETS"] != nil,
+               let controller = window.windowController as? WorkbookWindowController {
+                // Sheet management through the controller's actions.
+                let workbook = controller.workbook
+                let names = { workbook.sheets.map(\.name).joined(separator: ",") }
+                controller.appendSheet(nil)
+                controller.insertSheet(nil)
+                NSLog("sheets: after append+insert %@ current=%@ undo=%@", names(), workbook.currentSheet?.name ?? "nil",
+                      workbook.undoLabel ?? "nil")
+                controller.moveSheetRight(nil)
+                controller.duplicateSheet(nil)
+                NSLog("sheets: after move+duplicate %@ current=%@", names(), workbook.currentSheet?.name ?? "nil")
+                controller.removeSheet(nil)
+                try? workbook.rename(workbook.currentSheet!, to: "Renamed")
+                NSLog("sheets: after remove+rename %@ current=%@", names(), workbook.currentSheet?.name ?? "nil")
+                DispatchQueue.main.async {   // the tab strip rebuilds after a removal on the next turn
+                    NSLog("sheets: tabs=%ld", controller.tabCount)
+                }
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FREEZE"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

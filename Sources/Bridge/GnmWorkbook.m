@@ -182,6 +182,15 @@ cb_dirty_changed (GObject *doc, GParamSpec *pspec, gpointer owner)
 }
 
 static void
+cb_sheet_changed (GObject *sheet, GParamSpec *pspec, gpointer owner)
+{
+    GnmWorkbook *wb = (__bridge GnmWorkbook *) owner;
+    GnmSheet *wrapper = [wb wrapperForEngineSheet:(Sheet *) sheet];
+    if (wrapper && [wb.delegate respondsToSelector:@selector(workbook:sheetDidChange:)])
+        [wb.delegate workbook:wb sheetDidChange:wrapper];
+}
+
+static void
 cb_auto_expr_value_changed (GObject *view, GParamSpec *pspec, gpointer owner)
 {
     GnmWorkbook *wb = (__bridge GnmWorkbook *) owner;
@@ -328,6 +337,97 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
 - (void)selectSheet:(GnmSheet *)sheet
 {
     wb_view_sheet_focus (_wbv, sheet.engineSheet);
+}
+
+#pragma mark - Sheet management
+
+/* Run a sheet reorganisation as the GTK front end does: snapshot the
+ * order, change it, then cmd_reorganize_sheets records the difference as
+ * one undoable command (it owns the snapshot and refocuses `focus` on
+ * undo). */
+- (BOOL)_reorganizeSheetsWith:(void (NS_NOESCAPE ^)(void))change undoFocus:(Sheet *)focus error:(NSError **)error
+{
+    return [self _runCommand:^gboolean (WorkbookControl *wbc) {
+        WorkbookSheetState *old_state = workbook_sheet_state_new (_wb);
+        change ();
+        return cmd_reorganize_sheets (wbc, old_state, focus);
+    } description:@"Could not change the sheets." error:error];
+}
+
+- (GnmSheet *)insertSheetBefore:(GnmSheet *)sheet error:(NSError **)error
+{
+    Sheet *cur = wb_view_cur_sheet (_wbv);
+    Sheet *model = sheet ? sheet.engineSheet : cur;
+    if (model == NULL)
+        return nil;
+    __block Sheet *added = NULL;
+    int pos = sheet ? sheet.engineSheet->index_in_wb : -1;
+    BOOL ok = [self _reorganizeSheetsWith:^{
+        added = workbook_sheet_add (_wb, pos, gnm_sheet_get_max_cols (model), gnm_sheet_get_max_rows (model));
+    } undoFocus:cur error:error];
+    return ok && added ? [self wrapperForEngineSheet:added] : nil;
+}
+
+- (GnmSheet *)duplicateSheet:(GnmSheet *)sheet error:(NSError **)error
+{
+    Sheet *source = sheet.engineSheet;
+    if (source == NULL)
+        return nil;
+    __block Sheet *copy = NULL;
+    BOOL ok = [self _reorganizeSheetsWith:^{
+        copy = sheet_dup (source);
+        workbook_sheet_attach_at_pos (_wb, copy, source->index_in_wb + 1);
+        g_signal_emit_by_name (G_OBJECT (_wb), "sheet_added", 0);   /* as workbook_sheet_add does */
+    } undoFocus:source error:error];
+    GnmSheet *wrapper = ok && copy ? [self wrapperForEngineSheet:copy] : nil;
+    if (copy)
+        g_object_unref (copy);   /* the workbook holds its own reference */
+    return wrapper;
+}
+
+- (BOOL)canRemoveSheets
+{
+    return workbook_sheet_count (_wb) > 1;
+}
+
+- (BOOL)removeSheet:(GnmSheet *)sheet error:(NSError **)error
+{
+    Sheet *doomed = sheet.engineSheet;
+    if (doomed == NULL)
+        return NO;
+    if (!self.canRemoveSheets) {
+        if (error)
+            *error = [_engine _errorWithCode:GnmErrorCommandFailed
+                                 description:@"The last sheet of a workbook cannot be removed." collected:@[]];
+        return NO;
+    }
+    return [self _reorganizeSheetsWith:^{
+        workbook_sheet_delete (doomed);
+    } undoFocus:doomed error:error];
+}
+
+- (BOOL)renameSheet:(GnmSheet *)sheet to:(NSString *)name error:(NSError **)error
+{
+    Sheet *target = sheet.engineSheet;
+    if (target == NULL)
+        return NO;
+    return [self _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_rename_sheet (wbc, target, name.UTF8String);
+    } description:@"Could not rename the sheet." error:error];
+}
+
+- (BOOL)moveSheet:(GnmSheet *)sheet toIndex:(NSInteger)index error:(NSError **)error
+{
+    Sheet *target = sheet.engineSheet;
+    int count = workbook_sheet_count (_wb);
+    if (target == NULL || index < 0 || index >= count)
+        return NO;
+    int delta = (int) index - target->index_in_wb;
+    if (delta == 0)
+        return YES;
+    return [self _reorganizeSheetsWith:^{
+        workbook_sheet_move (target, delta);
+    } undoFocus:target error:error];
 }
 
 - (void)recalculate
@@ -479,6 +579,8 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
     if (wrapper == nil) {
         wrapper = [[GnmSheet alloc] initWithSheetView:sheetView workbook:self];
         [_sheetWrappers addObject:wrapper];
+        g_signal_connect (G_OBJECT (sheet), "notify::name", G_CALLBACK (cb_sheet_changed), (__bridge void *) self);
+        g_signal_connect (G_OBJECT (sheet), "notify::visibility", G_CALLBACK (cb_sheet_changed), (__bridge void *) self);
     }
     if ([self.delegate respondsToSelector:@selector(workbook:didAddSheet:)])
         [self.delegate workbook:self didAddSheet:wrapper];
@@ -492,6 +594,7 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
     if ([self.delegate respondsToSelector:@selector(workbook:willRemoveSheet:)])
         [self.delegate workbook:self willRemoveSheet:wrapper];
     [wrapper _detachFromEngine];
+    g_signal_handlers_disconnect_by_data (G_OBJECT (sheet), (__bridge void *) self);
     [_sheetWrappers removeObject:wrapper];
 }
 

@@ -104,6 +104,8 @@ GType gnm_cocoa_sheet_control_get_type (void);
 /// Drop the engine's clipboard when another application has replaced the
 /// system pasteboard since the control claimed it.
 - (void)_dropStaleEngineClipboard;
+/// The wrapper attached to an engine sheet, if any.
+- (nullable GnmSheet *)wrapperForEngineSheet:(Sheet *)sheet;
 /// Run an engine command that returns TRUE on failure, turning messages it
 /// reported into `error`.
 - (BOOL)_runCommand:(gboolean (NS_NOESCAPE ^)(WorkbookControl *wbc))command

@@ -296,6 +296,6 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    2026-10-11: insert/delete rows and columns, hide and unhide, clear
    variants, fill and autofill (fill handle), column and row sizes with
    header drag-resizing, merge, recalc, the auto-expression in the tab bar,
-   freeze panes. Next: sheet management (insert, rename, remove, reorder;
-   `cmd_reorganize_sheets`, `cmd_rename_sheet`), Paste Special
-   (`cmd_paste_to_selection` flags), sort (`cmd_sort`).
+   freeze panes, sheet management. Next: Paste Special
+   (`cmd_paste_to_selection` flags), sort (`cmd_sort`), the filtered Clear
+   variants, sheet resize (`cmd_resize_sheets`), tab colors.

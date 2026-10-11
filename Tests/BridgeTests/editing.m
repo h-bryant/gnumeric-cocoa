@@ -18,6 +18,9 @@
 - (void)workbook:(GnmWorkbook *)workbook undoLabelDidChange:(NSString *)undo redoLabel:(NSString *)redo {
     [_events addObject:[NSString stringWithFormat:@"labels:%@/%@", undo ?: @"-", redo ?: @"-"]];
 }
+- (void)workbook:(GnmWorkbook *)workbook sheetDidChange:(GnmSheet *)sheet {
+    [_events addObject:[@"sheet:" stringByAppendingString:sheet.name]];
+}
 - (void)workbook:(GnmWorkbook *)workbook autoExpressionDidChange:(NSString *)text {
     [_events addObject:[@"auto:" stringByAppendingString:text]];
 }
@@ -254,6 +257,42 @@ int main (void)
         GNM_ASSERT (!s.isFrozen, @"unfrozen");
         [s freezePanesWithUnfrozenTopLeft:GnmCellCoordinateMake (0, 0) frozenTopLeft:GnmCellCoordinateMake (0, 0)];
         GNM_ASSERT (!s.isFrozen, @"freezing nothing is ignored");
+
+        /* sheets: insert, duplicate, rename, move, remove, all undoable */
+        NSUInteger sheetCount = wb.sheets.count;
+        GnmSheet *added = [wb insertSheetBefore:nil error:&error];
+        GNM_ASSERT (added != nil && wb.sheets.count == sheetCount + 1 && wb.sheets.lastObject == added, @"append: %@", error);
+        GNM_ASSERT ([added.name hasPrefix:@"Sheet"], @"engine named it '%@'", added.name);
+        GNM_ASSERT ([wb.undoLabel.lowercaseString containsString:@"sheet"], @"undo label '%@'", wb.undoLabel);
+        GNM_ASSERT ([wb renameSheet:added to:@"Data" error:&error], @"rename: %@", error);
+        GNM_ASSERT_EQ_STR (added.name, @"Data");
+        GNM_ASSERT ([rec.events containsObject:@"sheet:Data"], @"delegate saw the rename: %@", rec.events.lastObject);
+        GNM_ASSERT (![wb renameSheet:added to:s.name error:&error], @"duplicate name refused");
+        GNM_ASSERT ([wb moveSheet:added toIndex:0 error:&error], @"move: %@", error);
+        GNM_ASSERT (wb.sheets.firstObject == added, @"moved first (index %ld)", (long) added.index);
+        [wb undo];
+        GNM_ASSERT (wb.sheets.lastObject == added, @"move undone");
+        GnmSheet *copy = [wb duplicateSheet:s error:&error];
+        GNM_ASSERT (copy != nil && copy != s && copy.index == s.index + 1, @"duplicate: %@", error);
+        GNM_ASSERT_EQ_STR ([copy displayTextOfCellAtColumn:3 row:3] ?: @"", [s displayTextOfCellAtColumn:3 row:3] ?: @"");
+        GNM_ASSERT ([wb removeSheet:copy error:&error], @"remove copy: %@", error);
+        GNM_ASSERT ([wb removeSheet:added error:&error], @"remove added: %@", error);
+        GNM_ASSERT (wb.sheets.count == sheetCount, @"back to %lu sheets", (unsigned long) wb.sheets.count);
+        [wb undo];
+        GNM_ASSERT (wb.sheets.count == sheetCount + 1 && [wb.sheets.lastObject.name isEqualToString:@"Data"], @"removal undone: %@", wb.sheets.lastObject.name);
+        [wb redo];
+        GNM_ASSERT (wb.sheets.count == sheetCount, @"removal redone");
+        [wb selectSheet:s];
+        /* the last sheet of a workbook stays (a fresh one: the engine's undo
+         * stack keeps only a limited number of commands) */
+        @autoreleasepool {
+            GnmWorkbook *fresh = [engine newWorkbookWithSheetCount:3];
+            GNM_ASSERT (fresh.sheets.count == 3, @"fresh workbook has %lu sheets", (unsigned long) fresh.sheets.count);
+            GNM_ASSERT ([fresh removeSheet:fresh.sheets.lastObject error:&error] && [fresh removeSheet:fresh.sheets.lastObject error:&error],
+                        @"remove two: %@", error);
+            GNM_ASSERT (!fresh.canRemoveSheets && ![fresh removeSheet:fresh.sheets.firstObject error:&error], @"the last sheet stays");
+            GNM_ASSERT (error.code == GnmErrorCommandFailed, @"error %@", error);
+        }
 
         /* merge and unmerge */
         [s selectRange:GnmCellRangeMake (50, 70, 52, 71) editPosition:GnmCellCoordinateMake (50, 70)];

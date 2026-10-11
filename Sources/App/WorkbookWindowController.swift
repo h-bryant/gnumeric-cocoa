@@ -13,7 +13,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     private let scrollView = NSScrollView()
     private let nameBox = NSTextField(labelWithString: "")
     private let formulaField = NSTextField(labelWithString: "")
-    private let tabs = NSSegmentedControl()
+    private let tabs = SheetTabControl()
     /// The status bar's auto-expression: a pull-down showing "Sum = 42"
     /// whose items choose the function, as the GTK status bar does.
     private let autoExpression = NSPopUpButton(frame: .zero, pullsDown: true)
@@ -119,6 +119,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         tabs.trackingMode = .selectOne
         tabs.target = self
         tabs.action = #selector(tabChanged(_:))
+        tabs.menu = MainMenu.sheetMenu()   // right-click on a tab
         // Many sheets overflow the window: the tabs sit in a horizontally
         // scrolling strip (trackpad scroll, no visible scroller).
         tabScroller.documentView = tabs
@@ -212,6 +213,9 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     }
 
     // MARK: Sheets
+
+    /// For the headless checks.
+    var tabCount: Int { tabs.segmentCount }
 
     private func rebuildTabs() {
         tabSheets = workbook.sheets.filter { $0.isVisible }
@@ -395,10 +399,81 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         case #selector(formatCells(_:)):
             return gridView.sheet != nil && formatSheetWindow == nil
         case #selector(setColumnWidth(_:)), #selector(setRowHeight(_:)),
-             #selector(setDefaultColumnWidth(_:)), #selector(setDefaultRowHeight(_:)):
+             #selector(setDefaultColumnWidth(_:)), #selector(setDefaultRowHeight(_:)), #selector(renameSheet(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
+        case #selector(removeSheet(_:)):
+            return gridView.sheet != nil && workbook.canRemoveSheets
+        case #selector(moveSheetLeft(_:)):
+            return (gridView.sheet?.index ?? 0) > 0
+        case #selector(moveSheetRight(_:)):
+            guard let sheet = gridView.sheet else { return false }
+            return sheet.index < workbook.sheets.count - 1
         default:
             return true
+        }
+    }
+
+    // MARK: Sheet management (Edit → Sheet, tab context menu)
+
+    private func runSheetCommand(_ command: (Workbook) throws -> Void) {
+        if gridView.isEditing { gridView.cancelEditing() }
+        do {
+            try command(workbook)
+        } catch {
+            present(error)
+        }
+    }
+
+    @objc func insertSheet(_ sender: Any?) {
+        runSheetCommand { workbook in
+            workbook.select(try workbook.insertSheet(before: gridView.sheet))
+        }
+    }
+
+    @objc func appendSheet(_ sender: Any?) {
+        runSheetCommand { workbook in
+            workbook.select(try workbook.insertSheet(before: nil))
+        }
+    }
+
+    @objc func duplicateSheet(_ sender: Any?) {
+        guard let current = gridView.sheet else { return }
+        runSheetCommand { workbook in
+            workbook.select(try workbook.duplicate(current))
+        }
+    }
+
+    @objc func removeSheet(_ sender: Any?) {
+        guard let current = gridView.sheet else { return }
+        runSheetCommand { try $0.remove(current) }
+    }
+
+    @objc func moveSheetLeft(_ sender: Any?) {
+        guard let current = gridView.sheet else { return }
+        runSheetCommand { try $0.move(current, toIndex: current.index - 1) }
+    }
+
+    @objc func moveSheetRight(_ sender: Any?) {
+        guard let current = gridView.sheet else { return }
+        runSheetCommand { try $0.move(current, toIndex: current.index + 1) }
+    }
+
+    @objc func renameSheet(_ sender: Any?) {
+        guard let window, let current = gridView.sheet else { return }
+        let alert = NSAlert()
+        alert.messageText = "Rename Sheet"
+        alert.informativeText = "A name for the sheet \"\(current.name)\"."
+        alert.addButton(withTitle: "Rename")
+        alert.addButton(withTitle: "Cancel")
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 220, height: 24))
+        field.stringValue = current.name
+        alert.accessoryView = field
+        alert.window.initialFirstResponder = field
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard response == .alertFirstButtonReturn else { return }
+            let name = field.stringValue.trimmingCharacters(in: .whitespaces)
+            guard !name.isEmpty, name != current.name else { return }
+            self?.runSheetCommand { try $0.rename(current, to: name) }
         }
     }
 
@@ -419,6 +494,10 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     }
 
     func workbook(_ workbook: Workbook, didAdd sheet: Sheet) {
+        rebuildTabs()
+    }
+
+    func workbook(_ workbook: Workbook, sheetDidChange sheet: Sheet) {
         rebuildTabs()
     }
 
@@ -463,5 +542,28 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         alert.addButton(withTitle: defaultAnswer ? "No" : "Yes")
         let first = alert.runModal() == .alertFirstButtonReturn
         return defaultAnswer ? first : !first
+    }
+}
+
+/// The sheet tabs: a right-click selects the tab under the mouse before
+/// its context menu opens, so the menu's commands apply to that sheet.
+@MainActor
+final class SheetTabControl: NSSegmentedControl {
+    override func menu(for event: NSEvent) -> NSMenu? {
+        let point = convert(event.locationInWindow, from: nil)
+        var x: CGFloat = 0
+        for segment in 0..<segmentCount {
+            let width = self.width(forSegment: segment) > 0 ? self.width(forSegment: segment)
+                : bounds.width / CGFloat(max(segmentCount, 1))
+            if point.x >= x && point.x < x + width {
+                if selectedSegment != segment {
+                    selectedSegment = segment
+                    sendAction(action, to: target)
+                }
+                break
+            }
+            x += width
+        }
+        return super.menu(for: event)
     }
 }

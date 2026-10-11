@@ -21,6 +21,9 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(WorkbookDelegate)
 - (void)workbook:(GnmWorkbook *)workbook willRemoveSheet:(GnmSheet *)sheet NS_SWIFT_NAME(workbook(_:willRemove:));
 - (void)workbookWillRemoveAllSheets:(GnmWorkbook *)workbook NS_SWIFT_NAME(workbookWillRemoveAllSheets(_:));
 - (void)workbook:(GnmWorkbook *)workbook didFocusSheet:(nullable GnmSheet *)sheet NS_SWIFT_NAME(workbook(_:didFocus:));
+/// A sheet's name or visibility changed (the GTK tab listens to the same
+/// signals); the order of `sheets` may have changed with it.
+- (void)workbook:(GnmWorkbook *)workbook sheetDidChange:(GnmSheet *)sheet NS_SWIFT_NAME(workbook(_:sheetDidChange:));
 - (void)workbook:(GnmWorkbook *)workbook editLineDidChange:(NSString *)text NS_SWIFT_NAME(workbook(_:editLineDidChange:));
 - (void)workbook:(GnmWorkbook *)workbook selectionDescriptionDidChange:(NSString *)text NS_SWIFT_NAME(workbook(_:selectionDescriptionDidChange:));
 - (void)workbook:(GnmWorkbook *)workbook undoLabelDidChange:(nullable NSString *)undoLabel
@@ -61,6 +64,22 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Workbook)
 @property (nonatomic, readonly, copy) NSArray<GnmSheet *> *sheets;
 @property (nonatomic, readonly, nullable) GnmSheet *currentSheet;
 - (void)selectSheet:(GnmSheet *)sheet NS_SWIFT_NAME(select(_:));
+
+// Sheet management, each one undoable command (`cmd_reorganize_sheets`,
+// `cmd_rename_sheet`), as the GTK tab menu does it.  New sheets take the
+// current sheet's size and the engine's next free name; the wrapper for a
+// new sheet is in `sheets` when the call returns.
+/// Insert an empty sheet before `sheet`, or at the end for nil.
+- (nullable GnmSheet *)insertSheetBefore:(nullable GnmSheet *)sheet error:(NSError **)error NS_SWIFT_NAME(insertSheet(before:));
+/// A copy of `sheet` right after it (`sheet_dup`).
+- (nullable GnmSheet *)duplicateSheet:(GnmSheet *)sheet error:(NSError **)error NS_SWIFT_NAME(duplicate(_:));
+/// Remove `sheet`; the last sheet cannot be removed (`canRemoveSheets`).
+- (BOOL)removeSheet:(GnmSheet *)sheet error:(NSError **)error NS_SWIFT_NAME(remove(_:));
+@property (nonatomic, readonly) BOOL canRemoveSheets;
+/// Rename; the engine refuses an empty or duplicate name.
+- (BOOL)renameSheet:(GnmSheet *)sheet to:(NSString *)name error:(NSError **)error NS_SWIFT_NAME(rename(_:to:));
+/// Move `sheet` to position `index` in the workbook order.
+- (BOOL)moveSheet:(GnmSheet *)sheet toIndex:(NSInteger)index error:(NSError **)error NS_SWIFT_NAME(move(_:toIndex:));
 
 /// The status bar's auto-expression: the function's label, " = ", and the
 /// value over the current selection, formatted as the engine suggests

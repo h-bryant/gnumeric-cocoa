@@ -319,9 +319,23 @@
   (3 to 10 ms). `GNM_SNAPSHOT_FREEZE=1` freezes at C4 and scrolls; the
   capture shows rows 1 to 3 and columns A and B in place beside row 28 and
   column H.
-- `docs/mvp-known-gaps.md` updated. Next in Phase 3: sheet management
-  (insert, rename, remove, reorder), Paste Special, sort, and the filtered
-  Clear variants.
+- Sheet management: Edit → Sheet (Insert, Insert at End, Duplicate,
+  Rename…, Move Left, Move Right, Remove), the same menu on a right-click
+  of a tab (`SheetTabControl` selects the tab under the mouse first). The
+  bridge runs each change the GTK way: `workbook_sheet_state_new`, the
+  change (`workbook_sheet_add`, `sheet_dup` plus
+  `workbook_sheet_attach_at_pos`, `workbook_sheet_delete`,
+  `workbook_sheet_move`), then `cmd_reorganize_sheets`, which owns the
+  snapshot and refocuses the given sheet on undo; `cmd_rename_sheet` for
+  names. The last sheet cannot be removed. Each sheet's `notify::name`
+  and `notify::visibility` reach the delegate as `workbook:sheetDidChange:`
+  (the GTK tab listens to the same), so the tab strip follows renames.
+  `GNM_SNAPSHOT_SHEETS=1` drives append, insert, move, duplicate, remove,
+  and rename. Found on the way: the engine's undo stack keeps a limited
+  number of commands (`core/undo/maxnum`), so a test that removes twenty
+  sheets cannot undo them all.
+- `docs/mvp-known-gaps.md` updated. Next in Phase 3: Paste Special, sort,
+  the filtered Clear variants, sheet resize, tab colors.
 
 ## How to resume
 

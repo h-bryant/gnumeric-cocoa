@@ -58,6 +58,8 @@ enum MainMenu {
         selectMenu.addItem(withTitle: "Column", action: Selector(("selectColumn:")), keyEquivalent: "")
         selectMenu.addItem(withTitle: "Row", action: Selector(("selectRow:")), keyEquivalent: "")
         editMenu.addItem(submenu(selectMenu, title: "Select"))
+        editMenu.addItem(.separator())
+        editMenu.addItem(submenu(sheetMenu(), title: "Sheet"))
         menuBar.addItem(submenu(editMenu, title: "Edit"))
 
         let viewMenu = NSMenu(title: "View")
@@ -118,6 +120,21 @@ enum MainMenu {
         NSApp.helpMenu = helpMenu
 
         return menuBar
+    }
+
+    /// The sheet commands: in Edit → Sheet and as the tab strip's context menu.
+    static func sheetMenu() -> NSMenu {
+        let menu = NSMenu(title: "Sheet")
+        menu.addItem(withTitle: "Insert", action: Selector(("insertSheet:")), keyEquivalent: "")
+        menu.addItem(withTitle: "Insert at End", action: Selector(("appendSheet:")), keyEquivalent: "")
+        menu.addItem(withTitle: "Duplicate", action: Selector(("duplicateSheet:")), keyEquivalent: "")
+        menu.addItem(.separator())
+        menu.addItem(withTitle: "Rename…", action: Selector(("renameSheet:")), keyEquivalent: "")
+        menu.addItem(withTitle: "Move Left", action: Selector(("moveSheetLeft:")), keyEquivalent: "")
+        menu.addItem(withTitle: "Move Right", action: Selector(("moveSheetRight:")), keyEquivalent: "")
+        menu.addItem(.separator())
+        menu.addItem(withTitle: "Remove", action: Selector(("removeSheet:")), keyEquivalent: "")
+        return menu
     }
 
     private static func submenu(_ menu: NSMenu, title: String) -> NSMenuItem {
