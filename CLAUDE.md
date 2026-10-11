@@ -22,7 +22,7 @@ Tests/EngineSmoke/run.sh         # just the C smoke programs
 scripts/build-bridge.sh          # Objective-C bridge with clang (no Xcode needed)
 Tests/BridgeTests/run.sh         # just the bridge tests
 scripts/build-app.sh             # Swift app with swiftc into build/app/GnumericCocoa.app
-scripts/run-app.sh [file]        # launch it; GNM_SNAPSHOT=out.png renders the grid and quits
+scripts/run-app.sh [file]        # launch it; GNM_SNAPSHOT=out.png renders grid + window and quits
 scripts/gen-xcconfig.sh && xcodegen generate   # regenerate the Xcode project
 xcodebuild -scheme GnumericCocoa -derivedDataPath build/DerivedData build
 scripts/test-xcode.sh            # XCTest bundle via xcrun xctest (xcodebuild test needs developer mode)

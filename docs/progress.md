@@ -83,9 +83,10 @@
   released (autorelease pools drained) before `shutdown`; a color-matched
   `CGColor` shifts its components, so RGB colors pass straight through;
   `NSStackView`'s default gravity distribution collapses the scroll view;
-  macOS 26's `NSScrollView` blanks its interior in `cacheDisplay`, so
-  snapshots capture the grid view itself; Homebrew bottles target the running
-  macOS, so a 14.0 deployment target only yields linker warnings for now.
+  the whole-window `cacheDisplay` came out blank (read at the time as a
+  capture artifact; it was the real `NSRulerView` bug, see 2026-10-11);
+  Homebrew bottles target the running macOS, so a 14.0 deployment target
+  only yields linker warnings for now.
 - Not done in Phase 1 yet: frozen panes (single pane only), right-to-left
   sheets (drawn left-to-right), header clicks to select columns and rows,
   zoom UI, sheet-tab overflow for many sheets, layer-backed scrolling
@@ -214,6 +215,48 @@
 - `docs/mvp-known-gaps.md` lists every GTK menu item (202, extracted from
   `src/GNOME_Gnumeric-gtk.xml`) and the non-menu features with a status and
   phase. Tagged `v0.1.0` locally (not pushed). Phase 3 starts next.
+
+## 2026-10-11: first interactive run, blank grid fixed
+
+- Henry ran the app: the window showed only the column header and the
+  sheet tabs; the grid, row header, and formula bar were blank, and typing
+  showed nothing. The whole-window `GNM_SNAPSHOT` capture (`-window.png`)
+  showed the same, which the previous session had dismissed as a capture
+  artifact (ADR-007 consequences, now corrected). Three causes, in order:
+  1. `NSRulerView` headers. On macOS 26 `NSScrollView` no longer tiles
+     rulers beside the clip view: the clip view keeps the full size, the
+     rulers sit in scroll pockets with backdrop views, and with them
+     installed nothing drawn in the document view reached the window
+     (verified: a plain red fill in `GridView.draw` never appeared; removing
+     the rulers made the grid appear). `SheetHeaderView` is now a plain
+     flipped `NSView`; `WorkbookWindowController` lays the two headers and
+     the scroll view out in a pane (row header full height on the left with
+     the select-all corner on top, column header above the scroll view) and
+     `GridView` redraws them on the clip view's bounds-changed notification.
+  2. `NSView.clipsToBounds` defaults to false since macOS 14: `draw(_:)`
+     received a dirty rect covering the whole window with no clip, so each
+     header's background fill painted over the formula bar and the other
+     header in any pass where views share a context (window captures, layer
+     rendering). The custom views set `clipsToBounds = true` and fill only
+     `dirtyRect ∩ bounds`.
+  3. The CGContext text matrix is not part of the graphics state, and
+     cairo-quartz draws glyphs with whatever it finds; AppKit's string
+     drawing leaves a flipped, translated one behind, so the engine's text
+     vanished whenever a header had drawn before the grid in the same
+     context. `GnmSheet` now resets the text matrix around its drawing and
+     restores it after.
+- Also: the formula bar's SwiftUI-backed text fields report a taller
+  intrinsic height once drawn, which re-laid out the window during the
+  first capture; the bar and its fields have fixed heights now. `Snapshot`
+  flushes layout before capturing and writes a third file, `-layers.png`,
+  from `CALayer.render(in:)`. Both whole-window captures now match the grid
+  capture at 1x and at 150 % zoom (headers, selection highlights, corner,
+  name box, cell text).
+- Not verified: the screen itself. Each layer-backed view draws into its own
+  context on screen, so causes 2 and 3 should not show there, and cause 1 is
+  fixed by construction; Henry should confirm.
+- Tests unchanged and passing: `scripts/smoke-test.sh`, `scripts/test-xcode.sh`,
+  `xcodebuild -scheme GnumericCocoa build`.
 
 ## How to resume
 

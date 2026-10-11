@@ -116,16 +116,27 @@ cairo-quartz surface created per call; the context's CTM maps sheet pixels
 downward, and the backing scale stays in the CTM, as a flipped `NSView`'s
 context already provides. The grid view is a plain flipped `NSView` whose
 coordinates are sheet pixels; it paints the selection and the edit cursor
-with AppKit colors after the engine has drawn; headers are `NSRulerView`
-subclasses that only ask the bridge for sizes and names.
+with AppKit colors after the engine has drawn; headers are plain flipped
+views beside the scroll view that only ask the bridge for sizes and names.
 
 Consequences: HiDPI needs nothing from the engine (verified at 2x);
 rendering tests can use flipped `CGBitmapContext`s; selection highlighting
 through the engine's `is_selected` path (which needs a `GtkStyleContext`) is
-bypassed. The grid view is not layer-backed for now because
-`cacheDisplay(in:to:)`, used for snapshots and future golden images, skips
-layer content; measured on 2026-10-11, full-window redraws take 3 to 10 ms
-(first draw of a sheet 55 to 85 ms), so scrolling does not need it.
+bypassed. Measured on 2026-10-11, full-window redraws take 3 to 10 ms
+(first draw of a sheet 55 to 85 ms), so scrolling needs no special
+treatment yet.
+
+Amended 2026-10-11 (`docs/progress.md`, same date): the headers were
+`NSRulerView` subclasses, which on macOS 26 left the document view invisible
+on screen; they are now laid out by the window controller. The grid view
+and the headers are layer-backed like the rest of the window (AppKit gives
+them layers because their ancestors have one) and set `clipsToBounds`,
+since the macOS 14 default of not clipping hands `draw(_:)` an unclipped
+whole-window dirty rect. The bridge resets the CGContext text matrix around
+its drawing because cairo-quartz draws glyphs with the matrix it finds and
+AppKit's string drawing leaves a flipped one behind. Whole-window
+`cacheDisplay` and `CALayer.render(in:)` captures are faithful again and
+are the headless check that the grid reaches the window.
 
 ## ADR-008 (2026-10-10): Development builds do not persist preferences
 

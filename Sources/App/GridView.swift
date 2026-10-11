@@ -34,11 +34,15 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
-        // Not layer-backed: cacheDisplay(in:to:) (snapshots, golden images)
-        // skips layer content, and plain drawRect scrolling is fast enough
-        // for now.  Revisit with responsive-scrolling measurements.
+        // Layer-backed like the rest of the window (AppKit gives it a layer
+        // because its ancestors have one); everything is drawn in draw(_:),
+        // so cacheDisplay(in:to:) snapshots stay faithful.  Full-window
+        // redraws take 3 to 10 ms, so scrolling needs nothing special yet.
+        clipsToBounds = true   // macOS 14+ default is false; see SheetHeaderView
         NotificationCenter.default.addObserver(self, selector: #selector(clipFrameChanged(_:)),
                                                name: NSView.frameDidChangeNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(clipBoundsChanged(_:)),
+                                               name: NSView.boundsDidChangeNotification, object: nil)
         addSubview(editor)
         editor.onCommit = { [weak self] text, movement in self?.commitEditing(text: text, movement: movement) }
         editor.onCancel = { [weak self] in self?.cancelEditing() }
@@ -74,6 +78,13 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     @objc private func clipFrameChanged(_ note: Notification) {
         guard let clip = enclosingScrollView?.contentView, note.object as? NSView === clip else { return }
         updateFrameSize()
+        headerViews.forEach { $0.needsDisplay = true }
+    }
+
+    /// Scrolling: the headers follow the clip view's bounds origin.
+    @objc private func clipBoundsChanged(_ note: Notification) {
+        guard let clip = enclosingScrollView?.contentView, note.object as? NSView === clip else { return }
+        headerViews.forEach { $0.needsDisplay = true }
     }
 
     func rect(of range: CellRange, in sheet: Sheet) -> NSRect {
@@ -94,6 +105,12 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
                 NSLog("GridView.draw %@ sheet=%@ took %.1f ms", NSStringFromRect(dirtyRect), sheet?.name ?? "nil",
                       (CFAbsoluteTimeGetCurrent() - started) * 1000)
             }
+        }
+        if debug, let context = NSGraphicsContext.current?.cgContext {
+            let t = context.textMatrix, m = context.ctm
+            NSLog("GridView.draw textMatrix=[%g %g %g %g %g %g] ctm=[%g %g %g %g %g %g] clip=%@",
+                  t.a, t.b, t.c, t.d, t.tx, t.ty, m.a, m.b, m.c, m.d, m.tx, m.ty,
+                  NSStringFromRect(context.boundingBoxOfClipPath))
         }
         guard let sheet, let context = NSGraphicsContext.current?.cgContext else {
             NSColor.white.setFill()

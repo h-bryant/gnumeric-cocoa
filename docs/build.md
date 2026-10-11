@@ -64,7 +64,7 @@ not a Homebrew formula; `dylibbundler` 1.0.5 is (Phase 6).
 | `scripts/gen-xcconfig.sh` | write `build/engine.xcconfig` from pkg-config for `project.yml`; then `xcodegen generate` |
 | `scripts/build-app.sh` | swiftc build of `Sources/App` plus the bridge into `build/app/GnumericCocoa.app` (ad-hoc signed) |
 | `scripts/test-xcode.sh` | build the Xcode test bundle and run it with `xcrun xctest`; `--xcodebuild` uses `xcodebuild test` (needs developer mode) |
-| `scripts/run-app.sh [file ...]` | launch that app directly; `GNM_SNAPSHOT=out.png` renders the grid to a PNG and quits, `GNM_DEBUG_LAYOUT=1` logs view frames and grid draws |
+| `scripts/run-app.sh [file ...]` | launch that app directly; `GNM_SNAPSHOT=out.png` writes the grid (`out.png`), the whole window through `cacheDisplay` (`out-window.png`) and through `CALayer.render` (`out-layers.png`), then quits; `GNM_DEBUG_LAYOUT=1` logs view frames, layer state, and every grid and header draw with its transform |
 
 Configure flags used by `build-gnumeric.sh`: Homebrew's
 (`--disable-schemas-compile --disable-silent-rules
@@ -98,6 +98,13 @@ scripts/build-app.sh             # build/app/GnumericCocoa.app
 scripts/run-app.sh upstream/gnumeric/samples/chart-tests.gnumeric
 GNM_SNAPSHOT=/tmp/grid.png scripts/run-app.sh upstream/gnumeric/samples/format-tests.gnumeric
 ```
+
+The three snapshot files should agree. The grid capture draws the grid view
+alone; the window captures draw the whole hierarchy and are what caught the
+blank grid of 2026-10-11 (`docs/progress.md`). SwiftUI-hosted controls (the
+text fields, the tab control) may come out incomplete in the window
+captures; that is a capture limitation, not a bug. The screen itself cannot
+be captured without a Screen Recording permission prompt.
 
 The app finds the engine's compiled GSettings schemas through `GNM_PREFIX`
 (exported by `scripts/env.sh`) or the `GnmEnginePrefix` key that

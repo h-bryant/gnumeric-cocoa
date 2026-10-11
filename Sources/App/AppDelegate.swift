@@ -87,12 +87,17 @@ enum EngineLocator {
     }
 }
 
-/// Development aid: log a view's subtree with frames (GNM_DEBUG_LAYOUT).
+/// Development aid: log a view's subtree with frames and layer state
+/// (GNM_DEBUG_LAYOUT).  `contents=1` means the layer holds drawn pixels.
 @MainActor
 private func dump(view: NSView, depth: Int) {
     let indent = String(repeating: "  ", count: depth)
-    NSLog("%@%@ frame=%@ hidden=%d layer=%d", indent, String(describing: type(of: view)),
-          NSStringFromRect(view.frame), view.isHidden ? 1 : 0, view.wantsLayer ? 1 : 0)
+    let layer = view.layer.map {
+        String(format: "layer(opacity=%.2f masks=%d contents=%d)", $0.opacity, $0.masksToBounds ? 1 : 0,
+               $0.contents != nil ? 1 : 0)
+    } ?? "nolayer"
+    NSLog("%@%@ frame=%@ hidden=%d alpha=%.2f opaque=%d %@", indent, String(describing: type(of: view)),
+          NSStringFromRect(view.frame), view.isHidden ? 1 : 0, view.alphaValue, view.isOpaque ? 1 : 0, layer)
     for sub in view.subviews {
         dump(view: sub, depth: depth + 1)
     }
@@ -191,19 +196,33 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            view.layoutSubtreeIfNeeded()
+            view.displayIfNeeded()
             if ProcessInfo.processInfo.environment["GNM_DEBUG_LAYOUT"] != nil {
                 dump(view: view, depth: 0)
             }
             // The PNG at `path` is the grid view's visible area: the part the
             // engine draws, and what golden-image tests compare.  A capture
-            // of the whole content view goes next to it, but on macOS 26
-            // NSScrollView's backdrop views blank its interior in
-            // cacheDisplay(in:to:), so treat that one as a layout check only.
+            // of the whole content view goes next to it (`-window.png`); it
+            // matched the screen when the NSRulerView headers blanked the
+            // scroll view on macOS 26 (2026-10-11), so it is the check that
+            // the grid actually reaches the window.  SwiftUI-hosted controls
+            // (text fields, the tab control) may come out incomplete in it.
             if let grid = findView(of: "GridView", in: view),
                let gridRep = grid.bitmapImageRepForCachingDisplay(in: grid.visibleRect) {
                 grid.cacheDisplay(in: grid.visibleRect, to: gridRep)
                 try? gridRep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: path))
                 NSLog("snapshot written to %@", path)
+            }
+            if ProcessInfo.processInfo.environment["GNM_DEBUG_LAYOUT"] != nil {
+                for name in ["RowHeaderView", "ColumnHeaderView"] {
+                    if let header = findView(of: name, in: view),
+                       let rep = header.bitmapImageRepForCachingDisplay(in: header.bounds) {
+                        header.cacheDisplay(in: header.bounds, to: rep)
+                        let headerPath = (path as NSString).deletingPathExtension + "-\(name).png"
+                        try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: headerPath))
+                    }
+                }
             }
             guard let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
             view.cacheDisplay(in: view.bounds, to: rep)
@@ -213,6 +232,17 @@ enum Snapshot {
                 try png.write(to: URL(fileURLWithPath: windowPath))
             } catch {
                 NSLog("snapshot failed: %@", error.localizedDescription)
+            }
+            // The layer tree as Core Animation composites it (`-layers.png`):
+            // the closest thing to the screen without a screen capture.
+            if let layer = view.layer, let layerRep = view.bitmapImageRepForCachingDisplay(in: view.bounds),
+               let context = NSGraphicsContext(bitmapImageRep: layerRep) {
+                NSGraphicsContext.saveGraphicsState()
+                NSGraphicsContext.current = context
+                layer.render(in: context.cgContext)
+                NSGraphicsContext.restoreGraphicsState()
+                let layersPath = (path as NSString).deletingPathExtension + "-layers.png"
+                try? layerRep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: layersPath))
             }
         }
     }

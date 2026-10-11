@@ -1,31 +1,43 @@
 import AppKit
 import GnmCocoa
 
-/// Column and row headers as ruler views, so NSScrollView keeps them in step
-/// with the grid.  Drawn natively; the engine only supplies sizes and names.
-/// Clicking selects whole columns or rows, dragging or shift-clicking extends,
-/// and the corner above the row header selects everything.
+/// Column and row headers: plain views the window controller lays out around
+/// the grid's scroll view (above and to the left of it) and that redraw when
+/// the clip view scrolls.  Drawn natively; the engine only supplies sizes and
+/// names.  Clicking selects whole columns or rows, dragging or shift-clicking
+/// extends, and the corner above the row header selects everything.
+///
+/// They used to be NSRulerView subclasses.  On macOS 26 NSScrollView no longer
+/// tiles rulers beside the clip view but overlays them in scroll pockets, and
+/// with rulers installed nothing drawn in the document view reached the
+/// window at all (docs/progress.md, 2026-10-11).
 @MainActor
-class SheetHeaderView: NSRulerView {
+class SheetHeaderView: NSView {
     static let thickness: CGFloat = 20
     static let rowHeaderWidth: CGFloat = 44
 
-    var gridView: GridView? { clientView as? GridView }
+    private(set) weak var gridView: GridView?
     var sheet: Sheet? { gridView?.sheet }
     /// Index (column or row) where the current header drag started.
     var dragAnchor: Int?
 
-    override init(scrollView: NSScrollView?, orientation: NSRulerView.Orientation) {
-        super.init(scrollView: scrollView, orientation: orientation)
-        ruleThickness = orientation == .horizontalRuler ? Self.thickness : Self.rowHeaderWidth
-        reservedThicknessForMarkers = 0
-        reservedThicknessForAccessoryView = 0
+    init(gridView: GridView) {
+        self.gridView = gridView
+        super.init(frame: .zero)
+        translatesAutoresizingMaskIntoConstraints = false
+        layerContentsRedrawPolicy = .duringViewResize
+        // Since macOS 14 views are not clipped by default: draw(_:) then gets
+        // a dirty rect covering the whole window and an unclipped context,
+        // and the background fill below would paint over the neighbours in
+        // any pass where views share a context (window captures).
+        clipsToBounds = true
     }
 
     @available(*, unavailable)
-    required init(coder: NSCoder) { fatalError("not used") }
+    required init?(coder: NSCoder) { fatalError("not used") }
 
     override var isFlipped: Bool { true }
+    override var isOpaque: Bool { true }
 
     /// Header text follows the sheet zoom like the GTK item bar does.
     var font: NSFont {
@@ -43,8 +55,12 @@ class SheetHeaderView: NSRulerView {
     }
 
     func fillBackground(_ rect: NSRect, selected: Bool) {
-        (selected ? NSColor.selectedContentBackgroundColor.withAlphaComponent(0.25) : NSColor.windowBackgroundColor).setFill()
+        NSColor.windowBackgroundColor.setFill()
         rect.fill()
+        if selected {
+            NSColor.selectedContentBackgroundColor.withAlphaComponent(0.25).setFill()
+            rect.fill(using: .sourceOver)
+        }
     }
 
     /// The column or row under a point in this view's coordinates.
@@ -79,10 +95,22 @@ class SheetHeaderView: NSRulerView {
     }
 
     func cornerClicked() {}
+
+    /// Development aid (GNM_DEBUG_LAYOUT): where a draw lands.
+    func logDraw(_ dirtyRect: NSRect) {
+        guard ProcessInfo.processInfo.environment["GNM_DEBUG_LAYOUT"] != nil,
+              let context = NSGraphicsContext.current?.cgContext else { return }
+        let m = context.ctm
+        NSLog("%@.draw %@ frame=%@ bounds=%@ ctm=[%g %g %g %g %g %g] clip=%@", String(describing: type(of: self)),
+              NSStringFromRect(dirtyRect), NSStringFromRect(frame), NSStringFromRect(bounds), m.a, m.b, m.c, m.d, m.tx, m.ty,
+              NSStringFromRect(context.boundingBoxOfClipPath))
+    }
 }
 
 @MainActor
 final class ColumnHeaderView: SheetHeaderView {
+    override var intrinsicContentSize: NSSize { NSSize(width: NSView.noIntrinsicMetric, height: Self.thickness) }
+
     override func index(at point: NSPoint) -> Int? {
         guard let gridView, let sheet else { return nil }
         let x = convert(point, to: gridView).x
@@ -94,8 +122,9 @@ final class ColumnHeaderView: SheetHeaderView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
+        logDraw(dirtyRect)
         NSColor.windowBackgroundColor.setFill()
-        dirtyRect.fill()
+        dirtyRect.intersection(bounds).fill()
         guard let gridView, let sheet else { return }
         let selection = sheet.selectedRange
         let visible = gridView.visibleRect
@@ -127,13 +156,13 @@ final class ColumnHeaderView: SheetHeaderView {
     }
 }
 
+/// The row header spans the full height of the sheet pane: its top strip,
+/// beside the column header, is the select-all corner.
 @MainActor
 final class RowHeaderView: SheetHeaderView {
-    /// The strip above the first row, beside the column header: the
-    /// select-all corner.
-    private var cornerHeight: CGFloat {
-        scrollView?.horizontalRulerView?.frame.height ?? SheetHeaderView.thickness
-    }
+    private var cornerHeight: CGFloat { Self.thickness }
+
+    override var intrinsicContentSize: NSSize { NSSize(width: Self.rowHeaderWidth, height: NSView.noIntrinsicMetric) }
 
     override func index(at point: NSPoint) -> Int? {
         guard let gridView, let sheet, point.y >= cornerHeight else { return nil }
@@ -150,8 +179,9 @@ final class RowHeaderView: SheetHeaderView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
+        logDraw(dirtyRect)
         NSColor.windowBackgroundColor.setFill()
-        dirtyRect.fill()
+        dirtyRect.intersection(bounds).fill()
         guard let gridView, let sheet else { return }
         let selection = sheet.selectedRange
         let visible = gridView.visibleRect

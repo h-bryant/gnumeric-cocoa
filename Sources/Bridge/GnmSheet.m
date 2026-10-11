@@ -699,12 +699,19 @@ gnm_cocoa_rgba_from_cgcolor (CGColorRef color)
 
 /* A cairo context on top of a CGContext whose CTM already maps sheet pixels
  * to the destination with y downward (a flipped NSView or a flipped bitmap
- * context).  The surface size only bounds cairo's extents. */
+ * context).  The surface size only bounds cairo's extents.
+ *
+ * The text matrix is not part of the graphics state, and cairo-quartz draws
+ * glyphs with whatever it finds; AppKit's string drawing leaves a flipped,
+ * translated one behind, which put every glyph off-screen when a header
+ * view had drawn into the same context before the grid (whole-window
+ * captures, 2026-10-11).  Reset it here; callers restore it. */
 static cairo_t *
 cairo_for_context (CGContextRef context, CGRect rect, cairo_surface_t **surface_out)
 {
     unsigned w = (unsigned) MAX (ceil (CGRectGetMaxX (rect)), 1.0);
     unsigned h = (unsigned) MAX (ceil (CGRectGetMaxY (rect)), 1.0);
+    CGContextSetTextMatrix (context, CGAffineTransformIdentity);
     cairo_surface_t *surface = cairo_quartz_surface_create_for_cg_context (context, w, h);
     cairo_t *cr = cairo_create (surface);
     cairo_rectangle (cr, rect.origin.x, rect.origin.y, rect.size.width, rect.size.height);
@@ -1080,6 +1087,7 @@ cell_range_from (GnmRange const *r)
     DrawContext dc;
     draw_context_init (&dc, _sheet, sv_wbv (_sv));
 
+    CGAffineTransform text_matrix = CGContextGetTextMatrix (context);
     CGContextSaveGState (context);
     CGContextClipToRect (context, rect);
     cairo_surface_t *surface;
@@ -1092,12 +1100,14 @@ cell_range_from (GnmRange const *r)
     cairo_surface_flush (surface);
     cairo_surface_destroy (surface);
     CGContextRestoreGState (context);
+    CGContextSetTextMatrix (context, text_matrix);
 }
 
 - (void)drawSheetObjectsInRect:(CGRect)rect context:(CGContextRef)context
 {
     if (_sheet->sheet_objects == NULL || CGRectIsEmpty (rect))
         return;
+    CGAffineTransform text_matrix = CGContextGetTextMatrix (context);
     CGContextSaveGState (context);
     CGContextClipToRect (context, rect);
     cairo_surface_t *surface;
@@ -1118,6 +1128,7 @@ cell_range_from (GnmRange const *r)
     cairo_surface_flush (surface);
     cairo_surface_destroy (surface);
     CGContextRestoreGState (context);
+    CGContextSetTextMatrix (context, text_matrix);
 }
 
 - (NSArray<NSValue *> *)sheetObjectFrames

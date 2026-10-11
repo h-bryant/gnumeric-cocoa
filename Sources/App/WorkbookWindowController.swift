@@ -3,7 +3,8 @@ import SwiftUI
 import GnmCocoa
 
 /// The document window: name box and formula line on top, the grid in a
-/// scroll view with header rulers, and sheet tabs at the bottom.
+/// scroll view with column and row headers beside it, and sheet tabs at the
+/// bottom.
 @MainActor
 final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWindowDelegate, NSUserInterfaceValidations, NSTextFieldDelegate {
     let workbook: Workbook
@@ -63,6 +64,14 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         formulaBar.spacing = 6
         formulaBar.edgeInsets = NSEdgeInsets(top: 6, left: 8, bottom: 2, right: 8)
         formulaBar.setContentHuggingPriority(NSLayoutConstraint.Priority(1), for: .horizontal)
+        // Fixed heights: the SwiftUI-backed text fields of macOS 26 report a
+        // taller intrinsic size once drawn, which re-laid out the window
+        // under the first capture (2026-10-11).
+        NSLayoutConstraint.activate([
+            nameBox.heightAnchor.constraint(equalToConstant: 24),
+            formulaField.heightAnchor.constraint(equalToConstant: 24),
+            formulaBar.heightAnchor.constraint(equalToConstant: 32),
+        ])
 
         scrollView.documentView = gridView
         scrollView.hasVerticalScroller = true
@@ -72,14 +81,32 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         scrollView.borderType = .noBorder
         scrollView.backgroundColor = .white
         scrollView.drawsBackground = true
-        scrollView.hasHorizontalRuler = true
-        scrollView.hasVerticalRuler = true
-        scrollView.horizontalRulerView = ColumnHeaderView(scrollView: scrollView, orientation: .horizontalRuler)
-        scrollView.verticalRulerView = RowHeaderView(scrollView: scrollView, orientation: .verticalRuler)
-        scrollView.rulersVisible = true
-        scrollView.horizontalRulerView?.clientView = gridView
-        scrollView.verticalRulerView?.clientView = gridView
-        gridView.headerViews = [scrollView.horizontalRulerView, scrollView.verticalRulerView].compactMap { $0 as? SheetHeaderView }
+        scrollView.contentView.postsBoundsChangedNotifications = true
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.setContentHuggingPriority(.defaultLow, for: .vertical)
+        scrollView.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
+
+        // Headers beside the scroll view, not NSRulerViews: see SheetHeaderView.
+        let columnHeader = ColumnHeaderView(gridView: gridView)
+        let rowHeader = RowHeaderView(gridView: gridView)
+        gridView.headerViews = [columnHeader, rowHeader]
+        let pane = NSView()
+        pane.translatesAutoresizingMaskIntoConstraints = false
+        pane.addSubview(rowHeader)
+        pane.addSubview(columnHeader)
+        pane.addSubview(scrollView)
+        NSLayoutConstraint.activate([
+            rowHeader.leadingAnchor.constraint(equalTo: pane.leadingAnchor),
+            rowHeader.topAnchor.constraint(equalTo: pane.topAnchor),
+            rowHeader.bottomAnchor.constraint(equalTo: pane.bottomAnchor),
+            columnHeader.leadingAnchor.constraint(equalTo: rowHeader.trailingAnchor),
+            columnHeader.trailingAnchor.constraint(equalTo: pane.trailingAnchor),
+            columnHeader.topAnchor.constraint(equalTo: pane.topAnchor),
+            scrollView.leadingAnchor.constraint(equalTo: rowHeader.trailingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: pane.trailingAnchor),
+            scrollView.topAnchor.constraint(equalTo: columnHeader.bottomAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: pane.bottomAnchor),
+        ])
 
         tabs.segmentStyle = .texturedRounded
         tabs.trackingMode = .selectOne
@@ -100,14 +127,14 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         tabBar.edgeInsets = NSEdgeInsets(top: 0, left: 8, bottom: 0, right: 8)
         tabScroller.setContentHuggingPriority(NSLayoutConstraint.Priority(1), for: .horizontal)
 
-        let column = NSStackView(views: [formulaBar, scrollView, tabBar])
+        let column = NSStackView(views: [formulaBar, pane, tabBar])
         column.orientation = .vertical
-        column.distribution = .fill   /* the default, gravity areas, would not stretch the scroll view */
+        column.distribution = .fill   /* the default, gravity areas, would not stretch the pane */
         column.spacing = 0
         column.alignment = .width
         column.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.setContentHuggingPriority(.defaultLow, for: .vertical)
-        scrollView.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
+        pane.setContentHuggingPriority(.defaultLow, for: .vertical)
+        pane.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
 
         let content = NSView()
         content.addSubview(column)
