@@ -241,6 +241,20 @@ int main (void)
         GNM_ASSERT_EQ_STR (wb.autoExpressionFunction, @"average");
         [wb setAutoExpressionFunction:@"sum" label:@"Sum"];
 
+        /* frozen panes: the engine keeps the two corners, drops frozen
+         * columns when none are asked for, and refuses a no-op */
+        GNM_ASSERT (!s.isFrozen && s.frozenTopLeft.column == -1, @"not frozen at first");
+        [s freezePanesWithUnfrozenTopLeft:GnmCellCoordinateMake (2, 3) frozenTopLeft:GnmCellCoordinateMake (0, 0)];
+        GNM_ASSERT (s.isFrozen, @"frozen");
+        GNM_ASSERT (s.unfrozenTopLeft.column == 2 && s.unfrozenTopLeft.row == 3, @"unfrozen at C4: %ld,%ld",
+                    (long) s.unfrozenTopLeft.column, (long) s.unfrozenTopLeft.row);
+        [s freezePanesWithUnfrozenTopLeft:GnmCellCoordinateMake (0, 5) frozenTopLeft:GnmCellCoordinateMake (0, 0)];
+        GNM_ASSERT (s.isFrozen && s.unfrozenTopLeft.column == 0 && s.unfrozenTopLeft.row == 5, @"rows only");
+        [s unfreezePanes];
+        GNM_ASSERT (!s.isFrozen, @"unfrozen");
+        [s freezePanesWithUnfrozenTopLeft:GnmCellCoordinateMake (0, 0) frozenTopLeft:GnmCellCoordinateMake (0, 0)];
+        GNM_ASSERT (!s.isFrozen, @"freezing nothing is ignored");
+
         /* merge and unmerge */
         [s selectRange:GnmCellRangeMake (50, 70, 52, 71) editPosition:GnmCellCoordinateMake (50, 70)];
         GNM_ASSERT (!s.selectionHasMergedCells, @"no merges yet");

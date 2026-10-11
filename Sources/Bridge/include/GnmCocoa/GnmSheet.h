@@ -171,6 +171,21 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 /// single-cell number source count up by one instead of repeating.
 - (BOOL)autofillFromRange:(GnmCellRange)source toRange:(GnmCellRange)target defaultIncrement:(BOOL)defaultIncrement error:(NSError **)error NS_SWIFT_NAME(autofill(from:to:defaultIncrement:));
 
+// Frozen panes (View → Freeze Panes).  `frozenTopLeft` is the first cell
+// of the frozen area (the window's top-left when it was frozen) and
+// `unfrozenTopLeft` the first cell that scrolls; a frozen pane has no
+// frozen columns when the two columns are equal (both 0, the engine's
+// rule), likewise rows.  Both are (-1, -1) when nothing is frozen.
+@property (nonatomic, readonly, getter=isFrozen) BOOL frozen;
+@property (nonatomic, readonly) GnmCellCoordinate frozenTopLeft;
+@property (nonatomic, readonly) GnmCellCoordinate unfrozenTopLeft;
+/// Freeze with `unfrozen` as the first scrolling cell and `frozen` as the
+/// top-left of the frozen area (`gnm_sheet_view_freeze_panes`); the engine
+/// ignores a request that freezes nothing.  The control hears back through
+/// `sheetFrozenPanesDidChange:`.
+- (void)freezePanesWithUnfrozenTopLeft:(GnmCellCoordinate)unfrozen frozenTopLeft:(GnmCellCoordinate)frozen NS_SWIFT_NAME(freezePanes(unfrozenTopLeft:frozenTopLeft:));
+- (void)unfreezePanes;
+
 // Merged cells.
 /// Whether any selected range overlaps a merged region.
 @property (nonatomic, readonly) BOOL selectionHasMergedCells;

@@ -226,6 +226,24 @@ enum Snapshot {
                 view.displayIfNeeded()
             }
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FREEZE"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // Freeze at C4 through the View menu action, then scroll
+                // well into the sheet: rows 1-3 and columns A-B must stay.
+                let grid = controller.gridView
+                sheet.selectCell(atColumn: 2, row: 3)
+                grid.freezePanes(nil)
+                NSLog("freeze: frozen=%d unfrozen=%ld,%ld panes=%@", sheet.isFrozen ? 1 : 0,
+                      sheet.unfrozenTopLeft.column, sheet.unfrozenTopLeft.row,
+                      grid.panes.map { NSStringFromRect(NSRect(origin: $0.origin, size: NSSize(width: $0.width, height: $0.height))) } ?? "nil")
+                grid.scroll(NSPoint(x: 300, y: 400))
+                grid.enclosingScrollView?.reflectScrolledClipView(grid.enclosingScrollView!.contentView)
+                sheet.selectCell(atColumn: 4, row: 30)
+                NSLog("freeze: visible=%@ scrolling=%@", NSStringFromRect(grid.visibleRect), NSStringFromRect(grid.scrollingVisibleRect))
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FORMAT"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

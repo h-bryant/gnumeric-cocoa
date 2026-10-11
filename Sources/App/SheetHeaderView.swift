@@ -120,7 +120,8 @@ class SheetHeaderView: NSView {
             let size = max(1, resizing.startSize + along(point) - along(resizing.startPoint))
             let edgeInGrid = (isColumnHeader ? gridView.sheet?.leftEdge(ofColumn: resizing.index)
                                              : gridView.sheet?.topEdge(ofRow: resizing.index)) ?? 0
-            gridView.resizeGuide = (isColumnHeader, edgeInGrid + size)
+            gridView.resizeGuide = (isColumnHeader, isColumnHeader ? gridView.viewX(forSheetX: edgeInGrid) + size
+                                                                    : gridView.viewY(forSheetY: edgeInGrid) + size)
             needsDisplay = true
             return
         }
@@ -178,7 +179,7 @@ class SheetHeaderView: NSView {
                 if left > visible.maxX { break }
                 let width = sheet.width(ofColumn: column)
                 if width > 0 {
-                    let edge = convert(NSPoint(x: left + width, y: 0), from: gridView).x
+                    let edge = convert(NSPoint(x: gridView.viewX(forSheetX: left + width - 0.5) + 0.5, y: 0), from: gridView).x
                     addCursorRect(NSRect(x: edge - grip, y: 0, width: 2 * grip, height: bounds.height), cursor: cursor)
                 }
                 column += 1
@@ -190,7 +191,7 @@ class SheetHeaderView: NSView {
                 if top > visible.maxY { break }
                 let height = sheet.height(ofRow: row)
                 if height > 0 {
-                    let edge = convert(NSPoint(x: 0, y: top + height), from: gridView).y
+                    let edge = convert(NSPoint(x: 0, y: gridView.viewY(forSheetY: top + height - 0.5) + 0.5), from: gridView).y
                     addCursorRect(NSRect(x: 0, y: edge - grip, width: bounds.width, height: 2 * grip), cursor: cursor)
                 }
                 row += 1
@@ -231,13 +232,13 @@ final class ColumnHeaderView: SheetHeaderView {
 
     override func index(at point: NSPoint) -> Int? {
         guard let gridView, let sheet else { return nil }
-        let x = convert(point, to: gridView).x
+        let x = gridView.sheetX(forViewX: convert(point, to: gridView).x)
         return x >= 0 ? sheet.column(atX: x) : 0
     }
 
     override func boundary(at point: NSPoint) -> Int? {
         guard let gridView, let sheet else { return nil }
-        let x = convert(point, to: gridView).x
+        let x = gridView.sheetX(forViewX: convert(point, to: gridView).x)
         guard x >= 0 else { return nil }
         // The edge just before or just after the point, within the grip.
         let column = sheet.column(atX: x)
@@ -259,30 +260,41 @@ final class ColumnHeaderView: SheetHeaderView {
         guard let gridView, let sheet else { return }
         let selection = sheet.selectedRange
         let visible = gridView.visibleRect
-        var column = sheet.column(atX: visible.minX)
         let height = bounds.height
-        NSColor.separatorColor.setFill()
-        while column < sheet.columnCount {
-            let left = sheet.leftEdge(ofColumn: column)
-            if left > visible.maxX { break }
-            let width = sheet.width(ofColumn: column)
-            if width > 0 {
-                let x0 = convert(NSPoint(x: left, y: 0), from: gridView).x
-                let cell = NSRect(x: x0, y: 0, width: width, height: height)
-                if cell.intersects(dirtyRect) {
-                    let selected = column >= selection.start.column && column <= selection.end.column
-                    fillBackground(cell, selected: selected)
-                    let name = sheet.name(ofColumn: column) as NSString
-                    let attrs = attributes(selected: selected)
-                    let size = name.size(withAttributes: attrs)
-                    name.draw(in: NSRect(x: cell.minX, y: (height - size.height) / 2, width: cell.width, height: size.height),
-                              withAttributes: attrs)
-                    NSColor.separatorColor.setFill()
-                    NSRect(x: cell.maxX - 1, y: 0, width: 1, height: height).fill()
+        func drawColumns(from first: Int, to end: Int, maxX: CGFloat) {
+            var column = first
+            while column < end {
+                let left = sheet.leftEdge(ofColumn: column)
+                if left > maxX { break }
+                let width = sheet.width(ofColumn: column)
+                if width > 0 {
+                    let x0 = convert(NSPoint(x: gridView.viewX(forSheetX: left), y: 0), from: gridView).x
+                    let cell = NSRect(x: x0, y: 0, width: width, height: height)
+                    if cell.intersects(dirtyRect) {
+                        let selected = column >= selection.start.column && column <= selection.end.column
+                        fillBackground(cell, selected: selected)
+                        let name = sheet.name(ofColumn: column) as NSString
+                        let attrs = attributes(selected: selected)
+                        let size = name.size(withAttributes: attrs)
+                        name.draw(in: NSRect(x: cell.minX, y: (height - size.height) / 2, width: cell.width, height: size.height),
+                                  withAttributes: attrs)
+                        NSColor.separatorColor.setFill()
+                        NSRect(x: cell.maxX - 1, y: 0, width: 1, height: height).fill()
+                    }
                 }
+                column += 1
             }
-            column += 1
         }
+        drawColumns(from: sheet.column(atX: visible.minX), to: sheet.columnCount, maxX: visible.maxX)
+        if let panes = gridView.panes, panes.hasColumns {
+            // The frozen columns, painted over whatever scrolled under them.
+            let frozen = sheet.frozenTopLeft, unfrozen = sheet.unfrozenTopLeft
+            drawColumns(from: frozen.column, to: unfrozen.column, maxX: .greatestFiniteMagnitude)
+            NSColor.tertiaryLabelColor.setFill()
+            let edge = convert(NSPoint(x: visible.minX + panes.width, y: 0), from: gridView).x
+            NSRect(x: edge - 1, y: 0, width: 1, height: height).fill()
+        }
+        NSColor.separatorColor.setFill()
         NSRect(x: 0, y: height - 1, width: bounds.width, height: 1).fill()
         drawResizeGuide()
         window?.invalidateCursorRects(for: self)
@@ -300,13 +312,13 @@ final class RowHeaderView: SheetHeaderView {
 
     override func index(at point: NSPoint) -> Int? {
         guard let gridView, let sheet, point.y >= cornerHeight else { return nil }
-        let y = convert(point, to: gridView).y
+        let y = gridView.sheetY(forViewY: convert(point, to: gridView).y)
         return y >= 0 ? sheet.row(atY: y) : 0
     }
 
     override func boundary(at point: NSPoint) -> Int? {
         guard let gridView, let sheet, point.y >= cornerHeight else { return nil }
-        let y = convert(point, to: gridView).y
+        let y = gridView.sheetY(forViewY: convert(point, to: gridView).y)
         guard y >= 0 else { return nil }
         let row = sheet.row(atY: y)
         let top = sheet.topEdge(ofRow: row)
@@ -331,28 +343,38 @@ final class RowHeaderView: SheetHeaderView {
         guard let gridView, let sheet else { return }
         let selection = sheet.selectedRange
         let visible = gridView.visibleRect
-        var row = sheet.row(atY: visible.minY)
         let width = bounds.width
-        while row < sheet.rowCount {
-            let top = sheet.topEdge(ofRow: row)
-            if top > visible.maxY { break }
-            let height = sheet.height(ofRow: row)
-            if height > 0 {
-                let y0 = convert(NSPoint(x: 0, y: top), from: gridView).y
-                let cell = NSRect(x: 0, y: y0, width: width, height: height)
-                if cell.intersects(dirtyRect) {
-                    let selected = row >= selection.start.row && row <= selection.end.row
-                    fillBackground(cell, selected: selected)
-                    let name = sheet.name(ofRow: row) as NSString
-                    let attrs = attributes(selected: selected)
-                    let size = name.size(withAttributes: attrs)
-                    name.draw(in: NSRect(x: 0, y: cell.minY + (height - size.height) / 2, width: width - 4, height: size.height),
-                              withAttributes: attrs)
-                    NSColor.separatorColor.setFill()
-                    NSRect(x: 0, y: cell.maxY - 1, width: width, height: 1).fill()
+        func drawRows(from first: Int, to end: Int, maxY: CGFloat) {
+            var row = first
+            while row < end {
+                let top = sheet.topEdge(ofRow: row)
+                if top > maxY { break }
+                let height = sheet.height(ofRow: row)
+                if height > 0 {
+                    let y0 = convert(NSPoint(x: 0, y: gridView.viewY(forSheetY: top)), from: gridView).y
+                    let cell = NSRect(x: 0, y: y0, width: width, height: height)
+                    if cell.intersects(dirtyRect) {
+                        let selected = row >= selection.start.row && row <= selection.end.row
+                        fillBackground(cell, selected: selected)
+                        let name = sheet.name(ofRow: row) as NSString
+                        let attrs = attributes(selected: selected)
+                        let size = name.size(withAttributes: attrs)
+                        name.draw(in: NSRect(x: 0, y: cell.minY + (height - size.height) / 2, width: width - 4, height: size.height),
+                                  withAttributes: attrs)
+                        NSColor.separatorColor.setFill()
+                        NSRect(x: 0, y: cell.maxY - 1, width: width, height: 1).fill()
+                    }
                 }
+                row += 1
             }
-            row += 1
+        }
+        drawRows(from: sheet.row(atY: visible.minY), to: sheet.rowCount, maxY: visible.maxY)
+        if let panes = gridView.panes, panes.hasRows {
+            let frozen = sheet.frozenTopLeft, unfrozen = sheet.unfrozenTopLeft
+            drawRows(from: frozen.row, to: unfrozen.row, maxY: .greatestFiniteMagnitude)
+            NSColor.tertiaryLabelColor.setFill()
+            let edge = convert(NSPoint(x: 0, y: visible.minY + panes.height), from: gridView).y
+            NSRect(x: 0, y: edge - 1, width: width, height: 1).fill()
         }
         // The select-all corner: a small triangle pointing at A1.
         let corner = NSRect(x: 0, y: 0, width: width, height: cornerHeight)

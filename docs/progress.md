@@ -304,9 +304,24 @@
   offers `recomputeAutoExpression` because the engine's own trigger after a
   selection change is a GLib timeout (the recalc lag) that test programs
   never pump.
-- `docs/mvp-known-gaps.md` updated. Next in Phase 3: freeze panes, sheet
-  management (insert, rename, remove, reorder), Paste Special, sort, and
-  the filtered Clear variants.
+- Freeze panes (View → Freeze Panes / Unfreeze Panes). The bridge exposes
+  `isFrozen`, `frozenTopLeft`, `unfrozenTopLeft`, `freezePanes…`, and
+  `unfreezePanes` over `gnm_sheet_view_freeze_panes`; the action follows
+  the GTK placement rules (`cb_view_freeze_panes`). The grid keeps one
+  document view: the frozen rows, columns, and corner are painted again as
+  overlays at the visible rect's top and left (the sheet drawn with a
+  translation and a clip, so the selection and ants come along), with
+  mapping helpers (`viewX(forSheetX:)` and friends) for hit testing, the
+  fill handle, and the headers, which paint the frozen columns or rows
+  over the scrolled ones. `GridClipView.constrainBoundsRect` clamps
+  scrolling to the first unfrozen cell, and "make cell visible" clears
+  the strips. While frozen, any change repaints the visible rect
+  (3 to 10 ms). `GNM_SNAPSHOT_FREEZE=1` freezes at C4 and scrolls; the
+  capture shows rows 1 to 3 and columns A and B in place beside row 28 and
+  column H.
+- `docs/mvp-known-gaps.md` updated. Next in Phase 3: sheet management
+  (insert, rename, remove, reorder), Paste Special, sort, and the filtered
+  Clear variants.
 
 ## How to resume
 

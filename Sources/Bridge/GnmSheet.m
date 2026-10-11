@@ -1144,6 +1144,44 @@ pixels_from_points (Sheet const *sheet, gboolean horizontal, double points)
     } description:@"Could not autofill." error:error];
 }
 
+#pragma mark - Frozen panes
+
+- (BOOL)isFrozen
+{
+    return _sv != NULL && gnm_sheet_view_is_frozen (_sv);
+}
+
+- (GnmCellCoordinate)frozenTopLeft
+{
+    if (!self.isFrozen)
+        return GnmCellCoordinateMake (-1, -1);
+    return GnmCellCoordinateMake (_sv->frozen_top_left.col, _sv->frozen_top_left.row);
+}
+
+- (GnmCellCoordinate)unfrozenTopLeft
+{
+    if (!self.isFrozen)
+        return GnmCellCoordinateMake (-1, -1);
+    return GnmCellCoordinateMake (_sv->unfrozen_top_left.col, _sv->unfrozen_top_left.row);
+}
+
+- (void)freezePanesWithUnfrozenTopLeft:(GnmCellCoordinate)unfrozen frozenTopLeft:(GnmCellCoordinate)frozen
+{
+    if (_sv == NULL)
+        return;
+    GnmCellPos f = { (int) frozen.column, (int) frozen.row };
+    GnmCellPos u = { (int) unfrozen.column, (int) unfrozen.row };
+    if (u.col < f.col || u.row < f.row)
+        return;   /* the engine would only complain */
+    gnm_sheet_view_freeze_panes (_sv, &f, &u);
+}
+
+- (void)unfreezePanes
+{
+    if (_sv != NULL)
+        gnm_sheet_view_freeze_panes (_sv, NULL, NULL);
+}
+
 #pragma mark - Merged cells
 
 - (BOOL)selectionHasMergedCells

@@ -37,6 +37,78 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         didSet { needsDisplay = true }
     }
     static let fillHandleSize: CGFloat = 7
+
+    /// Frozen panes: the frozen rows and columns are painted as overlays at
+    /// the top and left of the visible rect (the GTK front end uses up to
+    /// four canvases instead).  `origin` is the sheet position of the frozen
+    /// area's top-left cell, `width` and `height` the frozen extents in
+    /// sheet pixels (0 when no columns or no rows are frozen).
+    struct Panes {
+        let origin: NSPoint
+        let width: CGFloat
+        let height: CGFloat
+        var hasColumns: Bool { width > 0 }
+        var hasRows: Bool { height > 0 }
+    }
+
+    var panes: Panes? {
+        guard let sheet, sheet.isFrozen else { return nil }
+        let frozen = sheet.frozenTopLeft, unfrozen = sheet.unfrozenTopLeft
+        let origin = NSPoint(x: sheet.leftEdge(ofColumn: frozen.column), y: sheet.topEdge(ofRow: frozen.row))
+        return Panes(origin: origin,
+                     width: unfrozen.column > frozen.column ? sheet.leftEdge(ofColumn: unfrozen.column) - origin.x : 0,
+                     height: unfrozen.row > frozen.row ? sheet.topEdge(ofRow: unfrozen.row) - origin.y : 0)
+    }
+
+    /// The scroll origin the clip view must not go above: the first
+    /// unfrozen cell sits right under the frozen strips.
+    var minimumScrollOrigin: NSPoint {
+        guard let panes else { return .zero }
+        return panes.origin
+    }
+
+    // Sheet pixels and view points coincide, except where a frozen strip
+    // covers the visible rect: there the view shows the frozen cells.
+    func viewX(forSheetX x: CGFloat) -> CGFloat {
+        guard let panes, panes.hasColumns, x >= panes.origin.x, x < panes.origin.x + panes.width else { return x }
+        return visibleRect.minX + (x - panes.origin.x)
+    }
+
+    func viewY(forSheetY y: CGFloat) -> CGFloat {
+        guard let panes, panes.hasRows, y >= panes.origin.y, y < panes.origin.y + panes.height else { return y }
+        return visibleRect.minY + (y - panes.origin.y)
+    }
+
+    func sheetX(forViewX x: CGFloat) -> CGFloat {
+        guard let panes, panes.hasColumns, x >= visibleRect.minX, x < visibleRect.minX + panes.width else { return x }
+        return panes.origin.x + (x - visibleRect.minX)
+    }
+
+    func sheetY(forViewY y: CGFloat) -> CGFloat {
+        guard let panes, panes.hasRows, y >= visibleRect.minY, y < visibleRect.minY + panes.height else { return y }
+        return panes.origin.y + (y - visibleRect.minY)
+    }
+
+    func sheetPoint(forViewPoint p: NSPoint) -> NSPoint {
+        NSPoint(x: sheetX(forViewX: p.x), y: sheetY(forViewY: p.y))
+    }
+
+    /// Where a sheet rect appears; one that straddles a frozen boundary
+    /// keeps its size and follows its origin.
+    func viewRect(forSheetRect r: NSRect) -> NSRect {
+        NSRect(x: viewX(forSheetX: r.minX), y: viewY(forSheetY: r.minY), width: r.width, height: r.height)
+    }
+
+    /// The part of the visible rect that scrolls: the visible rect minus
+    /// the frozen strips.
+    var scrollingVisibleRect: NSRect {
+        var r = visibleRect
+        if let panes {
+            r.origin.x += panes.width; r.size.width -= panes.width
+            r.origin.y += panes.height; r.size.height -= panes.height
+        }
+        return r
+    }
     private let editor = CellEditorField()
     private var editingCell: CellCoordinate?
     var isEditing: Bool { editingCell != nil }
@@ -90,10 +162,12 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         headerViews.forEach { $0.needsDisplay = true }
     }
 
-    /// Scrolling: the headers follow the clip view's bounds origin.
+    /// Scrolling: the headers follow the clip view's bounds origin, and
+    /// frozen strips are repainted at the new visible rect.
     @objc private func clipBoundsChanged(_ note: Notification) {
         guard let clip = enclosingScrollView?.contentView, note.object as? NSView === clip else { return }
         headerViews.forEach { $0.needsDisplay = true }
+        if panes != nil { needsDisplay = true }
     }
 
     func rect(of range: CellRange, in sheet: Sheet) -> NSRect {
@@ -126,6 +200,49 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
             dirtyRect.fill()
             return
         }
+        drawPass(sheet, context: context, dirtyRect: dirtyRect)
+        guard let panes else { return }
+        // Frozen strips: the sheet drawn again, shifted so the frozen cells
+        // land at the top and left of the visible rect, clipped to each strip.
+        let visible = visibleRect
+        var strips: [(clip: NSRect, shift: NSPoint)] = []
+        if panes.hasRows {
+            strips.append((NSRect(x: visible.minX + panes.width, y: visible.minY,
+                                  width: visible.width - panes.width, height: panes.height),
+                           NSPoint(x: 0, y: visible.minY - panes.origin.y)))
+        }
+        if panes.hasColumns {
+            strips.append((NSRect(x: visible.minX, y: visible.minY + panes.height,
+                                  width: panes.width, height: visible.height - panes.height),
+                           NSPoint(x: visible.minX - panes.origin.x, y: 0)))
+        }
+        if panes.hasRows && panes.hasColumns {
+            strips.append((NSRect(x: visible.minX, y: visible.minY, width: panes.width, height: panes.height),
+                           NSPoint(x: visible.minX - panes.origin.x, y: visible.minY - panes.origin.y)))
+        }
+        for strip in strips {
+            let clip = strip.clip.intersection(dirtyRect)
+            guard !clip.isEmpty else { continue }
+            NSGraphicsContext.saveGraphicsState()
+            clip.clip()
+            let transform = NSAffineTransform()
+            transform.translateX(by: strip.shift.x, yBy: strip.shift.y)
+            transform.concat()
+            drawPass(sheet, context: context, dirtyRect: clip.offsetBy(dx: -strip.shift.x, dy: -strip.shift.y))
+            NSGraphicsContext.restoreGraphicsState()
+        }
+        // The pane boundaries.
+        NSColor.tertiaryLabelColor.setFill()
+        if panes.hasRows {
+            NSRect(x: visible.minX, y: visible.minY + panes.height - 1, width: visible.width, height: 1).fill()
+        }
+        if panes.hasColumns {
+            NSRect(x: visible.minX + panes.width - 1, y: visible.minY, width: 1, height: visible.height).fill()
+        }
+    }
+
+    /// Everything the sheet shows in `dirtyRect` (sheet coordinates).
+    private func drawPass(_ sheet: Sheet, context: CGContext, dirtyRect: NSRect) {
         sheet.drawCells(in: dirtyRect, context: context, backgroundColor: NSColor.white.cgColor)
         sheet.drawSheetObjects(in: dirtyRect, context: context)
         drawMarchingAnts(of: sheet, dirtyRect: dirtyRect)
@@ -182,7 +299,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
 
     override func resetCursorRects() {
         guard let sheet, !isEditing else { return }
-        addCursorRect(fillHandleRect(for: rect(of: sheet.selectedRange, in: sheet)).insetBy(dx: -2, dy: -2),
+        addCursorRect(viewRect(forSheetRect: fillHandleRect(for: rect(of: sheet.selectedRange, in: sheet))).insetBy(dx: -2, dy: -2),
                       cursor: .crosshair)
     }
 
@@ -202,8 +319,12 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
 
     private func invalidateSelection(_ sheet: Sheet) {
         let newRect = rect(of: sheet.selectedRange, in: sheet)
-        setNeedsDisplay(lastSelectionRect.insetBy(dx: -6, dy: -6))
-        setNeedsDisplay(newRect.insetBy(dx: -6, dy: -6))
+        if panes != nil {
+            needsDisplay = true   // the overlays show these cells elsewhere
+        } else {
+            setNeedsDisplay(lastSelectionRect.insetBy(dx: -6, dy: -6))
+            setNeedsDisplay(newRect.insetBy(dx: -6, dy: -6))
+        }
         headerViews.forEach { $0.needsDisplay = true }
         window?.invalidateCursorRects(for: self)
     }
@@ -420,6 +541,11 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
             return selectionIsMultiCell
         case #selector(unmergeCells(_:)):
             return sheet.selectionHasMergedCells
+        case #selector(freezePanes(_:)):
+            if let menuItem = item as? NSMenuItem {
+                menuItem.title = sheet.isFrozen ? "Unfreeze Panes" : "Freeze Panes"
+            }
+            return true
         default:
             return true
         }
@@ -429,7 +555,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
 
     override func mouseDown(with event: NSEvent) {
         guard let sheet else { return }
-        let point = convert(event.locationInWindow, from: nil)
+        let point = sheetPoint(forViewPoint: convert(event.locationInWindow, from: nil))
         if !isEditing, event.clickCount == 1,
            fillHandleRect(for: rect(of: sheet.selectedRange, in: sheet)).insetBy(dx: -2, dy: -2).contains(point) {
             fillSource = sheet.selectedRange
@@ -456,7 +582,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         guard let sheet else { return }
         if let fillSource {
             autoscroll(with: event)
-            let point = convert(event.locationInWindow, from: nil)
+            let point = sheetPoint(forViewPoint: convert(event.locationInWindow, from: nil))
             let cell = CellCoordinate(column: sheet.column(atX: point.x), row: sheet.row(atY: point.y))
             let target = Self.fillTarget(from: fillSource, toward: cell)
             if fillTarget.map({ $0 != target }) ?? true {
@@ -467,7 +593,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         }
         guard let anchor = dragAnchor else { return }
         autoscroll(with: event)
-        let point = convert(event.locationInWindow, from: nil)
+        let point = sheetPoint(forViewPoint: convert(event.locationInWindow, from: nil))
         let cell = CellCoordinate(column: sheet.column(atX: point.x), row: sheet.row(atY: point.y))
         let range = Self.range(from: anchor, to: cell)
         let current = sheet.selectedRange
@@ -530,12 +656,62 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     /// selection (what the GTK pane does).
     private var topVisibleRow: Int {
         guard let sheet else { return 0 }
-        return sheet.row(atY: visibleRect.minY)
+        return sheet.row(atY: scrollingVisibleRect.minY)
     }
 
     private var leftVisibleColumn: Int {
         guard let sheet else { return 0 }
-        return sheet.column(atX: visibleRect.minX)
+        return sheet.column(atX: scrollingVisibleRect.minX)
+    }
+
+    // MARK: Freeze panes (View menu)
+
+    /// Toggle frozen panes.  Freezing follows the GTK rules
+    /// (wbc-gtk-actions.c, cb_view_freeze_panes): the edit position is the
+    /// first scrolling cell; at A1 a whole-row or whole-column selection
+    /// freezes the rows above or the columns before it; a cell on the
+    /// window's top edge freezes rows only, one on its left edge columns
+    /// only; an edit position out of view, or at the window's top-left,
+    /// freezes at the middle of the window.
+    @objc func freezePanes(_ sender: Any?) {
+        guard let sheet else { return }
+        if isEditing { commitEditing(text: editor.stringValue, movement: .none) }
+        if sheet.isFrozen {
+            sheet.unfreezePanes()
+            return
+        }
+        let visible = visibleRect
+        var frozen = CellCoordinate(column: sheet.column(atX: visible.minX), row: sheet.row(atY: visible.minY))
+        let last = CellCoordinate(column: sheet.column(atX: visible.maxX - 1), row: sheet.row(atY: visible.maxY - 1))
+        var unfrozen = sheet.editPosition
+        if unfrozen.column == 0 && unfrozen.row == 0 {
+            let first = sheet.selectedRange
+            let fullRows = first.start.column == 0 && first.end.column == sheet.columnCount - 1
+            let fullColumns = first.start.row == 0 && first.end.row == sheet.rowCount - 1
+            if !fullRows && !fullColumns {
+                unfrozen = CellCoordinate(column: first.end.column + 1, row: first.end.row + 1)
+            } else if fullRows && !fullColumns {
+                unfrozen = CellCoordinate(column: 0, row: first.end.row + 1)
+            } else if fullColumns && !fullRows {
+                unfrozen = CellCoordinate(column: first.end.column + 1, row: 0)
+            }
+        }
+        var center = unfrozen.column < frozen.column || unfrozen.column > last.column
+            || unfrozen.row < frozen.row || unfrozen.row > last.row
+        if unfrozen.column == frozen.column {
+            if unfrozen.row == frozen.row {
+                center = true
+            } else {
+                unfrozen.column = 0; frozen.column = 0
+            }
+        } else if unfrozen.row == frozen.row {
+            unfrozen.row = 0; frozen.row = 0
+        }
+        if center {
+            unfrozen = CellCoordinate(column: (frozen.column + last.column) / 2, row: (frozen.row + last.row) / 2)
+        }
+        guard unfrozen.column > frozen.column || unfrozen.row > frozen.row else { return }
+        sheet.freezePanes(unfrozenTopLeft: unfrozen, frozenTopLeft: frozen)
     }
 
     func selectColumns(from first: Int, to last: Int, anchor: Int) {
@@ -687,7 +863,51 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         scroll(NSPoint(x: sheet.leftEdge(ofColumn: column), y: sheet.topEdge(ofRow: row)))
     }
 
+    /// Scroll so the cell shows; a scrolling cell must clear the frozen
+    /// strips, a frozen one is always in view.
     func sheet(_ sheet: Sheet, makeVisibleColumn column: Int, row: Int) {
-        scrollToVisible(sheet.frameOfCell(atColumn: column, row: row))
+        var frame = sheet.frameOfCell(atColumn: column, row: row)
+        if let panes {
+            let unfrozen = sheet.unfrozenTopLeft
+            if panes.hasColumns {
+                if column < unfrozen.column { frame.size.width = 0 } else {
+                    frame.origin.x -= panes.width; frame.size.width += panes.width
+                }
+            }
+            if panes.hasRows {
+                if row < unfrozen.row { frame.size.height = 0 } else {
+                    frame.origin.y -= panes.height; frame.size.height += panes.height
+                }
+            }
+            if frame.width == 0 && frame.height == 0 { return }
+            if frame.width == 0 { frame.origin.x = visibleRect.minX; frame.size.width = 1 }
+            if frame.height == 0 { frame.origin.y = visibleRect.minY; frame.size.height = 1 }
+        }
+        scrollToVisible(frame)
+    }
+
+    func sheetFrozenPanesDidChange(_ sheet: Sheet) {
+        // The clip view's minimum origin changed: re-clamp, then repaint.
+        if let clip = enclosingScrollView?.contentView {
+            clip.scroll(to: clip.constrainBoundsRect(clip.bounds).origin)
+            enclosingScrollView?.reflectScrolledClipView(clip)
+        }
+        needsDisplay = true
+        headerViews.forEach { $0.needsDisplay = true }
+        window?.invalidateCursorRects(for: self)
+    }
+}
+
+/// The grid's clip view: scrolling never goes above the first unfrozen cell.
+@MainActor
+final class GridClipView: NSClipView {
+    override func constrainBoundsRect(_ proposedBounds: NSRect) -> NSRect {
+        var bounds = super.constrainBoundsRect(proposedBounds)
+        if let grid = documentView as? GridView {
+            let minimum = grid.minimumScrollOrigin
+            bounds.origin.x = max(bounds.origin.x, minimum.x)
+            bounds.origin.y = max(bounds.origin.y, minimum.y)
+        }
+        return bounds
     }
 }

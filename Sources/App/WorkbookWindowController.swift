@@ -79,6 +79,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             formulaBar.heightAnchor.constraint(equalToConstant: 32),
         ])
 
+        scrollView.contentView = GridClipView()   // clamps scrolling under frozen panes
         scrollView.documentView = gridView
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = true

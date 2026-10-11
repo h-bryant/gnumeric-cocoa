@@ -51,7 +51,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | Action | Status | Notes / Phase |
 |---|---|---|
 | ViewNew | no | second window on one workbook (`control_new` slot), Phase 3 |
-| ViewFreezeThawPanes | no | Phase 3; frozen panes in files draw as one pane |
+| ViewFreezeThawPanes | ported | View → Freeze/Unfreeze Panes with the GTK placement rules; files with frozen panes open frozen |
 | ViewStatusbar | partial | the auto-expression (Sum/Min/Max/Average/Count of the selection) sits at the right of the tab bar; no hide toggle, no other status fields |
 | ViewFullScreen | no | enable the window's full-screen behavior, Phase 3 |
 | FormatWorkbook (workbook properties) | no | Phase 5 |
@@ -123,7 +123,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | Cell comments (display, tooltips) | no | Phase 5 |
 | Hyperlinks (activation) | no | Phase 5 (`gnm_hlink_activate` takes `WBCGtk`) |
 | Sheet objects: selection handles, move, resize, context menus, editing, form widgets | no | Phase 4; objects draw read-only |
-| Frozen panes | no | Phase 3 |
+| Frozen panes | ported | 2026-10-11: frozen strips painted as overlays on one document view, scrolling clamped to the first unfrozen cell |
 | Right-to-left sheets | no | Phase 7; drawn left-to-right |
 | Marching ants animation | partial | static dashed outline |
 | Drag and drop (cells, files, sheet tabs) | no | Phase 3 |

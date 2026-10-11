@@ -65,6 +65,8 @@ enum MainMenu {
         zoomIn.keyEquivalentModifierMask = [.command]
         viewMenu.addItem(withTitle: "Zoom Out", action: Selector(("zoomOut:")), keyEquivalent: "-")
         viewMenu.addItem(withTitle: "Actual Size", action: Selector(("zoomActualSize:")), keyEquivalent: "0")
+        viewMenu.addItem(.separator())
+        viewMenu.addItem(withTitle: "Freeze Panes", action: Selector(("freezePanes:")), keyEquivalent: "")
         menuBar.addItem(submenu(viewMenu, title: "View"))
 
         let insertMenu = NSMenu(title: "Insert")
