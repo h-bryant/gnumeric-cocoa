@@ -41,7 +41,7 @@ and even in auto mode stop and ask Henry before doing any of the following:
 | Language at the C boundary | Objective-C | Calls C and GObject directly; Swift interop with GObject macros and refcounting is awkward. |
 | Language for app/UI layer | Swift, from Phase 1 | Dialogs can be SwiftUI hosted in AppKit via `NSHostingView`, shrinking Phase 5; value types and `let` bindings fit Henry's functional style; current AppKit docs and new APIs are Swift-first. Starting in Objective-C and switching later would discard the MVP UI code. |
 | Scope | Full feature parity with GTK Gnumeric, eventually. MVP = viewer/editor + read-only chart rendering + basic Format Cells dialog (see Phase 2b). | Ships something usable early, tests the SwiftUI-dialog pattern before Phase 5, and keeps the fallback to the GTK build for everything else until parity is reached. |
-| Upstream engagement | Open a GNOME GitLab issue after Phase 0, with concrete findings and a specific request; no general announcement before working code exists. Henry posts it; Claude Code drafts it. | Maintainers can confirm or correct architecture assumptions and may accept small decoupling patches, keeping the patch series short. Contacting them before Phase 0 would mean announcing a project with no code. |
+| Upstream engagement | **Deferred (Henry, 2026-10-11):** the port proceeds without depending on any change to upstream Gnumeric. Engine changes the port cannot avoid are carried as small patches in `patches/`, written to stay upstreamable. `docs/upstream-issue.md` stays a draft, not posted. The git tag `upstream-baseline-2026-10-11` marks the point to return to if engagement resumes (`docs/decisions.md` ADR-011). | Keeps the project self-contained and unblocked; the option to engage later is preserved by the draft, the site list in `docs/architecture.md` §5, and the tag. |
 | Minimum macOS | Homebrew's oldest supported release at release time; 15 (Sequoia) as of 2026-10-10 | Dependencies come from Homebrew, whose bottles target the OS they are built on; 14 is no longer supported there. `MACOSX_DEPLOYMENT_TARGET = 15.0` in `project.yml` and `LSMinimumSystemVersion` in `Info.plist` (`docs/decisions.md` ADR-009). |
 | Repo name | `gnumeric-cocoa` | Matches convention (Qt, SDL, wxWidgets name Mac backends "cocoa"). |
 | License | Same as Gnumeric: GPL-2.0-only OR GPL-3.0-only (confirmed: upstream ships `COPYING`, `COPYING-gpl2`, `COPYING-gpl3`) | Combined work links the GPL engine. AppKit linking is allowed under the GPL system-library exceptions. |
@@ -125,7 +125,7 @@ Each phase ends with a commit-ready state and a short entry in `docs/progress.md
    - the real `WorkbookControl`/`SheetControl` vtables and which methods a new front end must implement,
    - a GTK-dependency map of `src/` (e.g., `grep -l gtk` plus link analysis),
    - the init/shutdown sequence from `ssconvert.c`.
-5. **Done (draft).** Draft `docs/upstream-issue.md`: the text of a GNOME GitLab issue for `GNOME/gnumeric`. It should briefly describe the port, list the concrete Phase 0 findings, and make a specific request, typically: which engine entry points take `WBCGtk*` and could reasonably be moved to `WorkbookControl*`, and whether such patches would be accepted. Keep it short, factual, and free of promises about delivery. Henry reviews and posts it himself.
+5. **Done (draft, not posted).** Draft `docs/upstream-issue.md`: the text of a GNOME GitLab issue for `GNOME/gnumeric`. It should briefly describe the port, list the concrete Phase 0 findings, and make a specific request, typically: which engine entry points take `WBCGtk*` and could reasonably be moved to `WorkbookControl*`, and whether such patches would be accepted. Keep it short, factual, and free of promises about delivery. Henry decided on 2026-10-11 not to engage upstream for now (§2); the draft is kept for later.
 6. **Done** for the VERIFY items. Phase estimates: Phase 1 and 2 are unchanged in scope; Phase 2 additionally needs the seven decoupling patches (small). Phase 5 is the largest: 83 dialog entry points over 69 files, all GTK forms.
 
 ### Phase 1 — Skeleton, read-only viewer
@@ -280,9 +280,11 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    -scheme GnumericCocoa build` (works since 2026-10-10; `docs/build.md`). Add
    XCTest targets to `project.yml` wrapping `Tests/BridgeTests`, keeping
    `Tests/BridgeTests/run.sh` as the no-Xcode path.
-3. If Henry has reviewed `docs/upstream-issue.md`, incorporate his edits; he posts it.
+3. Upstream engagement is deferred (§2, ADR-011): do not post or extend
+   `docs/upstream-issue.md`; keep any engine patch minimal and upstreamable.
 4. Finish Phase 1 (see the gaps in `docs/progress.md`): frozen panes, header
    clicks selecting columns and rows, zoom UI, right-to-left sheets, sheet-tab
    overflow, and a scrolling-performance check (layer backing, ADR-007). Then
    Phase 2 starts with the cell editor and `cmd_set_text`, which first needs
-   the seven decoupling patches of `docs/architecture.md` §5 in `patches/`.
+   the seven decoupling patches of `docs/architecture.md` §5 in `patches/`
+   (carried locally, ADR-011; `scripts/build-gnumeric.sh` applies them).

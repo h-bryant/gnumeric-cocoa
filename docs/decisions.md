@@ -182,3 +182,28 @@ the GTK build's `gnumeric.plist`. `GnmEngine.shutdown` stores the active
 plugin list so later launches keep their plugins (docs/architecture.md §2).
 Renaming later would orphan that file and any "Open With" defaults; if
 upstream adopts the port, that rename happens with the adopting release.
+
+## ADR-011 (2026-10-11): Upstream engagement deferred; the port stays self-contained
+
+Context: `HANDOFF.md` §2 planned a GNOME GitLab issue after Phase 0 asking
+whether decoupling patches (the seven `WBCGtk` sites in
+`docs/architecture.md` §5) would be accepted. The draft exists
+(`docs/upstream-issue.md`). Waiting on, or shaping work around, upstream
+review would slow the port down.
+
+Decision (Henry, 2026-10-11): proceed without depending on any upstream
+change. The draft is not posted. Engine changes the port cannot avoid are
+carried in `patches/` (applied by `scripts/build-gnumeric.sh` to the build
+copy, never to the submodule), kept minimal, each with a header explaining
+why, and written in the form upstream would accept, so that nothing has to
+be redone if engagement resumes. The annotated git tag
+`upstream-baseline-2026-10-11` marks the repository at this decision.
+
+Consequences: Phase 2 needs those patches before `cmd_insert_cols`,
+`cmd_insert_rows`, `cmd_paste_copy`, `cmd_selection_colrow_hide`,
+`cmd_shift_rows`, `cmd_shift_cols`, and the `undo.c` filter case can be
+reached from a Cocoa control; the patch series must be re-applied and
+re-checked at every submodule re-pin (ADR-003). To resume upstream work
+later: `git show upstream-baseline-2026-10-11`, re-check the line numbers
+in `docs/upstream-issue.md` and `docs/architecture.md` §5 against the pinned
+tag, fold the accumulated `patches/` into the request, and post.

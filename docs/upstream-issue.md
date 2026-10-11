@@ -1,3 +1,9 @@
+<!-- STATUS (2026-10-11): NOT POSTED. Henry deferred upstream engagement
+     (docs/decisions.md ADR-011); the port carries its own patches in
+     patches/.  If engagement resumes: start from the git tag
+     upstream-baseline-2026-10-11, re-check every line number below against
+     the pinned submodule tag, and add whatever patches/ holds by then. -->
+
 # Draft GNOME GitLab issue for GNOME/gnumeric
 
 Status: draft for Henry's review. Henry posts it; nothing has been sent.

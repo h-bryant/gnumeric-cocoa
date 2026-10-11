@@ -115,9 +115,18 @@
   byte-identically to the swiftc build. `scripts/smoke-test.sh` passes.
 - Working tree clean; committed on `main`, nothing pushed.
 
+## 2026-10-11: upstream engagement deferred
+
+- Henry decided to proceed without depending on upstream Gnumeric changes
+  (`docs/decisions.md` ADR-011). `docs/upstream-issue.md` stays an unposted
+  draft; unavoidable engine changes go to `patches/`, kept upstreamable. The
+  annotated tag `upstream-baseline-2026-10-11` marks this point for a later
+  return to upstream work.
+
 ## How to resume
 
-1. Henry (optional): review and post `docs/upstream-issue.md`.
+1. Upstream engagement is deferred; see ADR-011 before touching
+   `docs/upstream-issue.md`.
 2. Claude Code: `claude --enable-auto-mode` here, then "read HANDOFF.md and
    docs/progress.md and continue with Phase 1". `scripts/smoke-test.sh` first,
    then `scripts/gen-xcconfig.sh && xcodegen generate && xcodebuild -scheme
