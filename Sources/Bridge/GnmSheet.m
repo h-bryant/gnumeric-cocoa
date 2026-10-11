@@ -982,14 +982,68 @@ cell_range_from (GnmRange const *r)
 
 - (void)paste
 {
+    [self pasteWithOptions:GnmPasteDefault];
+}
+
+- (void)pasteWithOptions:(GnmPasteOptions)options
+{
     if (_sv == NULL)
         return;
     [self.workbook _dropStaleEngineClipboard];
     /* void: problems are reported through the command context */
     [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
-        cmd_paste_to_selection (wbc, _sv, PASTE_DEFAULT);
+        cmd_paste_to_selection (wbc, _sv, (int) options);
         return FALSE;
     } description:@"Could not paste." error:NULL];
+}
+
+- (BOOL)sortSelectionDescending:(BOOL)descending error:(NSError **)error
+{
+    if (_sv == NULL || _sv->selections == NULL || _sv->selections->next != NULL) {
+        if (error)
+            *error = [self.workbook.engine _errorWithCode:GnmErrorCommandFailed
+                                             description:@"Sort does not support multiple ranges." collected:@[]];
+        return NO;
+    }
+    /* wbc-gtk-actions.c, sort_by_rows: one range sorts its rows by every
+     * column left to right; one cell sorts the sheet below by that column. */
+    GnmRange const *r = _sv->selections->data;
+    GnmRange sel;
+    int numclause;
+    GnmSortClause *clause;
+    if (range_is_singleton (r)) {
+        range_init_full_sheet (&sel, _sheet);
+        sel.start.row = r->start.row;
+        range_clip_to_finite (&sel, _sheet);
+        numclause = 1;
+        clause = g_new0 (GnmSortClause, 1);
+        clause[0].offset = r->start.col - sel.start.col;
+    } else {
+        sel = *r;
+        range_clip_to_finite (&sel, _sheet);
+        numclause = range_width (&sel);
+        clause = g_new0 (GnmSortClause, numclause);
+        for (int i = 0; i < numclause; i++)
+            clause[i].offset = i;
+    }
+    for (int i = 0; i < numclause; i++) {
+        clause[i].asc = descending;   /* sic: the engine's flag reads this way (GTK does the same) */
+        clause[i].cs = gnm_conf_get_core_sort_default_by_case ();
+        clause[i].val = TRUE;
+    }
+    GnmSortData *data = gnm_sort_data_new ();
+    data->sheet = _sheet;
+    data->range = sel;
+    data->num_clause = numclause;
+    data->clauses = clause;
+    data->locale = NULL;
+    data->retain_formats = gnm_conf_get_core_sort_default_retain_formats ();
+    data->top = TRUE;
+    if (sheet_range_has_heading (data->sheet, &data->range, data->top, FALSE))
+        data->range.start.row += 1;
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_sort (wbc, data);   /* takes ownership of data */
+    } description:@"Could not sort." error:error];
 }
 
 - (NSArray<NSValue *> *)marchingAntsFrames

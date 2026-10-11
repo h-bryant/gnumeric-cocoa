@@ -38,6 +38,7 @@ enum MainMenu {
         editMenu.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
         editMenu.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
         editMenu.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        editMenu.addItem(withTitle: "Paste Special…", action: Selector(("pasteSpecial:")), keyEquivalent: "V")
         editMenu.addItem(withTitle: "Delete", action: #selector(NSText.delete(_:)), keyEquivalent: "")
         let clearMenu = NSMenu(title: "Clear")
         clearMenu.addItem(withTitle: "All", action: Selector(("clearAll:")), keyEquivalent: "")
@@ -102,6 +103,9 @@ enum MainMenu {
         menuBar.addItem(submenu(formatMenu, title: "Format"))
 
         let dataMenu = NSMenu(title: "Data")
+        dataMenu.addItem(withTitle: "Sort Ascending", action: Selector(("sortAscending:")), keyEquivalent: "")
+        dataMenu.addItem(withTitle: "Sort Descending", action: Selector(("sortDescending:")), keyEquivalent: "")
+        dataMenu.addItem(.separator())
         let recalc = dataMenu.addItem(withTitle: "Recalculate", action: Selector(("recalculate:")),
                                       keyEquivalent: String(Character(UnicodeScalar(NSF9FunctionKey)!)))
         recalc.keyEquivalentModifierMask = []

@@ -214,8 +214,19 @@ enum Snapshot {
                 grid.selectColumn(nil)
                 grid.autofitColumns(nil)
                 NSLog("phase3: column A width %g undo=%@", sheet.width(ofColumn: 0), sheet.workbook?.undoLabel ?? "nil")
+                // Paste Special (values, transposed) of the series into K5, then sort it descending.
                 sheet.selectRange(CellRange(start: CellCoordinate(column: 6, row: 4), end: CellCoordinate(column: 6, row: 9)),
                                   editPosition: CellCoordinate(column: 6, row: 4))
+                grid.copy(nil)
+                sheet.selectCell(atColumn: 10, row: 4)
+                grid.paste(options: [.asValues, .transpose])
+                NSLog("phase3: transposed K5=%@ P5=%@", sheet.displayTextOfCell(atColumn: 10, row: 4) ?? "nil",
+                      sheet.displayTextOfCell(atColumn: 15, row: 4) ?? "nil")
+                sheet.selectRange(CellRange(start: CellCoordinate(column: 6, row: 4), end: CellCoordinate(column: 6, row: 9)),
+                                  editPosition: CellCoordinate(column: 6, row: 4))
+                grid.sortDescending(nil)
+                NSLog("phase3: sorted G5=%@ G10=%@ undo=%@", sheet.displayTextOfCell(atColumn: 6, row: 4) ?? "nil",
+                      sheet.displayTextOfCell(atColumn: 6, row: 9) ?? "nil", sheet.workbook?.undoLabel ?? "nil")
                 sheet.workbook?.recomputeAutoExpression()   // the engine's own trigger is a lag timer
                 NSLog("phase3: auto-expression '%@'", sheet.workbook?.autoExpressionText ?? "nil")
                 sheet.workbook?.setAutoExpression(function: "average", label: "Average")

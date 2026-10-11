@@ -403,6 +403,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(removeSheet(_:)):
             return gridView.sheet != nil && workbook.canRemoveSheets
+        case #selector(pasteSpecial(_:)):
+            return gridView.sheet != nil && window?.attachedSheet == nil && NSPasteboard.general.string(forType: .string) != nil
         case #selector(moveSheetLeft(_:)):
             return (gridView.sheet?.index ?? 0) > 0
         case #selector(moveSheetRight(_:)):
@@ -410,6 +412,69 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             return sheet.index < workbook.sheets.count - 1
         default:
             return true
+        }
+    }
+
+    // MARK: Paste Special (Edit menu)
+
+    /// The GTK Paste Special dialog as a sheet: what to paste, an
+    /// arithmetic operation, a region transform, and the four switches,
+    /// plus Paste Link.
+    @objc func pasteSpecial(_ sender: Any?) {
+        guard let window, gridView.sheet != nil else { return }
+        let alert = NSAlert()
+        alert.messageText = "Paste Special"
+        alert.addButton(withTitle: "Paste")
+        alert.addButton(withTitle: "Paste Link")
+        alert.addButton(withTitle: "Cancel")
+        let what = NSPopUpButton(frame: .zero, pullsDown: false)
+        let whatChoices: [(String, PasteOptions)] = [
+            ("All", .allCells), ("Contents", .contents), ("As Values", .asValues), ("Formats", .formats), ("Comments", .comments)]
+        whatChoices.forEach { what.addItem(withTitle: $0.0) }
+        let operation = NSPopUpButton(frame: .zero, pullsDown: false)
+        let operationChoices: [(String, PasteOptions)] = [
+            ("None", []), ("Add", .add), ("Subtract", .subtract), ("Multiply", .multiply), ("Divide", .divide)]
+        operationChoices.forEach { operation.addItem(withTitle: $0.0) }
+        let region = NSPopUpButton(frame: .zero, pullsDown: false)
+        let regionChoices: [(String, PasteOptions)] = [
+            ("None", []), ("Transpose", .transpose), ("Flip Horizontally", .flipHorizontally), ("Flip Vertically", .flipVertically)]
+        regionChoices.forEach { region.addItem(withTitle: $0.0) }
+        let skipBlanks = NSButton(checkboxWithTitle: "Skip blanks", target: nil, action: nil)
+        let keepReferences = NSButton(checkboxWithTitle: "Don't change formulae", target: nil, action: nil)
+        let widths = NSButton(checkboxWithTitle: "Column widths", target: nil, action: nil)
+        let heights = NSButton(checkboxWithTitle: "Row heights", target: nil, action: nil)
+        let grid = NSGridView(views: [
+            [NSTextField(labelWithString: "Paste:"), what],
+            [NSTextField(labelWithString: "Operation:"), operation],
+            [NSTextField(labelWithString: "Region:"), region],
+            [NSView(), skipBlanks],
+            [NSView(), keepReferences],
+            [NSView(), widths],
+            [NSView(), heights],
+        ])
+        grid.column(at: 0).xPlacement = .trailing
+        grid.rowSpacing = 6
+        grid.frame = NSRect(x: 0, y: 0, width: 300, height: grid.fittingSize.height)
+        alert.accessoryView = grid
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard let self else { return }
+            switch response {
+            case .alertFirstButtonReturn:
+                var options = whatChoices[max(what.indexOfSelectedItem, 0)].1
+                if options == .allCells || options == .contents || options == .asValues {
+                    options.formUnion(operationChoices[max(operation.indexOfSelectedItem, 0)].1)
+                }
+                options.formUnion(regionChoices[max(region.indexOfSelectedItem, 0)].1)
+                if skipBlanks.state == .on { options.insert(.skipBlanks) }
+                if keepReferences.state == .on { options.insert(.keepFormulaReferences) }
+                if widths.state == .on { options.insert(.columnWidths) }
+                if heights.state == .on { options.insert(.rowHeights) }
+                self.gridView.paste(options: options)
+            case .alertSecondButtonReturn:
+                self.gridView.paste(options: .link)
+            default:
+                break
+            }
         }
     }
 

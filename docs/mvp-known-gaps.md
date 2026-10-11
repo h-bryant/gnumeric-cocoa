@@ -30,7 +30,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 |---|---|---|
 | Undo, Redo | ported | engine command stack, labels in the menu |
 | EditCut, EditCopy, EditPaste | ported | engine clipboard; text to and from other apps |
-| EditPasteSpecial | no | Phase 3 (`cmd_paste_to_selection` takes flags already) |
+| EditPasteSpecial | ported | Edit → Paste Special… (⌘⇧V): what, operation, region transform, the four switches, Paste Link |
 | EditFind, EditReplace | no | Phase 5 |
 | EditRecalc | ported | Data → Recalculate (F9), `workbook_recalc_all` |
 | EditPreferences | no | Phase 5 |
@@ -69,7 +69,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | ChartGuru, InsertComponent, InsertShapedComponent, NewGOComponent, GOComponentFromFile, InsertImage | no | Phase 4; existing charts and images draw read-only |
 | InsertFormula (function selector), InsertNames | no | Phase 5 |
 | InsertComment, InsertHyperlink | no | Phase 5 |
-| InsertSortDecreasing, InsertSortIncreasing | no | Phase 3 |
+| InsertSortDecreasing, InsertSortIncreasing | ported | Data → Sort Ascending / Descending (the GTK quick sort: by the selection's columns, heading kept) |
 | InsertCurrentDate, InsertCurrentTime, InsertCurrentDateTime | no | Phase 3 |
 
 ## Format
@@ -97,7 +97,8 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 
 | Action | Status | Notes / Phase |
 |---|---|---|
-| DataSort, DataShuffle, DataValidate, DataConsolidate, DataTable, DataTextToColumns | no | Phase 3/5 |
+| DataSort | partial | quick sort only; no Sort dialog (clauses, case, by columns) |
+| DataShuffle, DataValidate, DataConsolidate, DataTable, DataTextToColumns | no | Phase 3/5 |
 | CopyDown, CopyRight | ported | Edit → Fill → Down ⌘D, Right ⌘R |
 | EditFillAutofill | ported | the fill handle on the selection; Option makes a single number count up (the GTK Ctrl) |
 | EditFillSeries, ToolsMerge, ToolsTabulate, RandomGenerator* | no | Phase 3/5 |

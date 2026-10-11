@@ -511,6 +511,15 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     @objc func mergeAndCenter(_ sender: Any?) { run { try $0.mergeSelection(centered: true) } }
     @objc func unmergeCells(_ sender: Any?) { run { try $0.unmergeSelection() } }
 
+    @objc func sortAscending(_ sender: Any?) { run { try $0.sortSelection(descending: false) } }
+    @objc func sortDescending(_ sender: Any?) { run { try $0.sortSelection(descending: true) } }
+
+    /// Paste Special, with the options the window controller collected.
+    func paste(options: PasteOptions) {
+        if isEditing { commitEditing(text: editor.stringValue, movement: .none) }
+        sheet?.paste(options: options)
+    }
+
     @objc func recalculate(_ sender: Any?) {
         if isEditing { commitEditing(text: editor.stringValue, movement: .none) }
         sheet?.workbook?.recalculateAll()

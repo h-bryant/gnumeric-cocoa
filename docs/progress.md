@@ -334,8 +334,19 @@
   and rename. Found on the way: the engine's undo stack keeps a limited
   number of commands (`core/undo/maxnum`), so a test that removes twenty
   sheets cannot undo them all.
-- `docs/mvp-known-gaps.md` updated. Next in Phase 3: Paste Special, sort,
-  the filtered Clear variants, sheet resize, tab colors.
+- Paste Special (Edit → Paste Special…, ⌘⇧V): an `NSAlert` sheet with the
+  GTK dialog's choices (what to paste, arithmetic operation, region
+  transform, skip blanks, keep formula references, column widths, row
+  heights) and a Paste Link button; the bridge's `pasteWithOptions:`
+  mirrors the engine's PASTE_* flags. Sort: Data → Sort Ascending and
+  Sort Descending run the GTK quick sort (`sort_by_rows`: by every column
+  of the one selected range, heading detected; a single cell sorts the
+  sheet below it by that column; `cmd_sort` owns the `GnmSortData`). The
+  engine's clause flag reads inverted (`asc = descending`), kept as GTK
+  has it. Both covered in `Tests/BridgeTests/editing.m` and driven by
+  `GNM_SNAPSHOT_PHASE3=1`.
+- `docs/mvp-known-gaps.md` updated. Next in Phase 3: the filtered Clear
+  variants (with autofilter), sheet resize, tab colors, the Sort dialog.
 
 ## How to resume
 

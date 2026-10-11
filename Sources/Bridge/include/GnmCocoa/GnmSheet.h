@@ -19,6 +19,31 @@ typedef NS_OPTIONS(NSUInteger, GnmClearOptions) {
     GnmClearObjects = 1 << 7,
 } NS_SWIFT_NAME(ClearOptions);
 
+/// What and how `pasteWithOptions:` pastes; mirrors the engine's PASTE_*
+/// flags.  `GnmPasteDefault` is the plain paste (everything, with column
+/// widths and row heights adjusted).
+typedef NS_OPTIONS(NSUInteger, GnmPasteOptions) {
+    GnmPasteContents = 1 << 0,
+    GnmPasteAsValues = 1 << 1,       /* instead of contents */
+    GnmPasteFormats = 1 << 2,
+    GnmPasteComments = 1 << 3,
+    GnmPasteObjects = 1 << 4,
+    GnmPasteAdd = 1 << 5,
+    GnmPasteSubtract = 1 << 6,
+    GnmPasteMultiply = 1 << 7,
+    GnmPasteDivide = 1 << 8,
+    GnmPasteTranspose = 1 << 9,
+    GnmPasteLink = 1 << 10,
+    GnmPasteSkipBlanks = 1 << 11,
+    GnmPasteColumnWidths = 1 << 14,
+    GnmPasteRowHeights = 1 << 16,
+    GnmPasteKeepFormulaReferences = 1 << 18,   /* PASTE_EXPR_LOCAL_RELOCATE */
+    GnmPasteFlipHorizontally = 1 << 20,
+    GnmPasteFlipVertically = 1 << 21,
+    GnmPasteAllCells = GnmPasteContents | GnmPasteFormats | GnmPasteComments | GnmPasteObjects,
+    GnmPasteDefault = GnmPasteAllCells | (1 << 15) | (1 << 17),   /* auto widths and heights */
+} NS_SWIFT_NAME(PasteOptions);
+
 /// Requests the engine makes through the SheetControl vtable
 /// (docs/architecture.md §3).  All optional; all on the main thread.
 NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(SheetDelegate)
@@ -125,6 +150,13 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 - (void)copySelection;
 - (void)cutSelection;
 - (void)paste;
+/// Paste Special: the same sources with explicit options.
+- (void)pasteWithOptions:(GnmPasteOptions)options NS_SWIFT_NAME(paste(options:));
+/// Sort the selection's rows by its columns left to right (`cmd_sort`, the
+/// GTK quick sort): a single selected cell sorts the whole sheet below it
+/// by that column; a heading row is detected and kept.  Several ranges
+/// are refused.
+- (BOOL)sortSelectionDescending:(BOOL)descending error:(NSError **)error NS_SWIFT_NAME(sortSelection(descending:));
 /// Frames (sheet pixels) of the ranges carrying marching ants: the source
 /// of the last copy or cut, until it is pasted or cleared.
 @property (nonatomic, readonly) NSArray<NSValue *> *marchingAntsFrames;

@@ -244,6 +244,35 @@ int main (void)
         GNM_ASSERT_EQ_STR (wb.autoExpressionFunction, @"average");
         [wb setAutoExpressionFunction:@"sum" label:@"Sum"];
 
+        /* paste special: values only (the formula becomes its value),
+         * transposed; and the quick sort by the selection's columns */
+        [s setText:@"3" atColumn:70 row:90 autocorrect:NO error:NULL];
+        [s setText:@"=BS91*2" atColumn:71 row:90 autocorrect:NO error:NULL];   /* 6 */
+        [s selectRange:GnmCellRangeMake (70, 90, 71, 90) editPosition:GnmCellCoordinateMake (70, 90)];
+        [s copySelection];
+        [s selectCellAtColumn:70 row:95];
+        [s pasteWithOptions:GnmPasteAsValues | GnmPasteTranspose];
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:70 row:95] ?: @"", @"3");
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:70 row:96] ?: @"", @"6");
+        GNM_ASSERT (![s cellHasFormulaAtColumn:70 row:96], @"pasted as a value");
+        [wb undo];
+        [s setText:@"b" atColumn:80 row:100 autocorrect:NO error:NULL];
+        [s setText:@"c" atColumn:80 row:101 autocorrect:NO error:NULL];
+        [s setText:@"a" atColumn:80 row:102 autocorrect:NO error:NULL];
+        [s setText:@"2" atColumn:81 row:100 autocorrect:NO error:NULL];
+        [s setText:@"3" atColumn:81 row:101 autocorrect:NO error:NULL];
+        [s setText:@"1" atColumn:81 row:102 autocorrect:NO error:NULL];
+        [s selectRange:GnmCellRangeMake (80, 100, 81, 102) editPosition:GnmCellCoordinateMake (80, 100)];
+        GNM_ASSERT ([s sortSelectionDescending:NO error:&error], @"sort: %@", error);
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:80 row:100] ?: @"", @"a");
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:81 row:100] ?: @"", @"1");   /* rows move together */
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:80 row:102] ?: @"", @"c");
+        GNM_ASSERT ([wb.undoLabel hasPrefix:@"Sorting"], @"undo label '%@'", wb.undoLabel);
+        GNM_ASSERT ([s sortSelectionDescending:YES error:&error], @"sort descending: %@", error);
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:80 row:100] ?: @"", @"c");
+        [wb undo]; [wb undo];
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:80 row:100] ?: @"", @"b");
+
         /* frozen panes: the engine keeps the two corners, drops frozen
          * columns when none are asked for, and refuses a no-op */
         GNM_ASSERT (!s.isFrozen && s.frozenTopLeft.column == -1, @"not frozen at first");
