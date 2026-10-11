@@ -57,6 +57,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 document.close()
             }
         }
+        if ProcessInfo.processInfo.environment["GNM_SNAPSHOT"] != nil {
+            NSLog("terminate: documents=%ld windows=%@", NSDocumentController.shared.documents.count,
+                  NSApp.windows.map { "\(type(of: $0)) visible=\($0.isVisible) sheet=\($0.attachedSheet != nil)" }.joined(separator: ", "))
+        }
         engine?.shutdown()
     }
 }
@@ -119,7 +123,17 @@ enum Snapshot {
     @MainActor
     static func schedule(path: String, after seconds: TimeInterval) {
         DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {
-            defer { NSApp.terminate(nil) }
+            // Terminate from a later turn, with every document marked clean:
+            // the review of unsaved documents would otherwise block headless
+            // (or leave its alert holding the document past the engine's
+            // shutdown), and this closure's own window reference must be
+            // gone before applicationWillTerminate releases the workbooks.
+            defer {
+                for document in NSDocumentController.shared.documents {
+                    document.updateChangeCount(.changeCleared)
+                }
+                DispatchQueue.main.async { NSApp.terminate(nil) }
+            }
             guard let window = NSApp.windows.first(where: { $0.isVisible }),
                   let view = window.contentView else {
                 NSLog("snapshot: no visible window")
@@ -157,6 +171,54 @@ enum Snapshot {
                 }
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
+            }
+            // Each hook runs in its own pool: references the bridge
+            // autoreleases must be gone before terminate shuts the engine down.
+            autoreleasepool {
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_PHASE3"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // The Phase 3 menu commands, driven through the grid view's
+                // actions: insert and delete rows, fill, autofill, hide,
+                // autofit, merge, with the undo stack checked along the way.
+                let grid = controller.gridView
+                sheet.selectRange(CellRange(start: CellCoordinate(column: 0, row: 4), end: CellCoordinate(column: 0, row: 5)),
+                                  editPosition: CellCoordinate(column: 0, row: 4))
+                grid.insertRows(nil)
+                NSLog("phase3: after insert rows A7=%@ undo=%@", sheet.displayTextOfCell(atColumn: 0, row: 6) ?? "nil",
+                      sheet.workbook?.undoLabel ?? "nil")
+                grid.deleteRows(nil)
+                NSLog("phase3: after delete rows A5=%@ undo=%@", sheet.displayTextOfCell(atColumn: 0, row: 4) ?? "nil",
+                      sheet.workbook?.undoLabel ?? "nil")
+                sheet.selectRange(CellRange(start: CellCoordinate(column: 4, row: 4), end: CellCoordinate(column: 4, row: 8)),
+                                  editPosition: CellCoordinate(column: 4, row: 4))
+                try? sheet.setText("fill", atColumn: 4, row: 4, autocorrect: false)
+                grid.fillDown(nil)
+                NSLog("phase3: fill down E9=%@", sheet.displayTextOfCell(atColumn: 4, row: 8) ?? "nil")
+                try? sheet.setText("10", atColumn: 6, row: 4, autocorrect: false)
+                try? sheet.setText("20", atColumn: 6, row: 5, autocorrect: false)
+                let source = CellRange(start: CellCoordinate(column: 6, row: 4), end: CellCoordinate(column: 6, row: 5))
+                let target = GridView.fillTarget(from: source, toward: CellCoordinate(column: 6, row: 9))
+                try? sheet.autofill(from: source, to: target, defaultIncrement: false)
+                NSLog("phase3: autofill target rows %ld-%ld G10=%@", target.start.row, target.end.row,
+                      sheet.displayTextOfCell(atColumn: 6, row: 9) ?? "nil")
+                sheet.selectRange(CellRange(start: CellCoordinate(column: 8, row: 4), end: CellCoordinate(column: 9, row: 5)),
+                                  editPosition: CellCoordinate(column: 8, row: 4))
+                grid.mergeAndCenter(nil)
+                NSLog("phase3: merged=%d undo=%@", sheet.selectionHasMergedCells ? 1 : 0, sheet.workbook?.undoLabel ?? "nil")
+                grid.selectColumn(nil)
+                grid.hideColumns(nil)
+                NSLog("phase3: column I visible=%d", sheet.isColumnVisible(8) ? 1 : 0)
+                grid.unhideColumns(nil)
+                sheet.selectCell(atColumn: 0, row: 6)
+                grid.selectColumn(nil)
+                grid.autofitColumns(nil)
+                NSLog("phase3: column A width %g undo=%@", sheet.width(ofColumn: 0), sheet.workbook?.undoLabel ?? "nil")
+                sheet.selectCell(atColumn: 2, row: 2)
+                grid.recalculate(nil)
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FORMAT"] != nil,
                let controller = window.windowController as? WorkbookWindowController,

@@ -61,6 +61,8 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Workbook)
 
 /// Recalculate cells that need it (`workbook_recalc`).
 - (void)recalculate;
+/// Recalculate every cell (`workbook_recalc_all`, the GTK Recalculate).
+- (void)recalculateAll;
 
 // Undo and redo come from the engine's command stack, which is the only
 // source of truth (never mirror it in NSUndoManager).  Labels are the

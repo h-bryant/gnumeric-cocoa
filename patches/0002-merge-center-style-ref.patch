@@ -1,0 +1,26 @@
+Keep the centering style alive across cmd_merge_cells_redo.
+
+sheet_apply_style absorbs a reference to the partial style it is given
+(sheet.c: "@style: (transfer full)"; sheet_style_apply_range unrefs it), but
+cmd_merge_cells_redo applied one align-center style to every merged range
+and then unreffed it once more, so Merge and Center freed the style after
+the first range and tripped "gnm_style_unref: assertion 'style->ref_count >
+0' failed" (a use after free with several ranges).  Found through the Cocoa
+front end on 2026-10-11; the GTK front end runs the same code.  Take a
+reference per range so the final unref balances.
+
+--- a/src/commands.c	2026-10-11 09:06:31
++++ b/src/commands.c	2026-10-11 09:06:31
+@@ -4143,8 +4143,11 @@
+ 		g_slist_free (merged);
+ 
+ 		gnm_sheet_merge_add (sheet, r, TRUE, GO_CMD_CONTEXT (wbc));
+-		if (me->center)
++		if (me->center) {
++			/* sheet_apply_style absorbs a reference */
++			gnm_style_ref (align_center);
+ 			sheet_apply_style (me->cmd.sheet, r, align_center);
++		}
+ 	}
+ 
+ 	if (me->center)

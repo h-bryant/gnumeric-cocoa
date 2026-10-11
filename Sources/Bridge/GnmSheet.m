@@ -1037,6 +1037,150 @@ cell_range_from (GnmRange const *r)
     } description:hidden ? @"Could not hide." : @"Could not unhide." error:error];
 }
 
+#pragma mark - Column widths and row heights
+
+/* Points to pixels at the sheet's own scale (zoom times its pixels per
+ * point), through the engine's conversion so the two agree exactly. */
+static int
+pixels_from_points (Sheet const *sheet, gboolean horizontal, double points)
+{
+    ColRowInfo info = { 0 };
+    info.size_pts = points;
+    colrow_compute_pixels_from_pts (&info, sheet, horizontal, -1);
+    return info.size_pixels;
+}
+
+- (CGFloat)widthInPointsOfColumn:(NSInteger)column
+{
+    ColRowInfo const *info = sheet_col_get_info (_sheet, (int) column);
+    return info ? info->size_pts : 0;
+}
+
+- (CGFloat)heightInPointsOfRow:(NSInteger)row
+{
+    ColRowInfo const *info = sheet_row_get_info (_sheet, (int) row);
+    return info ? info->size_pts : 0;
+}
+
+- (CGFloat)defaultColumnWidthInPoints { return sheet_col_get_default_size_pts (_sheet); }
+- (CGFloat)defaultRowHeightInPoints { return sheet_row_get_default_size_pts (_sheet); }
+
+- (BOOL)setSelectedColumns:(BOOL)columns sizeInPoints:(CGFloat)points error:(NSError **)error
+{
+    int pixels = points > 0 ? MAX (pixels_from_points (_sheet, columns, points), 1) : 0;
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        /* The GTK Column Width dialog: the engine collects the selection's
+         * columns and runs cmd_resize_colrow (returns TRUE on failure
+         * through cmd_generic_with_size). */
+        workbook_cmd_resize_selected_colrow (wbc, _sheet, columns, pixels);
+        return FALSE;
+    } description:columns ? @"Could not set the column width." : @"Could not set the row height." error:error];
+}
+
+- (BOOL)setColumns:(BOOL)columns inRange:(NSRange)range sizeInPixels:(NSInteger)pixels error:(NSError **)error
+{
+    if (range.length == 0)
+        return YES;
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        /* The command's undo object takes the list (cmd_resize_colrow). */
+        ColRowIndexList *list = colrow_get_index_list ((int) range.location,
+                                                       (int) (range.location + range.length - 1), NULL);
+        return cmd_resize_colrow (wbc, _sheet, columns, list, (int) pixels);
+    } description:columns ? @"Could not set the column width." : @"Could not set the row height." error:error];
+}
+
+- (BOOL)autofitSelectedColumns:(BOOL)columns error:(NSError **)error
+{
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        workbook_cmd_resize_selected_colrow (wbc, _sheet, columns, -1);
+        return FALSE;
+    } description:@"Could not fit the size to the content." error:error];
+}
+
+- (BOOL)autofitSelectedCellsWidth:(BOOL)width error:(NSError **)error
+{
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        workbook_cmd_autofit_selection (wbc, _sheet, width);
+        return FALSE;
+    } description:@"Could not fit the size to the content." error:error];
+}
+
+- (BOOL)setDefaultSizeInPoints:(CGFloat)points forColumns:(BOOL)columns error:(NSError **)error
+{
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_colrow_std_size (wbc, _sheet, columns, points);
+    } description:columns ? @"Could not set the default column width." : @"Could not set the default row height." error:error];
+}
+
+#pragma mark - Fill
+
+- (BOOL)fillDown:(NSError **)error
+{
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_copyrel (wbc, 0, -1, "Copy down");
+    } description:@"Could not fill down." error:error];
+}
+
+- (BOOL)fillRight:(NSError **)error
+{
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_copyrel (wbc, -1, 0, "Copy right");
+    } description:@"Could not fill right." error:error];
+}
+
+- (BOOL)autofillFromRange:(GnmCellRange)source toRange:(GnmCellRange)target defaultIncrement:(BOOL)defaultIncrement error:(NSError **)error
+{
+    /* As the GTK fill handle calls it (item-cursor.c): the base is the
+     * target's top-left, the size is the source's, the end is the target's
+     * bottom-right, and the fill runs backwards when the target starts
+     * before the source. */
+    BOOL inverse = target.start.column < source.start.column || target.start.row < source.start.row;
+    int w = (int) (source.end.column - source.start.column + 1);
+    int h = (int) (source.end.row - source.start.row + 1);
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_autofill (wbc, _sheet, defaultIncrement,
+                             (int) target.start.column, (int) target.start.row, w, h,
+                             (int) target.end.column, (int) target.end.row, inverse);
+    } description:@"Could not autofill." error:error];
+}
+
+#pragma mark - Merged cells
+
+- (BOOL)selectionHasMergedCells
+{
+    if (_sv == NULL)
+        return NO;
+    GSList *ranges = selection_get_ranges (_sv, FALSE);
+    BOOL found = NO;
+    for (GSList *l = ranges; l != NULL && !found; l = l->next) {
+        GSList *overlap = gnm_sheet_merge_get_overlap (_sheet, l->data);
+        found = overlap != NULL;
+        g_slist_free (overlap);
+    }
+    range_fragment_free (ranges);
+    return found;
+}
+
+- (BOOL)mergeSelectionCentered:(BOOL)center error:(NSError **)error
+{
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        GSList *ranges = selection_get_ranges (_sv, FALSE);
+        gboolean failed = cmd_merge_cells (wbc, _sheet, ranges, center);
+        range_fragment_free (ranges);
+        return failed;
+    } description:@"Could not merge the cells." error:error];
+}
+
+- (BOOL)unmergeSelection:(NSError **)error
+{
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        GSList *ranges = selection_get_ranges (_sv, FALSE);
+        gboolean failed = cmd_unmerge_cells (wbc, _sheet, ranges);
+        range_fragment_free (ranges);
+        return failed;
+    } description:@"Could not unmerge the cells." error:error];
+}
+
 #pragma mark - Selection
 
 - (GnmCellCoordinate)editPosition

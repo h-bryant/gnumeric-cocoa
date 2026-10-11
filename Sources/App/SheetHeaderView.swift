@@ -20,6 +20,11 @@ class SheetHeaderView: NSView {
     var sheet: Sheet? { gridView?.sheet }
     /// Index (column or row) where the current header drag started.
     var dragAnchor: Int?
+    /// A boundary drag in progress: the column (row) being resized, its
+    /// size when the drag started, and the mouse position then.
+    var resizing: (index: Int, startSize: CGFloat, startPoint: NSPoint)?
+    /// Half the width of the strip around a boundary that resizes.
+    static let boundaryGrip: CGFloat = 4
 
     init(gridView: GridView) {
         self.gridView = gridView
@@ -69,10 +74,34 @@ class SheetHeaderView: NSView {
     /// Select from the anchor to `index` (whole columns or rows).
     func select(from anchor: Int, to index: Int) {}
 
+    /// The column (row) whose far edge lies within the grip strip around
+    /// `point`, for resizing; nil elsewhere.
+    func boundary(at point: NSPoint) -> Int? { nil }
+
+    /// Whether this header resizes columns (true) or rows.
+    var isColumnHeader: Bool { true }
+
+    /// The mouse coordinate that matters for this header.
+    func along(_ point: NSPoint) -> CGFloat { isColumnHeader ? point.x : point.y }
+
+    func size(of index: Int) -> CGFloat {
+        guard let sheet else { return 0 }
+        return isColumnHeader ? sheet.width(ofColumn: index) : sheet.height(ofRow: index)
+    }
+
     override func mouseDown(with event: NSEvent) {
         guard let gridView else { return }
         window?.makeFirstResponder(gridView)
         let point = convert(event.locationInWindow, from: nil)
+        if let index = boundary(at: point) {
+            if event.clickCount == 2 {
+                // Double-click on a boundary fits the column (row) to its content.
+                apply(size: -1, to: index)
+                return
+            }
+            resizing = (index, size(of: index), point)
+            return
+        }
         guard let index = index(at: point) else {
             cornerClicked()
             return
@@ -86,15 +115,103 @@ class SheetHeaderView: NSView {
     }
 
     override func mouseDragged(with event: NSEvent) {
-        guard let anchor = dragAnchor else { return }
         let point = convert(event.locationInWindow, from: nil)
+        if let resizing, let gridView {
+            let size = max(1, resizing.startSize + along(point) - along(resizing.startPoint))
+            let edgeInGrid = (isColumnHeader ? gridView.sheet?.leftEdge(ofColumn: resizing.index)
+                                             : gridView.sheet?.topEdge(ofRow: resizing.index)) ?? 0
+            gridView.resizeGuide = (isColumnHeader, edgeInGrid + size)
+            needsDisplay = true
+            return
+        }
+        guard let anchor = dragAnchor else { return }
         if let index = index(at: point) {
             select(from: anchor, to: index)
         }
         gridView?.autoscroll(with: event)
     }
 
+    override func mouseUp(with event: NSEvent) {
+        guard let resizing else { return }
+        self.resizing = nil
+        gridView?.resizeGuide = nil
+        let point = convert(event.locationInWindow, from: nil)
+        let size = max(1, resizing.startSize + along(point) - along(resizing.startPoint))
+        if abs(size - resizing.startSize) >= 1 {
+            apply(size: Int(size.rounded()), to: resizing.index)
+        }
+    }
+
+    /// Resize the column (row) at `index`, or every selected one when the
+    /// whole-column selection includes it (what the GTK header does).
+    /// -1 fits the content.
+    func apply(size: Int, to index: Int) {
+        guard let sheet, let gridView else { return }
+        var range = NSRange(location: index, length: 1)
+        let selection = sheet.selectedRange
+        let wholeSelection = isColumnHeader
+            ? (selection.start.row == 0 && selection.end.row == sheet.rowCount - 1
+               && index >= selection.start.column && index <= selection.end.column)
+            : (selection.start.column == 0 && selection.end.column == sheet.columnCount - 1
+               && index >= selection.start.row && index <= selection.end.row)
+        if wholeSelection {
+            range = isColumnHeader
+                ? NSRange(location: selection.start.column, length: selection.end.column - selection.start.column + 1)
+                : NSRange(location: selection.start.row, length: selection.end.row - selection.start.row + 1)
+        }
+        do {
+            try sheet.set(columns: isColumnHeader, in: range, sizeInPixels: size)
+        } catch {
+            gridView.presentError?(error)
+        }
+    }
+
+    override func resetCursorRects() {
+        guard let gridView, let sheet else { return }
+        let cursor: NSCursor = isColumnHeader ? .resizeLeftRight : .resizeUpDown
+        let grip = Self.boundaryGrip
+        let visible = gridView.visibleRect
+        if isColumnHeader {
+            var column = sheet.column(atX: visible.minX)
+            while column < sheet.columnCount {
+                let left = sheet.leftEdge(ofColumn: column)
+                if left > visible.maxX { break }
+                let width = sheet.width(ofColumn: column)
+                if width > 0 {
+                    let edge = convert(NSPoint(x: left + width, y: 0), from: gridView).x
+                    addCursorRect(NSRect(x: edge - grip, y: 0, width: 2 * grip, height: bounds.height), cursor: cursor)
+                }
+                column += 1
+            }
+        } else {
+            var row = sheet.row(atY: visible.minY)
+            while row < sheet.rowCount {
+                let top = sheet.topEdge(ofRow: row)
+                if top > visible.maxY { break }
+                let height = sheet.height(ofRow: row)
+                if height > 0 {
+                    let edge = convert(NSPoint(x: 0, y: top + height), from: gridView).y
+                    addCursorRect(NSRect(x: 0, y: edge - grip, width: bounds.width, height: 2 * grip), cursor: cursor)
+                }
+                row += 1
+            }
+        }
+    }
+
     func cornerClicked() {}
+
+    /// The boundary being dragged, in this header.
+    func drawResizeGuide() {
+        guard let gridView, let guide = gridView.resizeGuide, guide.isColumn == isColumnHeader else { return }
+        NSColor.controlAccentColor.setFill()
+        if isColumnHeader {
+            let x = convert(NSPoint(x: guide.position, y: 0), from: gridView).x
+            NSRect(x: x - 1, y: 0, width: 2, height: bounds.height).fill()
+        } else {
+            let y = convert(NSPoint(x: 0, y: guide.position), from: gridView).y
+            NSRect(x: 0, y: y - 1, width: bounds.width, height: 2).fill()
+        }
+    }
 
     /// Development aid (GNM_DEBUG_LAYOUT): where a draw lands.
     func logDraw(_ dirtyRect: NSRect) {
@@ -110,11 +227,25 @@ class SheetHeaderView: NSView {
 @MainActor
 final class ColumnHeaderView: SheetHeaderView {
     override var intrinsicContentSize: NSSize { NSSize(width: NSView.noIntrinsicMetric, height: Self.thickness) }
+    override var isColumnHeader: Bool { true }
 
     override func index(at point: NSPoint) -> Int? {
         guard let gridView, let sheet else { return nil }
         let x = convert(point, to: gridView).x
         return x >= 0 ? sheet.column(atX: x) : 0
+    }
+
+    override func boundary(at point: NSPoint) -> Int? {
+        guard let gridView, let sheet else { return nil }
+        let x = convert(point, to: gridView).x
+        guard x >= 0 else { return nil }
+        // The edge just before or just after the point, within the grip.
+        let column = sheet.column(atX: x)
+        let left = sheet.leftEdge(ofColumn: column)
+        let right = left + sheet.width(ofColumn: column)
+        if abs(x - right) <= Self.boundaryGrip { return column }
+        if column > 0, abs(x - left) <= Self.boundaryGrip { return column - 1 }
+        return nil
     }
 
     override func select(from anchor: Int, to index: Int) {
@@ -153,6 +284,8 @@ final class ColumnHeaderView: SheetHeaderView {
             column += 1
         }
         NSRect(x: 0, y: height - 1, width: bounds.width, height: 1).fill()
+        drawResizeGuide()
+        window?.invalidateCursorRects(for: self)
     }
 }
 
@@ -163,11 +296,24 @@ final class RowHeaderView: SheetHeaderView {
     private var cornerHeight: CGFloat { Self.thickness }
 
     override var intrinsicContentSize: NSSize { NSSize(width: Self.rowHeaderWidth, height: NSView.noIntrinsicMetric) }
+    override var isColumnHeader: Bool { false }
 
     override func index(at point: NSPoint) -> Int? {
         guard let gridView, let sheet, point.y >= cornerHeight else { return nil }
         let y = convert(point, to: gridView).y
         return y >= 0 ? sheet.row(atY: y) : 0
+    }
+
+    override func boundary(at point: NSPoint) -> Int? {
+        guard let gridView, let sheet, point.y >= cornerHeight else { return nil }
+        let y = convert(point, to: gridView).y
+        guard y >= 0 else { return nil }
+        let row = sheet.row(atY: y)
+        let top = sheet.topEdge(ofRow: row)
+        let bottom = top + sheet.height(ofRow: row)
+        if abs(y - bottom) <= Self.boundaryGrip { return row }
+        if row > 0, abs(y - top) <= Self.boundaryGrip { return row - 1 }
+        return nil
     }
 
     override func select(from anchor: Int, to index: Int) {
@@ -224,5 +370,7 @@ final class RowHeaderView: SheetHeaderView {
             NSRect(x: 0, y: cornerHeight - 1, width: width, height: 1).fill()
         }
         NSRect(x: width - 1, y: 0, width: 1, height: bounds.height).fill()
+        drawResizeGuide()
+        window?.invalidateCursorRects(for: self)
     }
 }

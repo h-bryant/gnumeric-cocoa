@@ -1,7 +1,8 @@
 import AppKit
 
-/// The menu bar, built in code.  Only what a viewer needs; later phases add
-/// the Edit, Format, and Data menus as their commands arrive.
+/// The menu bar, built in code.  Items use string selectors so that the
+/// responder chain (grid view, window controller, document) resolves them;
+/// `docs/mvp-known-gaps.md` lists what is still missing.
 @MainActor
 enum MainMenu {
     static func build() -> NSMenu {
@@ -38,8 +39,25 @@ enum MainMenu {
         editMenu.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
         editMenu.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
         editMenu.addItem(withTitle: "Delete", action: #selector(NSText.delete(_:)), keyEquivalent: "")
+        let clearMenu = NSMenu(title: "Clear")
+        clearMenu.addItem(withTitle: "All", action: Selector(("clearAll:")), keyEquivalent: "")
+        clearMenu.addItem(withTitle: "Formats", action: Selector(("clearFormats:")), keyEquivalent: "")
+        clearMenu.addItem(withTitle: "Contents", action: #selector(NSText.delete(_:)), keyEquivalent: "")
+        clearMenu.addItem(withTitle: "Comments", action: Selector(("clearComments:")), keyEquivalent: "")
+        editMenu.addItem(submenu(clearMenu, title: "Clear"))
         editMenu.addItem(.separator())
-        editMenu.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        let fillMenu = NSMenu(title: "Fill")
+        fillMenu.addItem(withTitle: "Down", action: Selector(("fillDown:")), keyEquivalent: "d")
+        fillMenu.addItem(withTitle: "Right", action: Selector(("fillRight:")), keyEquivalent: "r")
+        editMenu.addItem(submenu(fillMenu, title: "Fill"))
+        editMenu.addItem(withTitle: "Delete Columns", action: Selector(("deleteColumns:")), keyEquivalent: "")
+        editMenu.addItem(withTitle: "Delete Rows", action: Selector(("deleteRows:")), keyEquivalent: "")
+        editMenu.addItem(.separator())
+        let selectMenu = NSMenu(title: "Select")
+        selectMenu.addItem(withTitle: "All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        selectMenu.addItem(withTitle: "Column", action: Selector(("selectColumn:")), keyEquivalent: "")
+        selectMenu.addItem(withTitle: "Row", action: Selector(("selectRow:")), keyEquivalent: "")
+        editMenu.addItem(submenu(selectMenu, title: "Select"))
         menuBar.addItem(submenu(editMenu, title: "Edit"))
 
         let viewMenu = NSMenu(title: "View")
@@ -49,9 +67,41 @@ enum MainMenu {
         viewMenu.addItem(withTitle: "Actual Size", action: Selector(("zoomActualSize:")), keyEquivalent: "0")
         menuBar.addItem(submenu(viewMenu, title: "View"))
 
+        let insertMenu = NSMenu(title: "Insert")
+        insertMenu.addItem(withTitle: "Columns", action: Selector(("insertColumns:")), keyEquivalent: "")
+        insertMenu.addItem(withTitle: "Rows", action: Selector(("insertRows:")), keyEquivalent: "")
+        menuBar.addItem(submenu(insertMenu, title: "Insert"))
+
         let formatMenu = NSMenu(title: "Format")
         formatMenu.addItem(withTitle: "Cells…", action: Selector(("formatCells:")), keyEquivalent: "1")
+        formatMenu.addItem(.separator())
+        let columnMenu = NSMenu(title: "Column")
+        columnMenu.addItem(withTitle: "Width…", action: Selector(("setColumnWidth:")), keyEquivalent: "")
+        columnMenu.addItem(withTitle: "Autofit Width", action: Selector(("autofitColumns:")), keyEquivalent: "")
+        columnMenu.addItem(withTitle: "Standard Width…", action: #selector(WorkbookWindowController.setDefaultColumnWidth(_:)), keyEquivalent: "")
+        columnMenu.addItem(.separator())
+        columnMenu.addItem(withTitle: "Hide", action: Selector(("hideColumns:")), keyEquivalent: "")
+        columnMenu.addItem(withTitle: "Unhide", action: Selector(("unhideColumns:")), keyEquivalent: "")
+        formatMenu.addItem(submenu(columnMenu, title: "Column"))
+        let rowMenu = NSMenu(title: "Row")
+        rowMenu.addItem(withTitle: "Height…", action: Selector(("setRowHeight:")), keyEquivalent: "")
+        rowMenu.addItem(withTitle: "Autofit Height", action: Selector(("autofitRows:")), keyEquivalent: "")
+        rowMenu.addItem(withTitle: "Standard Height…", action: Selector(("setDefaultRowHeight:")), keyEquivalent: "")
+        rowMenu.addItem(.separator())
+        rowMenu.addItem(withTitle: "Hide", action: Selector(("hideRows:")), keyEquivalent: "")
+        rowMenu.addItem(withTitle: "Unhide", action: Selector(("unhideRows:")), keyEquivalent: "")
+        formatMenu.addItem(submenu(rowMenu, title: "Row"))
+        formatMenu.addItem(.separator())
+        formatMenu.addItem(withTitle: "Merge Cells", action: Selector(("mergeCells:")), keyEquivalent: "")
+        formatMenu.addItem(withTitle: "Merge and Center", action: Selector(("mergeAndCenter:")), keyEquivalent: "")
+        formatMenu.addItem(withTitle: "Unmerge Cells", action: Selector(("unmergeCells:")), keyEquivalent: "")
         menuBar.addItem(submenu(formatMenu, title: "Format"))
+
+        let dataMenu = NSMenu(title: "Data")
+        let recalc = dataMenu.addItem(withTitle: "Recalculate", action: Selector(("recalculate:")),
+                                      keyEquivalent: String(Character(UnicodeScalar(NSF9FunctionKey)!)))
+        recalc.keyEquivalentModifierMask = []
+        menuBar.addItem(submenu(dataMenu, title: "Data"))
 
         let windowMenu = NSMenu(title: "Window")
         windowMenu.addItem(withTitle: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")

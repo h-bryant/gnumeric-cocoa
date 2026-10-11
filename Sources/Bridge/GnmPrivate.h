@@ -32,6 +32,7 @@
 #include <selection.h>
 #include <parse-util.h>
 #include <commands.h>
+#include <workbook-cmd-format.h>
 #include <cmd-edit.h>
 #include <clipboard.h>
 #include <number-match.h>

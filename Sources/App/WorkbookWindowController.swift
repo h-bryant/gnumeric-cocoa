@@ -232,10 +232,79 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             tabs.selectedSegment = index
             revealSelectedTab()
         }
-        scrollView.horizontalRulerView?.needsDisplay = true
-        scrollView.verticalRulerView?.needsDisplay = true
         window?.makeFirstResponder(gridView)
         updateSubtitle()
+    }
+
+    // MARK: Column width and row height (Format menu)
+
+    /// A sheet with one numeric field, in points; `completion` gets the
+    /// value when the user confirms.
+    private func promptSize(title: String, message: String, value: Double,
+                            completion: @escaping @MainActor (Double) -> Void) {
+        guard let window else { return }
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = message
+        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: "Cancel")
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 120, height: 24))
+        let formatter = NumberFormatter()
+        formatter.minimum = 0
+        formatter.maximumFractionDigits = 2
+        field.formatter = formatter
+        field.doubleValue = value
+        field.alignment = .right
+        alert.accessoryView = field
+        alert.window.initialFirstResponder = field
+        alert.beginSheetModal(for: window) { response in
+            guard response == .alertFirstButtonReturn else { return }
+            completion(field.doubleValue)
+        }
+    }
+
+    private func runSizeCommand(_ command: (Sheet) throws -> Void) {
+        guard let sheet = gridView.sheet else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        do {
+            try command(sheet)
+        } catch {
+            present(error)
+        }
+    }
+
+    @objc func setColumnWidth(_ sender: Any?) {
+        guard let sheet = gridView.sheet else { return }
+        promptSize(title: "Column Width", message: "Width of the selected columns, in points. 0 restores the standard width.",
+                   value: sheet.widthInPoints(ofColumn: sheet.selectedRange.start.column)) { [weak self] points in
+            self?.runSizeCommand { try $0.setSelected(columns: true, sizeInPoints: points) }
+        }
+    }
+
+    @objc func setRowHeight(_ sender: Any?) {
+        guard let sheet = gridView.sheet else { return }
+        promptSize(title: "Row Height", message: "Height of the selected rows, in points. 0 restores the standard height.",
+                   value: sheet.heightInPoints(ofRow: sheet.selectedRange.start.row)) { [weak self] points in
+            self?.runSizeCommand { try $0.setSelected(columns: false, sizeInPoints: points) }
+        }
+    }
+
+    @objc func setDefaultColumnWidth(_ sender: Any?) {
+        guard let sheet = gridView.sheet else { return }
+        promptSize(title: "Standard Column Width", message: "Width of the columns without their own width, in points.",
+                   value: sheet.defaultColumnWidthInPoints) { [weak self] points in
+            guard points > 0 else { return }
+            self?.runSizeCommand { try $0.setDefaultSizeInPoints(points, forColumns: true) }
+        }
+    }
+
+    @objc func setDefaultRowHeight(_ sender: Any?) {
+        guard let sheet = gridView.sheet else { return }
+        promptSize(title: "Standard Row Height", message: "Height of the rows without their own height, in points.",
+                   value: sheet.defaultRowHeightInPoints) { [weak self] points in
+            guard points > 0 else { return }
+            self?.runSizeCommand { try $0.setDefaultSizeInPoints(points, forColumns: false) }
+        }
     }
 
     // MARK: Format Cells (Format menu)
@@ -305,6 +374,9 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             return abs(zoom - 1) > 1e-6
         case #selector(formatCells(_:)):
             return gridView.sheet != nil && formatSheetWindow == nil
+        case #selector(setColumnWidth(_:)), #selector(setRowHeight(_:)),
+             #selector(setDefaultColumnWidth(_:)), #selector(setDefaultRowHeight(_:)):
+            return gridView.sheet != nil && window?.attachedSheet == nil
         default:
             return true
         }

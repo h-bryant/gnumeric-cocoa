@@ -322,6 +322,11 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
     workbook_recalc (_wb);
 }
 
+- (void)recalculateAll
+{
+    workbook_recalc_all (_wb);
+}
+
 #pragma mark - Commands, undo, redo
 
 - (BOOL)_runCommand:(gboolean (NS_NOESCAPE ^)(WorkbookControl *wbc))command

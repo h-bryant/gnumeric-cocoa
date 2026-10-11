@@ -158,6 +158,84 @@ int main (void)
         NSLog (@"single-cell paste of a date shows '%@'", [s displayTextOfCellAtColumn:0 row:42]);
         GNM_ASSERT ([s displayTextOfCellAtColumn:0 row:42].length > 0, @"single value pasted");
 
+        /* column widths and row heights: points are zoom-independent, the
+         * engine rounds through pixels, undo restores */
+        CGFloat w0 = [s widthInPointsOfColumn:2];
+        GNM_ASSERT (w0 > 0 && [s widthOfColumn:2] > 0, @"column 2 has a size");
+        [s selectRange:GnmCellRangeMake (2, 0, 2, s.rowCount - 1) editPosition:GnmCellCoordinateMake (2, 0)];
+        GNM_ASSERT ([s setSelectedColumns:YES sizeInPoints:100 error:&error], @"set width: %@", error);
+        GNM_ASSERT (fabs ([s widthInPointsOfColumn:2] - 100) < 1, @"width now %g pt", [s widthInPointsOfColumn:2]);
+        GNM_ASSERT ([wb.undoLabel containsString:@"width"], @"undo label '%@'", wb.undoLabel);
+        [wb undo];
+        GNM_ASSERT (fabs ([s widthInPointsOfColumn:2] - w0) < 0.01, @"width back to %g", [s widthInPointsOfColumn:2]);
+        GNM_ASSERT ([s setColumns:YES inRange:NSMakeRange (2, 1) sizeInPixels:50 error:&error], @"set pixels: %@", error);
+        GNM_ASSERT ([s widthOfColumn:2] == 50, @"width now %g px", [s widthOfColumn:2]);
+        [wb undo];
+        [s selectRange:GnmCellRangeMake (0, 5, 0, 5) editPosition:GnmCellCoordinateMake (0, 5)];
+        GNM_ASSERT ([s setSelectedColumns:NO sizeInPoints:40 error:&error], @"set height: %@", error);
+        GNM_ASSERT (fabs ([s heightInPointsOfRow:5] - 40) < 1, @"height now %g pt", [s heightInPointsOfRow:5]);
+        [wb undo];
+        CGFloat d0 = s.defaultColumnWidthInPoints;
+        GNM_ASSERT ([s setDefaultSizeInPoints:d0 + 20 forColumns:YES error:&error], @"default width: %@", error);
+        GNM_ASSERT (fabs (s.defaultColumnWidthInPoints - (d0 + 20)) < 0.01, @"default now %g", s.defaultColumnWidthInPoints);
+        [wb undo];
+        GNM_ASSERT (fabs (s.defaultColumnWidthInPoints - d0) < 0.01, @"default back");
+        /* autofit grows a column to long content */
+        [s setText:@"a rather long piece of text for autofitting" atColumn:30 row:0 autocorrect:NO error:NULL];
+        CGFloat before = [s widthOfColumn:30];
+        [s selectCellAtColumn:30 row:0];
+        GNM_ASSERT ([s autofitSelectedColumns:YES error:&error], @"autofit: %@", error);
+        GNM_ASSERT ([s widthOfColumn:30] > before * 2, @"autofit widened %g -> %g", before, [s widthOfColumn:30]);
+        [wb undo];
+        GNM_ASSERT ([s autofitSelectedCellsWidth:YES error:&error], @"autofit cells: %@", error);
+        GNM_ASSERT ([s widthOfColumn:30] > before * 2, @"autofit cells widened to %g", [s widthOfColumn:30]);
+        [wb undo]; [wb undo];
+
+        /* fill down and right copy the first row/column over the selection;
+         * autofill continues a series, or repeats it with the default increment */
+        [s setText:@"x" atColumn:30 row:50 autocorrect:NO error:NULL];
+        [s selectRange:GnmCellRangeMake (30, 50, 30, 53) editPosition:GnmCellCoordinateMake (30, 50)];
+        GNM_ASSERT ([s fillDown:&error], @"fill down: %@", error);
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:30 row:53] ?: @"", @"x");
+        [s selectRange:GnmCellRangeMake (30, 50, 33, 50) editPosition:GnmCellCoordinateMake (30, 50)];
+        GNM_ASSERT ([s fillRight:&error], @"fill right: %@", error);
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:33 row:50] ?: @"", @"x");
+        [wb undo]; [wb undo];
+        GNM_ASSERT ([s displayTextOfCellAtColumn:30 row:53] == nil, @"fills undone");
+        [s setText:@"1" atColumn:40 row:60 autocorrect:NO error:NULL];
+        [s setText:@"2" atColumn:40 row:61 autocorrect:NO error:NULL];
+        GNM_ASSERT ([s autofillFromRange:GnmCellRangeMake (40, 60, 40, 61) toRange:GnmCellRangeMake (40, 60, 40, 65)
+                       defaultIncrement:NO error:&error], @"autofill: %@", error);
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:40 row:65] ?: @"", @"6");
+        [wb undo];
+        /* a single number repeats, unless the default increment of one is asked for */
+        GNM_ASSERT ([s autofillFromRange:GnmCellRangeMake (40, 60, 40, 60) toRange:GnmCellRangeMake (40, 60, 40, 65)
+                       defaultIncrement:NO error:&error], @"autofill copy: %@", error);
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:40 row:65] ?: @"", @"1");
+        [wb undo];
+        GNM_ASSERT ([s autofillFromRange:GnmCellRangeMake (40, 60, 40, 60) toRange:GnmCellRangeMake (40, 60, 40, 65)
+                       defaultIncrement:YES error:&error], @"autofill increment: %@", error);
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:40 row:65] ?: @"", @"6");
+        [wb undo];
+        /* backwards: the target starts above the source (the engine shows a
+         * real minus sign, U+2212) */
+        GNM_ASSERT ([s autofillFromRange:GnmCellRangeMake (40, 60, 40, 61) toRange:GnmCellRangeMake (40, 56, 40, 61)
+                       defaultIncrement:NO error:&error], @"inverse autofill: %@", error);
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:40 row:56] ?: @"", @"\u22123");
+        [wb undo];
+
+        /* merge and unmerge */
+        [s selectRange:GnmCellRangeMake (50, 70, 52, 71) editPosition:GnmCellCoordinateMake (50, 70)];
+        GNM_ASSERT (!s.selectionHasMergedCells, @"no merges yet");
+        GNM_ASSERT ([s mergeSelectionCentered:NO error:&error], @"merge: %@", error);
+        GNM_ASSERT (s.selectionHasMergedCells, @"merged");
+        GNM_ASSERT ([s unmergeSelection:&error], @"unmerge: %@", error);
+        GNM_ASSERT (!s.selectionHasMergedCells, @"unmerged");
+        [wb undo];
+        GNM_ASSERT (s.selectionHasMergedCells, @"undo of unmerge restores the merge");
+        [wb undo];
+        [wb recalculateAll];
+
         /* save the edited file and reopen */
         [s setText:@"saved" atColumn:3 row:3 autocorrect:NO error:NULL];
         NSURL *out = [NSURL fileURLWithPath:[gnm_test_env ("GNM_TEST_OUT") stringByAppendingPathComponent:@"bridge-edited.gnumeric"]];

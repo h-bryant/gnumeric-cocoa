@@ -137,6 +137,46 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 /// Hide or show the selected columns or rows (`cmd_selection_colrow_hide`).
 - (BOOL)setSelectedColumns:(BOOL)columns hidden:(BOOL)hidden error:(NSError **)error NS_SWIFT_NAME(setSelected(columns:hidden:));
 
+// Column widths and row heights.  Points are the engine's zoom-independent
+// unit (what files store); `widthOfColumn:` and friends give pixels at the
+// current zoom.
+- (CGFloat)widthInPointsOfColumn:(NSInteger)column NS_SWIFT_NAME(widthInPoints(ofColumn:));
+- (CGFloat)heightInPointsOfRow:(NSInteger)row NS_SWIFT_NAME(heightInPoints(ofRow:));
+@property (nonatomic, readonly) CGFloat defaultColumnWidthInPoints;
+@property (nonatomic, readonly) CGFloat defaultRowHeightInPoints;
+/// Resize the selected columns or rows (`cmd_resize_colrow`); 0 points
+/// restores the default size.
+- (BOOL)setSelectedColumns:(BOOL)columns sizeInPoints:(CGFloat)points error:(NSError **)error NS_SWIFT_NAME(setSelected(columns:sizeInPoints:));
+/// Resize a run of columns or rows to a pixel size at the current zoom
+/// (header dragging); 0 restores the default, -1 fits the content.
+- (BOOL)setColumns:(BOOL)columns inRange:(NSRange)range sizeInPixels:(NSInteger)pixels error:(NSError **)error NS_SWIFT_NAME(set(columns:in:sizeInPixels:));
+/// Fit the selected columns or rows to all of their content.
+- (BOOL)autofitSelectedColumns:(BOOL)columns error:(NSError **)error NS_SWIFT_NAME(autofitSelected(columns:));
+/// Fit the columns (or rows) of the selection to the selected cells only
+/// (`cmd_autofit_selection`).
+- (BOOL)autofitSelectedCellsWidth:(BOOL)width error:(NSError **)error NS_SWIFT_NAME(autofitSelectedCells(width:));
+/// Change the sheet's default column width or row height
+/// (`cmd_colrow_std_size`); columns and rows without an explicit size follow.
+- (BOOL)setDefaultSizeInPoints:(CGFloat)points forColumns:(BOOL)columns error:(NSError **)error NS_SWIFT_NAME(setDefaultSizeInPoints(_:forColumns:));
+
+// Fill.
+/// Copy the top row of the selection down over the rest of it, or the row
+/// above into a single-row selection (`cmd_copyrel`, the GTK Copy Down).
+- (BOOL)fillDown:(NSError **)error NS_SWIFT_NAME(fillDown());
+/// The same from the left (Copy Right).
+- (BOOL)fillRight:(NSError **)error NS_SWIFT_NAME(fillRight());
+/// Autofill: extend `source` over `target`, which must contain `source` and
+/// grow it in one direction only (what the fill handle does;
+/// `cmd_autofill`).  `defaultIncrement` (the GTK Ctrl modifier) makes a
+/// single-cell number source count up by one instead of repeating.
+- (BOOL)autofillFromRange:(GnmCellRange)source toRange:(GnmCellRange)target defaultIncrement:(BOOL)defaultIncrement error:(NSError **)error NS_SWIFT_NAME(autofill(from:to:defaultIncrement:));
+
+// Merged cells.
+/// Whether any selected range overlaps a merged region.
+@property (nonatomic, readonly) BOOL selectionHasMergedCells;
+- (BOOL)mergeSelectionCentered:(BOOL)center error:(NSError **)error NS_SWIFT_NAME(mergeSelection(centered:));
+- (BOOL)unmergeSelection:(NSError **)error NS_SWIFT_NAME(unmergeSelection());
+
 // Drawing, using the engine's own cell, border, and object renderers through
 // cairo-quartz (docs/architecture.md §6).  `rect` is in sheet pixels and the
 // context's CTM must map sheet pixels to the destination with y downward, as

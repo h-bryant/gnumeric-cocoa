@@ -292,10 +292,10 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    waits on Henry enabling developer mode: `sudo DevToolsSecurity -enable`).
 3. Upstream engagement is deferred (§2, ADR-011): do not post or extend
    `docs/upstream-issue.md`; keep any engine patch minimal and upstreamable.
-4. Henry has used the app once (2026-10-11) and saw a blank grid; the fix is
-   in (`docs/progress.md`), verified headlessly only. Ask what he sees now
-   before changing UI behavior.
-5. Phase 3 (`docs/mvp-known-gaps.md` says what the MVP lacks): start with
-   what the bridge already wraps (Insert/Delete rows and columns, hide and
-   unhide, clear variants) as menu items, then fill and autofill, column and
-   row resizing in the headers, freeze panes, and the status bar.
+4. Phase 3 (`docs/mvp-known-gaps.md` says what the MVP lacks). Done on
+   2026-10-11: insert/delete rows and columns, hide and unhide, clear
+   variants, fill and autofill (fill handle), column and row sizes with
+   header drag-resizing, merge, recalc. Next: the status bar with the
+   auto-expression (`WorkbookView` `notify::auto-expr-value`), freeze panes
+   (`gnm_sheet_view_freeze_panes` plus a four-pane grid), sheet management,
+   Paste Special, sort.

@@ -28,6 +28,15 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     var presentError: ((Error) -> Void)?
     private var dragAnchor: CellCoordinate?
     private var lastSelectionRect: NSRect = .zero
+    /// Dragging the fill handle: the source range and the pending target.
+    private var fillSource: CellRange?
+    private var fillTarget: CellRange?
+    /// A column or row boundary being dragged in a header, as a guide line
+    /// across the grid (sheet pixels).
+    var resizeGuide: (isColumn: Bool, position: CGFloat)? {
+        didSet { needsDisplay = true }
+    }
+    static let fillHandleSize: CGFloat = 7
     private let editor = CellEditorField()
     private var editingCell: CellCoordinate?
     var isEditing: Bool { editingCell != nil }
@@ -139,6 +148,42 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         let outline = NSBezierPath(rect: selection.insetBy(dx: -0.5, dy: -0.5))
         outline.lineWidth = 2
         outline.stroke()
+        if !isEditing {
+            // The fill handle: a small square on the bottom-right corner.
+            let handle = fillHandleRect(for: selection)
+            NSColor.white.setFill()
+            handle.insetBy(dx: -1, dy: -1).fill()
+            NSColor.controlAccentColor.setFill()
+            handle.fill()
+        }
+        if let fillTarget {
+            let target = rect(of: fillTarget, in: sheet)
+            let path = NSBezierPath(rect: target.insetBy(dx: -0.5, dy: -0.5))
+            path.lineWidth = 1
+            path.setLineDash([4, 2], count: 2, phase: 0)
+            NSColor.controlAccentColor.setStroke()
+            path.stroke()
+        }
+        if let resizeGuide {
+            NSColor.controlAccentColor.withAlphaComponent(0.6).setFill()
+            let visible = visibleRect
+            if resizeGuide.isColumn {
+                NSRect(x: resizeGuide.position - 1, y: visible.minY, width: 1, height: visible.height).fill()
+            } else {
+                NSRect(x: visible.minX, y: resizeGuide.position - 1, width: visible.width, height: 1).fill()
+            }
+        }
+    }
+
+    private func fillHandleRect(for selection: NSRect) -> NSRect {
+        let size = Self.fillHandleSize
+        return NSRect(x: selection.maxX - size / 2, y: selection.maxY - size / 2, width: size, height: size)
+    }
+
+    override func resetCursorRects() {
+        guard let sheet, !isEditing else { return }
+        addCursorRect(fillHandleRect(for: rect(of: sheet.selectedRange, in: sheet)).insetBy(dx: -2, dy: -2),
+                      cursor: .crosshair)
     }
 
     /// The source of the last copy or cut, outlined with dashes (static for
@@ -157,9 +202,10 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
 
     private func invalidateSelection(_ sheet: Sheet) {
         let newRect = rect(of: sheet.selectedRange, in: sheet)
-        setNeedsDisplay(lastSelectionRect.insetBy(dx: -3, dy: -3))
-        setNeedsDisplay(newRect.insetBy(dx: -3, dy: -3))
+        setNeedsDisplay(lastSelectionRect.insetBy(dx: -6, dy: -6))
+        setNeedsDisplay(newRect.insetBy(dx: -6, dy: -6))
         headerViews.forEach { $0.needsDisplay = true }
+        window?.invalidateCursorRects(for: self)
     }
 
     // MARK: Editing
@@ -273,6 +319,88 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         clearSelectionValues()
     }
 
+    // MARK: Edit, Insert, Format, and Data menu commands on the selection
+
+    /// Finish any edit, run an engine command, and show its error.
+    private func run(_ command: (Sheet) throws -> Void) {
+        guard let sheet else { return }
+        if isEditing { commitEditing(text: editor.stringValue, movement: .none) }
+        do {
+            try command(sheet)
+        } catch {
+            presentError?(error)
+        }
+    }
+
+    @objc func clearAll(_ sender: Any?) {
+        run { try $0.clearSelection([.values, .formats, .comments, .objects]) }
+    }
+    @objc func clearFormats(_ sender: Any?) { run { try $0.clearSelection(.formats) } }
+    @objc func clearComments(_ sender: Any?) { run { try $0.clearSelection(.comments) } }
+
+    /// Insert as many columns (rows) as the selection spans, before it, as
+    /// the GTK front end does.
+    @objc func insertColumns(_ sender: Any?) {
+        run { sheet in
+            let range = sheet.selectedRange
+            try sheet.insertColumns(range.end.column - range.start.column + 1, at: range.start.column)
+        }
+    }
+    @objc func insertRows(_ sender: Any?) {
+        run { sheet in
+            let range = sheet.selectedRange
+            try sheet.insertRows(range.end.row - range.start.row + 1, at: range.start.row)
+        }
+    }
+    @objc func deleteColumns(_ sender: Any?) {
+        run { sheet in
+            let range = sheet.selectedRange
+            try sheet.deleteColumns(NSRange(location: range.start.column, length: range.end.column - range.start.column + 1))
+        }
+    }
+    @objc func deleteRows(_ sender: Any?) {
+        run { sheet in
+            let range = sheet.selectedRange
+            try sheet.deleteRows(NSRange(location: range.start.row, length: range.end.row - range.start.row + 1))
+        }
+    }
+
+    @objc func fillDown(_ sender: Any?) { run { try $0.fillDown() } }
+    @objc func fillRight(_ sender: Any?) { run { try $0.fillRight() } }
+
+    @objc func selectColumn(_ sender: Any?) {
+        guard let sheet else { return }
+        let range = sheet.selectedRange
+        selectColumns(from: range.start.column, to: range.end.column, anchor: sheet.editPosition.column)
+    }
+    @objc func selectRow(_ sender: Any?) {
+        guard let sheet else { return }
+        let range = sheet.selectedRange
+        selectRows(from: range.start.row, to: range.end.row, anchor: sheet.editPosition.row)
+    }
+
+    @objc func hideColumns(_ sender: Any?) { run { try $0.setSelected(columns: true, hidden: true) } }
+    @objc func unhideColumns(_ sender: Any?) { run { try $0.setSelected(columns: true, hidden: false) } }
+    @objc func hideRows(_ sender: Any?) { run { try $0.setSelected(columns: false, hidden: true) } }
+    @objc func unhideRows(_ sender: Any?) { run { try $0.setSelected(columns: false, hidden: false) } }
+    @objc func autofitColumns(_ sender: Any?) { run { try $0.autofitSelected(columns: true) } }
+    @objc func autofitRows(_ sender: Any?) { run { try $0.autofitSelected(columns: false) } }
+
+    @objc func mergeCells(_ sender: Any?) { run { try $0.mergeSelection(centered: false) } }
+    @objc func mergeAndCenter(_ sender: Any?) { run { try $0.mergeSelection(centered: true) } }
+    @objc func unmergeCells(_ sender: Any?) { run { try $0.unmergeSelection() } }
+
+    @objc func recalculate(_ sender: Any?) {
+        if isEditing { commitEditing(text: editor.stringValue, movement: .none) }
+        sheet?.workbook?.recalculateAll()
+    }
+
+    private var selectionIsMultiCell: Bool {
+        guard let sheet else { return false }
+        let range = sheet.selectedRange
+        return range.start.column != range.end.column || range.start.row != range.end.row
+    }
+
     func validateUserInterfaceItem(_ item: any NSValidatedUserInterfaceItem) -> Bool {
         guard let sheet else { return false }
         switch item.action {
@@ -288,6 +416,10 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
             return sheet.workbook?.canRedo ?? false
         case #selector(paste(_:)):
             return NSPasteboard.general.string(forType: .string) != nil
+        case #selector(mergeCells(_:)), #selector(mergeAndCenter(_:)):
+            return selectionIsMultiCell
+        case #selector(unmergeCells(_:)):
+            return sheet.selectionHasMergedCells
         default:
             return true
         }
@@ -297,9 +429,15 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
 
     override func mouseDown(with event: NSEvent) {
         guard let sheet else { return }
+        let point = convert(event.locationInWindow, from: nil)
+        if !isEditing, event.clickCount == 1,
+           fillHandleRect(for: rect(of: sheet.selectedRange, in: sheet)).insetBy(dx: -2, dy: -2).contains(point) {
+            fillSource = sheet.selectedRange
+            fillTarget = nil
+            return
+        }
         if isEditing { commitEditing(text: editor.stringValue, movement: .none) }
         window?.makeFirstResponder(self)
-        let point = convert(event.locationInWindow, from: nil)
         let cell = CellCoordinate(column: sheet.column(atX: point.x), row: sheet.row(atY: point.y))
         if event.clickCount == 2 {
             sheet.selectCell(atColumn: cell.column, row: cell.row)
@@ -315,7 +453,19 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     }
 
     override func mouseDragged(with event: NSEvent) {
-        guard let sheet, let anchor = dragAnchor else { return }
+        guard let sheet else { return }
+        if let fillSource {
+            autoscroll(with: event)
+            let point = convert(event.locationInWindow, from: nil)
+            let cell = CellCoordinate(column: sheet.column(atX: point.x), row: sheet.row(atY: point.y))
+            let target = Self.fillTarget(from: fillSource, toward: cell)
+            if fillTarget.map({ $0 != target }) ?? true {
+                fillTarget = target
+                needsDisplay = true
+            }
+            return
+        }
+        guard let anchor = dragAnchor else { return }
         autoscroll(with: event)
         let point = convert(event.locationInWindow, from: nil)
         let cell = CellCoordinate(column: sheet.column(atX: point.x), row: sheet.row(atY: point.y))
@@ -325,6 +475,48 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
             range.end.column != current.end.column || range.end.row != current.end.row {
             sheet.selectRange(range, editPosition: anchor)
         }
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        guard let sheet, let source = fillSource else { return }
+        let target = fillTarget
+        fillSource = nil
+        fillTarget = nil
+        needsDisplay = true
+        guard let target, target != source else { return }
+        // Option: a single number counts up by one instead of repeating
+        // (the GTK Ctrl modifier).
+        let increment = event.modifierFlags.contains(.option)
+        do {
+            try sheet.autofill(from: source, to: target, defaultIncrement: increment)
+            sheet.selectRange(target, editPosition: sheet.editPosition)
+        } catch {
+            presentError?(error)
+        }
+    }
+
+    /// The fill handle extends the source in one direction only, by whole
+    /// multiples of its size (item-cursor.c, cb_autofill_scroll).
+    static func fillTarget(from source: CellRange, toward cell: CellCoordinate) -> CellRange {
+        var r = source
+        let width = source.end.column - source.start.column + 1
+        let height = source.end.row - source.start.row + 1
+        let north = source.start.row - cell.row, south = cell.row - source.end.row
+        let west = source.start.column - cell.column, east = cell.column - source.end.column
+        if max(north, south) > max(west, east) {
+            if cell.row < source.start.row {
+                r.start.row -= height * (north / height)
+            } else if cell.row > source.end.row {
+                r.end.row += height * (south / height)
+            }
+        } else {
+            if cell.column < source.start.column {
+                r.start.column -= width * (west / width)
+            } else if cell.column > source.end.column {
+                r.end.column += width * (east / width)
+            }
+        }
+        return r
     }
 
     private static func range(from a: CellCoordinate, to b: CellCoordinate) -> CellRange {

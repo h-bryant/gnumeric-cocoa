@@ -252,11 +252,52 @@
   from `CALayer.render(in:)`. Both whole-window captures now match the grid
   capture at 1x and at 150 % zoom (headers, selection highlights, corner,
   name box, cell text).
-- Not verified: the screen itself. Each layer-backed view draws into its own
-  context on screen, so causes 2 and 3 should not show there, and cause 1 is
-  fixed by construction; Henry should confirm.
+- Henry confirmed on screen the same day: grid, headers, and typing work.
 - Tests unchanged and passing: `scripts/smoke-test.sh`, `scripts/test-xcode.sh`,
   `xcodebuild -scheme GnumericCocoa build`.
+
+## 2026-10-11: Phase 3, first step: the commands the bridge already wrapped
+
+- Menus: Edit → Clear (All, Formats, Contents, Comments), Fill (Down ⌘D,
+  Right ⌘R), Delete Columns, Delete Rows, Select (All, Column, Row); a new
+  Insert menu (Columns, Rows: as many as the selection spans, before it);
+  Format → Column and Row submenus (Width/Height… in points, Autofit,
+  Standard…, Hide, Unhide), Merge Cells, Merge and Center, Unmerge Cells;
+  Data → Recalculate (F9). Actions live on `GridView` (responder chain);
+  the four size prompts, `NSAlert` sheets with a number field, on the
+  window controller.
+- Bridge (`GnmSheet`): sizes in points (`widthInPointsOfColumn:`,
+  defaults), `setSelectedColumns:sizeInPoints:` and
+  `setColumns:inRange:sizeInPixels:` (`cmd_resize_colrow` through the
+  engine's own point-to-pixel scale, `colrow_compute_pixels_from_pts`),
+  `autofitSelectedColumns:`, `autofitSelectedCellsWidth:`,
+  `setDefaultSizeInPoints:forColumns:` (`cmd_colrow_std_size`), `fillDown`
+  / `fillRight` (`cmd_copyrel`), `autofillFromRange:toRange:defaultIncrement:`
+  (`cmd_autofill`; the flag means a lone number counts up by one, the GTK
+  Ctrl), `mergeSelectionCentered:`, `unmergeSelection`,
+  `selectionHasMergedCells`; `GnmWorkbook.recalculateAll`. Covered in
+  `Tests/BridgeTests/editing.m` (the engine prints negatives with U+2212).
+- Grid: a fill handle on the selection's corner; dragging it extends the
+  source in one direction by whole multiples of its size
+  (`item-cursor.c`, `cb_autofill_scroll`) with a dashed outline, Option
+  for the increment. Headers: a resize cursor over column and row
+  boundaries, drag to resize (a guide line across the grid, applied on
+  release to every selected column or row when the dragged one is
+  selected), double-click to fit the content.
+- `patches/0002-merge-center-style-ref.patch`: Merge and Center tripped
+  `gnm_style_unref: assertion 'style->ref_count > 0'` because
+  `cmd_merge_cells_redo` unrefs the align-center style once more than it
+  owns (`sheet_apply_style` absorbs a reference); an upstream bug the GTK
+  front end shares. One `gnm_style_ref` per range. Re-check at the next
+  re-pin (ADR-003); it belongs in any future upstream request (ADR-011).
+- `GNM_SNAPSHOT_PHASE3=1` drives insert, delete, fill, autofill, merge,
+  hide, unhide, autofit, and recalc through the grid's actions before the
+  capture. Snapshot runs now mark documents clean before terminating: the
+  unsaved-documents review blocked headless and its alert kept the
+  document (so a workbook) alive past the engine's shutdown.
+- `docs/mvp-known-gaps.md` updated. Next in Phase 3: the status bar with
+  the auto-expression, freeze panes, sheet management (insert, rename,
+  remove, reorder), Paste Special, sort, and the filtered Clear variants.
 
 ## How to resume
 
