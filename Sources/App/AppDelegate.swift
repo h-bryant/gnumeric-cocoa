@@ -12,6 +12,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             engine.messageHandler = { (error: any Error) in
                 let nsError = error as NSError
                 NSLog("Gnumeric: %@ %@", nsError.localizedDescription, nsError.localizedRecoverySuggestion ?? "")
+                let alert = NSAlert(error: nsError)
+                if let suggestion = nsError.localizedRecoverySuggestion {
+                    alert.informativeText = suggestion
+                }
+                if let window = NSApp.keyWindow {
+                    alert.beginSheetModal(for: window)
+                } else if ProcessInfo.processInfo.environment["GNM_SNAPSHOT"] == nil {
+                    alert.runModal()
+                }
             }
             self.engine = engine
         } catch {
@@ -109,6 +118,39 @@ enum Snapshot {
                   let view = window.contentView else {
                 NSLog("snapshot: no visible window")
                 return
+            }
+            if let text = ProcessInfo.processInfo.environment["GNM_SNAPSHOT_TYPE"],
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // Exercise the editing path headlessly: type into C3, commit
+                // with Return, undo, redo, then paste a block at E5.
+                sheet.selectCell(atColumn: 2, row: 2)
+                controller.gridView.beginEditing(initialText: text)
+                controller.gridView.commitEditing(text: text, movement: .down)
+                controller.gridView.undo(nil)
+                controller.gridView.redo(nil)
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString("p1\tp2\np3\tp4", forType: .string)
+                sheet.selectCell(atColumn: 4, row: 4)
+                controller.gridView.paste(nil)
+                NSLog("typed: C3=%@ E5=%@ F6=%@ modified=%d undo=%@",
+                      sheet.displayTextOfCell(atColumn: 2, row: 2) ?? "nil",
+                      sheet.displayTextOfCell(atColumn: 4, row: 4) ?? "nil",
+                      sheet.displayTextOfCell(atColumn: 5, row: 5) ?? "nil",
+                      sheet.workbook?.isModified ?? false ? 1 : 0,
+                      sheet.workbook?.undoLabel ?? "nil")
+                // and the NSDocument save path, next to the snapshot
+                if let document = controller.document as? WorkbookDocument {
+                    let saveURL = URL(fileURLWithPath: (path as NSString).deletingPathExtension + "-saved.gnumeric")
+                    NSLog("document edited before save: %d", document.isDocumentEdited ? 1 : 0)
+                    document.save(to: saveURL, ofType: WorkbookDocument.gnumericType, for: .saveAsOperation) { error in
+                        let size = (try? FileManager.default.attributesOfItem(atPath: saveURL.path)[.size] as? Int) ?? -1
+                        NSLog("saved: error=%@ size=%d edited=%d fileURL=%@", error?.localizedDescription ?? "none",
+                              size, document.isDocumentEdited ? 1 : 0, document.fileURL?.lastPathComponent ?? "nil")
+                    }
+                }
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
             }
             if let zoom = ProcessInfo.processInfo.environment["GNM_SNAPSHOT_ZOOM"].flatMap(Double.init),
                let controller = window.windowController as? WorkbookWindowController {

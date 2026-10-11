@@ -1,11 +1,21 @@
 import AppKit
 import GnmCocoa
 
-/// One open file.  Reading goes through the engine's file openers, so every
-/// format Gnumeric can load works (HANDOFF.md §4, Phase 1).
+/// One open file.  Reading and writing go through the engine's file openers
+/// and savers, so every format Gnumeric handles works; the engine's command
+/// stack is the undo source of truth, so the document keeps no undo manager
+/// and mirrors the engine's dirty flag into its change count.
 @MainActor
 final class WorkbookDocument: NSDocument {
     private(set) var workbook: Workbook?
+
+    nonisolated static let gnumericType = "org.gnome.gnumeric.spreadsheet"
+    nonisolated static let xlsxType = "org.openxmlformats.spreadsheetml.sheet"
+
+    override init() {
+        super.init()
+        hasUndoManager = false
+    }
 
     override class var autosavesInPlace: Bool { false }
 
@@ -26,12 +36,41 @@ final class WorkbookDocument: NSDocument {
 
     override func makeWindowControllers() {
         guard let workbook else { return }
-        addWindowController(WorkbookWindowController(workbook: workbook))
+        addWindowController(WorkbookWindowController(workbook: workbook, document: self))
     }
 
-    /// Phase 1 is read-only: no writable types, so Save and Save As stay
-    /// disabled and closing never asks about unsaved changes.
-    override func writableTypes(for saveOperation: NSDocument.SaveOperationType) -> [String] { [] }
+    // MARK: Saving
+
+    override func writableTypes(for saveOperation: NSDocument.SaveOperationType) -> [String] {
+        [Self.gnumericType, Self.xlsxType]
+    }
+
+    override func fileNameExtension(forType typeName: String, saveOperation: NSDocument.SaveOperationType) -> String? {
+        switch typeName {
+        case Self.gnumericType: return "gnumeric"
+        case Self.xlsxType: return "xlsx"
+        default: return super.fileNameExtension(forType: typeName, saveOperation: saveOperation)
+        }
+    }
+
+    /// The engine's savers write through libgsf, which already writes to a
+    /// temporary file in the target directory and renames it on success, so
+    /// the document hands the final URL straight to the engine rather than
+    /// letting NSDocument stage a temporary copy (which would leave the
+    /// engine believing the document lives in the staging directory).
+    override nonisolated func writeSafely(to url: URL, ofType typeName: String, for saveOperation: NSDocument.SaveOperationType) throws {
+        // Saves run on the main thread (canAsynchronouslyWrite stays false).
+        try MainActor.assumeIsolated {
+            guard let workbook else { return }
+            try workbook.write(to: url)
+        }
+    }
+
+    /// The engine's dirty flag drives the change count.
+    func modifiedStateDidChange() {
+        guard let workbook else { return }
+        updateChangeCount(workbook.isModified ? .changeDone : .changeCleared)
+    }
 
     override func close() {
         super.close()

@@ -147,6 +147,37 @@
 - Still open from Phase 1: frozen panes (Phase 3 in `HANDOFF.md` anyway)
   and right-to-left sheets (drawn left-to-right; Phase 7).
 
+## 2026-10-11: Phase 2 editing, first cut
+
+- Engine side: `patches/0001-decouple-command-dialogs-from-wbcgtk.patch`
+  (the seven sites of `docs/architecture.md` §5; GTK behavior unchanged;
+  rebuilt with `scripts/build-gnumeric.sh`). Bridge: `GnmWorkbook` gains
+  undo/redo with the engine's labels, `notify::dirty` forwarding, and the
+  `query_yes_no` slot answered by the delegate; `GnmSheet` gains
+  `setText`, `fillSelection`, `clearSelection`, insert/delete rows and
+  columns, hide/unhide, and `editingTextOfCell`. Every command returns the
+  engine's own message as an `NSError` (`GnmErrorCommandFailed`).
+  `Tests/BridgeTests/editing.m` covers them, including both patched paths.
+- App side: in-cell editor (`CellEditorField`: typing starts a fresh edit,
+  double-click or F2 edits the content, Return/Tab/arrows commit and move,
+  Escape cancels, clicking elsewhere commits), the formula bar is editable
+  (Return commits, Escape reverts), Edit menu Undo/Redo carry the engine's
+  labels, Cut/Copy/Paste use tab-separated text (paste fills a block cell
+  by cell for now; a single region paste waits for the engine clipboard
+  format), Delete/Backspace clear values, and `WorkbookDocument` saves
+  `.gnumeric` and `.xlsx` through the engine (`writeSafely` hands the final
+  URL to libgsf's own atomic write) with the engine's dirty flag driving the
+  change count. Engine messages outside a command show as alert sheets;
+  yes/no questions as modal alerts.
+- Verified headlessly (`GNM_SNAPSHOT_TYPE="=2*21"`): C3 shows 42 after
+  typing, undo, redo; a pasted block appears at E5; the NSDocument save
+  writes a file ssconvert reads back with the edits and clears the edited
+  state.
+- Still to do in Phase 2: paste as one undoable region (engine clipboard
+  format, `claim_selection`/`paste_from_selection`), range selection with
+  the keyboard while editing a formula, autocomplete, and the editor using
+  the cell's own font.
+
 ## How to resume
 
 1. Upstream engagement is deferred; see ADR-011 before touching

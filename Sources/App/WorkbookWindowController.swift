@@ -4,8 +4,9 @@ import GnmCocoa
 /// The document window: name box and formula line on top, the grid in a
 /// scroll view with header rulers, and sheet tabs at the bottom.
 @MainActor
-final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWindowDelegate, NSUserInterfaceValidations {
+final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWindowDelegate, NSUserInterfaceValidations, NSTextFieldDelegate {
     let workbook: Workbook
+    private weak var workbookDocument: WorkbookDocument?
     let gridView = GridView()
     private let scrollView = NSScrollView()
     private let nameBox = NSTextField(labelWithString: "")
@@ -16,8 +17,9 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     /// Zoom steps for the View menu, as percentages.
     private static let zoomSteps: [Double] = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4]
 
-    init(workbook: Workbook) {
+    init(workbook: Workbook, document: WorkbookDocument) {
         self.workbook = workbook
+        self.workbookDocument = document
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1100, height: 720),
                               styleMask: [.titled, .closable, .miniaturizable, .resizable],
                               backing: .buffered, defer: false)
@@ -49,6 +51,10 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         formulaField.bezelStyle = .roundedBezel
         formulaField.lineBreakMode = .byTruncatingTail
         formulaField.isSelectable = true
+        formulaField.isEditable = true
+        formulaField.delegate = self
+        formulaField.cell?.usesSingleLineMode = true
+        formulaField.cell?.isScrollable = true
         formulaField.setContentHuggingPriority(NSLayoutConstraint.Priority(1), for: .horizontal)
         let formulaBar = NSStackView(views: [nameBox, formulaField])
         formulaBar.orientation = .horizontal
@@ -113,6 +119,42 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         window.contentView = content
         window.initialFirstResponder = gridView
         gridView.geometryDidChange = { [weak self] in self?.updateSubtitle() }
+        gridView.editingTextDidChange = { [weak self] text in
+            guard let self else { return }
+            if let text {
+                self.formulaField.stringValue = text
+            } else {
+                self.workbook.resendDelegateState()   // back to the cell's real content
+            }
+        }
+        gridView.presentError = { [weak self] error in self?.present(error) }
+    }
+
+    private func present(_ error: Error) {
+        guard let window else { return }
+        let alert = NSAlert(error: error)
+        if let suggestion = (error as NSError).localizedRecoverySuggestion {
+            alert.informativeText = suggestion
+        }
+        alert.beginSheetModal(for: window)
+    }
+
+    // MARK: Formula bar editing
+
+    func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+        guard control === formulaField else { return false }
+        switch commandSelector {
+        case #selector(NSResponder.insertNewline(_:)):
+            gridView.setEditCellText(formulaField.stringValue)
+            window?.makeFirstResponder(gridView)
+            return true
+        case #selector(NSResponder.cancelOperation(_:)):
+            workbook.resendDelegateState()
+            window?.makeFirstResponder(gridView)
+            return true
+        default:
+            return false
+        }
     }
 
     private func updateSubtitle() {
@@ -238,5 +280,21 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
 
     func workbook(_ workbook: Workbook, selectionDescriptionDidChange text: String) {
         nameBox.stringValue = text
+    }
+
+    func workbookModifiedStateDidChange(_ workbook: Workbook) {
+        workbookDocument?.modifiedStateDidChange()
+    }
+
+    /// Engine commands that need confirmation (hide every row, paste
+    /// thousands of copies) ask through a modal alert.
+    func workbook(_ workbook: Workbook, askYesNo question: String, defaultAnswer: Bool) -> Bool {
+        let alert = NSAlert()
+        alert.messageText = question
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: defaultAnswer ? "Yes" : "No")
+        alert.addButton(withTitle: defaultAnswer ? "No" : "Yes")
+        let first = alert.runModal() == .alertFirstButtonReturn
+        return defaultAnswer ? first : !first
     }
 }

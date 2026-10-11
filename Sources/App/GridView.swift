@@ -5,9 +5,10 @@ import GnmCocoa
 /// coordinates, drawn by the engine through the bridge, with the selection
 /// painted natively on top.
 @MainActor
-final class GridView: NSView, SheetDelegate {
+final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     var sheet: Sheet? {
         didSet {
+            if isEditing { cancelEditing() }
             if let old = oldValue, old.delegate === self {
                 old.delegate = nil
             }
@@ -21,8 +22,15 @@ final class GridView: NSView, SheetDelegate {
     var headerViews: [SheetHeaderView] = []
     /// Called after the engine reports a geometry change (zoom, sizes).
     var geometryDidChange: (() -> Void)?
+    /// Called with the editor's text as it changes, and nil when editing ends.
+    var editingTextDidChange: ((String?) -> Void)?
+    /// Shows an error to the user (the window controller attaches an alert).
+    var presentError: ((Error) -> Void)?
     private var dragAnchor: CellCoordinate?
     private var lastSelectionRect: NSRect = .zero
+    private let editor = CellEditorField()
+    private var editingCell: CellCoordinate?
+    var isEditing: Bool { editingCell != nil }
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -31,6 +39,10 @@ final class GridView: NSView, SheetDelegate {
         // for now.  Revisit with responsive-scrolling measurements.
         NotificationCenter.default.addObserver(self, selector: #selector(clipFrameChanged(_:)),
                                                name: NSView.frameDidChangeNotification, object: nil)
+        addSubview(editor)
+        editor.onCommit = { [weak self] text, movement in self?.commitEditing(text: text, movement: movement) }
+        editor.onCancel = { [weak self] in self?.cancelEditing() }
+        editor.onTextChange = { [weak self] text in self?.editingTextDidChange?(text) }
     }
 
     @available(*, unavailable)
@@ -118,13 +130,180 @@ final class GridView: NSView, SheetDelegate {
         headerViews.forEach { $0.needsDisplay = true }
     }
 
+    // MARK: Editing
+
+    /// Open the editor over the edit cell.  `initialText` nil means the
+    /// cell's current content (double-click, F2); a string replaces it
+    /// (typing starts fresh).
+    func beginEditing(initialText: String?) {
+        guard let sheet else { return }
+        let cell = sheet.editPosition
+        let frame = sheet.frameOfCell(atColumn: cell.column, row: cell.row)
+        let zoom = sheet.zoomFactor
+        editor.font = NSFont.systemFont(ofSize: max(8, 13.3 * zoom))   // the engine's 10 pt default at 96 dpi
+        editor.frame = NSRect(x: frame.minX, y: frame.minY,
+                              width: max(frame.width, 80 * zoom), height: max(frame.height, 16 * zoom))
+        editor.stringValue = initialText ?? (sheet.editingTextOfCell(atColumn: cell.column, row: cell.row) ?? "")
+        editingCell = cell
+        editor.isHidden = false
+        window?.makeFirstResponder(editor)
+        if let fieldEditor = editor.currentEditor() {
+            let end = editor.stringValue.utf16.count
+            fieldEditor.selectedRange = NSRange(location: initialText == nil ? end : end, length: 0)
+        }
+        editingTextDidChange?(editor.stringValue)
+    }
+
+    private func endEditingSession() {
+        editingCell = nil
+        editor.isHidden = true
+        editor.stringValue = ""
+        editingTextDidChange?(nil)
+        window?.makeFirstResponder(self)
+    }
+
+    func cancelEditing() {
+        guard isEditing else { return }
+        endEditingSession()
+    }
+
+    /// Commit the editor's text through the engine; on failure the editor
+    /// stays open with the error shown.
+    func commitEditing(text: String, movement: CellEditorField.Movement) {
+        guard let sheet, let cell = editingCell else { return }
+        do {
+            try sheet.setText(text, atColumn: cell.column, row: cell.row, autocorrect: true)
+        } catch {
+            presentError?(error)
+            window?.makeFirstResponder(editor)
+            return
+        }
+        endEditingSession()
+        switch movement {
+        case .down: move(columns: 0, rows: 1, extend: false)
+        case .up: move(columns: 0, rows: -1, extend: false)
+        case .right: move(columns: 1, rows: 0, extend: false)
+        case .left: move(columns: -1, rows: 0, extend: false)
+        case .none: break
+        }
+    }
+
+    /// Commit from the formula bar: same command, no movement.
+    func setEditCellText(_ text: String) {
+        guard let sheet else { return }
+        let cell = sheet.editPosition
+        do {
+            try sheet.setText(text, atColumn: cell.column, row: cell.row, autocorrect: true)
+        } catch {
+            presentError?(error)
+        }
+    }
+
+    private func clearSelectionValues() {
+        guard let sheet else { return }
+        do {
+            try sheet.clearSelection(.values)
+        } catch {
+            presentError?(error)
+        }
+    }
+
+    // MARK: Undo, redo, clipboard (Edit menu, through the responder chain)
+
+    @objc func undo(_ sender: Any?) {
+        if isEditing { cancelEditing() }
+        sheet?.workbook?.undo()
+    }
+
+    @objc func redo(_ sender: Any?) {
+        if isEditing { cancelEditing() }
+        sheet?.workbook?.redo()
+    }
+
+    /// Tab-separated display text of the selection.
+    private func selectionAsText() -> String? {
+        guard let sheet else { return nil }
+        let r = sheet.selectedRange
+        guard (r.end.row - r.start.row + 1) * (r.end.column - r.start.column + 1) <= 1_000_000 else { return nil }
+        var lines: [String] = []
+        for row in r.start.row...r.end.row {
+            let cells = (r.start.column...r.end.column).map { sheet.displayTextOfCell(atColumn: $0, row: row) ?? "" }
+            lines.append(cells.joined(separator: "\t"))
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    @objc func copy(_ sender: Any?) {
+        guard let text = selectionAsText() else { NSSound.beep(); return }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+    }
+
+    @objc func cut(_ sender: Any?) {
+        copy(sender)
+        clearSelectionValues()
+    }
+
+    /// Paste text: one value goes into the edit cell; tab- and
+    /// newline-separated text fills a block from the edit cell, one engine
+    /// command per cell for now (a single region paste comes with the
+    /// engine's clipboard format).
+    @objc func paste(_ sender: Any?) {
+        guard let sheet, let text = NSPasteboard.general.string(forType: .string) else { NSSound.beep(); return }
+        let origin = sheet.editPosition
+        var lines = text.components(separatedBy: .newlines)
+        if lines.last == "" { lines.removeLast() }
+        do {
+            for (dr, line) in lines.enumerated() {
+                for (dc, value) in line.components(separatedBy: "\t").enumerated() {
+                    let column = origin.column + dc, row = origin.row + dr
+                    guard column < sheet.columnCount, row < sheet.rowCount else { continue }
+                    try sheet.setText(value, atColumn: column, row: row, autocorrect: false)
+                }
+            }
+        } catch {
+            presentError?(error)
+        }
+    }
+
+    @objc func delete(_ sender: Any?) {
+        clearSelectionValues()
+    }
+
+    func validateUserInterfaceItem(_ item: any NSValidatedUserInterfaceItem) -> Bool {
+        guard let sheet else { return false }
+        switch item.action {
+        case #selector(undo(_:)):
+            if let menuItem = item as? NSMenuItem {
+                menuItem.title = sheet.workbook?.undoLabel.map { "Undo " + $0 } ?? "Undo"
+            }
+            return sheet.workbook?.canUndo ?? false
+        case #selector(redo(_:)):
+            if let menuItem = item as? NSMenuItem {
+                menuItem.title = sheet.workbook?.redoLabel.map { "Redo " + $0 } ?? "Redo"
+            }
+            return sheet.workbook?.canRedo ?? false
+        case #selector(paste(_:)):
+            return NSPasteboard.general.string(forType: .string) != nil
+        default:
+            return true
+        }
+    }
+
     // MARK: Mouse
 
     override func mouseDown(with event: NSEvent) {
         guard let sheet else { return }
+        if isEditing { commitEditing(text: editor.stringValue, movement: .none) }
         window?.makeFirstResponder(self)
         let point = convert(event.locationInWindow, from: nil)
         let cell = CellCoordinate(column: sheet.column(atX: point.x), row: sheet.row(atY: point.y))
+        if event.clickCount == 2 {
+            sheet.selectCell(atColumn: cell.column, row: cell.row)
+            beginEditing(initialText: nil)
+            return
+        }
         if event.modifierFlags.contains(.shift), let anchor = dragAnchor {
             sheet.selectRange(Self.range(from: anchor, to: cell), editPosition: anchor)
         } else {
@@ -195,8 +374,22 @@ final class GridView: NSView, SheetDelegate {
     // MARK: Keyboard
 
     override func keyDown(with event: NSEvent) {
+        // F2 edits the current content; a printable key starts a fresh edit.
+        if event.keyCode == 120 {
+            beginEditing(initialText: nil)
+            return
+        }
+        if let chars = event.characters, !chars.isEmpty,
+           !event.modifierFlags.contains(.command), !event.modifierFlags.contains(.control),
+           chars.unicodeScalars.allSatisfy({ $0.value >= 0x20 && $0.value != 0x7f && !($0.value >= 0xF700 && $0.value <= 0xF8FF) }) {
+            beginEditing(initialText: chars)
+            return
+        }
         interpretKeyEvents([event])
     }
+
+    override func deleteBackward(_ sender: Any?) { clearSelectionValues() }
+    override func deleteForward(_ sender: Any?) { clearSelectionValues() }
 
     private func move(columns dc: Int, rows dr: Int, extend: Bool) {
         guard let sheet else { return }

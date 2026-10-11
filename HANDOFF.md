@@ -1,10 +1,10 @@
 # gnumeric-cocoa — Handoff for Claude Code
 
-Status: Phase 0 complete (2026-10-10): Gnumeric 1.12.62 builds from the submodule
-and passes the smoke suite. Phase 1 in progress (2026-10-10, third session): the
-Objective-C bridge, the GLib run loop integration, and a Swift read-only viewer
-build (with Xcode 27 and with the clang/swiftc scripts) and render real files.
-§8 questions 1 to 5 are resolved. `docs/progress.md` has the session log.
+Status: Phase 0 complete (2026-10-10). Phase 1 complete except frozen panes and
+right-to-left sheets (deferred to Phases 3 and 7). Phase 2 in progress
+(2026-10-11): editing, undo/redo, clipboard, and saving work in the app, built
+with Xcode 27 or the clang/swiftc scripts. §8 questions 1 to 5 are resolved;
+upstream engagement is deferred (ADR-011). `docs/progress.md` has the session log.
 Owner: Henry.
 Goal: a native macOS (AppKit) front end for Gnumeric that reuses Gnumeric's existing
 C engine (`libspreadsheet`), `goffice`, and `libgsf`, replacing only the GTK user interface.
@@ -156,6 +156,14 @@ XCTest bundle. Not yet: frozen panes (Phase 3) and right-to-left sheets
 - Keyboard navigation, range selection, copy/paste. Pasteboard: plain text, TSV, and Gnumeric's own clipboard format.
 - Save, including uncompressed `.gnumeric` XML (Henry's preferred version-control-friendly format).
 
+Status 2026-10-11: cell editor, formula bar editing, undo/redo on the engine's
+stack, Delete, text clipboard (paste cell by cell), and saving `.gnumeric` and
+`.xlsx` through `NSDocument` exist (`docs/progress.md`). Not yet: region paste
+with the engine clipboard format, uncompressed `.gnumeric` XML as a save choice
+(the bridge supports `Gnumeric_XmlIO:sax` with an `.xml` name; the document
+offers only `.gnumeric` and `.xlsx`), autocomplete, keyboard range selection
+inside formulas.
+
 ### Phase 2b — MVP completion
 
 The MVP is Phases 1, 2, and this one. It must be usable for daily spreadsheet work on real files.
@@ -283,6 +291,6 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    waits on Henry enabling developer mode: `sudo DevToolsSecurity -enable`).
 3. Upstream engagement is deferred (§2, ADR-011): do not post or extend
    `docs/upstream-issue.md`; keep any engine patch minimal and upstreamable.
-4. Phase 2 starts with the cell editor and `cmd_set_text`, which first needs
-   the seven decoupling patches of `docs/architecture.md` §5 in `patches/`
-   (carried locally, ADR-011; `scripts/build-gnumeric.sh` applies them).
+4. Continue Phase 2 (see its status note in §4): region paste through the
+   engine's clipboard, then Phase 2b (read-only charts already draw; the
+   Format Cells dialog and `docs/mvp-known-gaps.md` remain).
