@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import GnmCocoa
 
 /// The document window: name box and formula line on top, the grid in a
@@ -210,6 +211,38 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         updateSubtitle()
     }
 
+    // MARK: Format Cells (Format menu)
+
+    private var formatSheetWindow: NSWindow?
+
+    @objc func formatCells(_ sender: Any?) {
+        guard let window, let sheet = gridView.sheet, formatSheetWindow == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let range = sheet.selectedRange
+        let multi = range.start.column != range.end.column || range.start.row != range.end.row
+        let model = FormatCellsModel(format: sheet.formatOfSelection, isMultiCell: multi)
+        let hosting = NSHostingController(rootView: FormatCellsView(model: model) { [weak self] accepted in
+            self?.finishFormatCells(accepted: accepted, model: model)
+        })
+        let sheetWindow = NSWindow(contentViewController: hosting)
+        sheetWindow.styleMask = [.titled]
+        sheetWindow.title = "Format Cells"
+        formatSheetWindow = sheetWindow
+        window.beginSheet(sheetWindow) { [weak self] _ in self?.formatSheetWindow = nil }
+    }
+
+    private func finishFormatCells(accepted: Bool, model: FormatCellsModel) {
+        if let sheetWindow = formatSheetWindow {
+            window?.endSheet(sheetWindow)
+        }
+        guard accepted, let sheet = gridView.sheet else { return }
+        do {
+            try sheet.apply(model.changes())
+        } catch {
+            present(error)
+        }
+    }
+
     // MARK: Zoom (View menu, through the responder chain)
 
     private func setZoom(_ factor: Double) {
@@ -243,6 +276,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         case #selector(zoomActualSize(_:)):
             guard let zoom else { return false }
             return abs(zoom - 1) > 1e-6
+        case #selector(formatCells(_:)):
+            return gridView.sheet != nil && formatSheetWindow == nil
         default:
             return true
         }

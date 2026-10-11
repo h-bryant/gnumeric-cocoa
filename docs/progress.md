@@ -189,6 +189,26 @@
 - Still to do in Phase 2: range selection with the keyboard while editing
   a formula, autocomplete, and the editor using the cell's own font.
 
+## 2026-10-11: Format Cells, the first SwiftUI dialog (Phase 2b)
+
+- Bridge: `GnmCellFormat` (NS_SWIFT_NAME `CellFormat`), an all-optional
+  value object: number format (Excel syntax), alignment, wrap, font name,
+  size, bold, italic, underline, strikethrough, text color, fill, and a
+  border per edge. `GnmSheet.formatOfSelection` reads the selection's
+  common style with `sheet_style_find_conflicts` (nil where cells differ);
+  `applyFormat:` runs `cmd_selection_format` with a partial style and the
+  border set. Format helpers wrap goffice's family classification and
+  format generator. `Tests/BridgeTests/format.m` covers read, mixed
+  detection, apply, undo, fill removal, and the helpers.
+- App: `FormatCellsView` (SwiftUI `TabView`: Number, Alignment, Font,
+  Border, Fill) over an `@Observable` `FormatCellsModel` that tracks which
+  properties the user touched, so only those apply and untouched mixed
+  properties stay mixed. Hosted in an `NSHostingController` inside a window
+  sheet from Format → Cells… (⌘1). Verified headlessly
+  (`GNM_SNAPSHOT_FORMAT=1`): the model builds from a selection, the view
+  lays out, and applying produces "Changing format of B5:B7" with the
+  expected render.
+
 ## How to resume
 
 1. Upstream engagement is deferred; see ADR-011 before touching

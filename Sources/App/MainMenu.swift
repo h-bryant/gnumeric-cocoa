@@ -49,6 +49,10 @@ enum MainMenu {
         viewMenu.addItem(withTitle: "Actual Size", action: Selector(("zoomActualSize:")), keyEquivalent: "0")
         menuBar.addItem(submenu(viewMenu, title: "View"))
 
+        let formatMenu = NSMenu(title: "Format")
+        formatMenu.addItem(withTitle: "Cells…", action: Selector(("formatCells:")), keyEquivalent: "1")
+        menuBar.addItem(submenu(formatMenu, title: "Format"))
+
         let windowMenu = NSMenu(title: "Window")
         windowMenu.addItem(withTitle: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
         windowMenu.addItem(withTitle: "Zoom", action: #selector(NSWindow.performZoom(_:)), keyEquivalent: "")

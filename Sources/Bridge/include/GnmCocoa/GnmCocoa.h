@@ -12,5 +12,6 @@
 #import <GnmCocoa/GnmError.h>
 #import <GnmCocoa/GnmEngine.h>
 #import <GnmCocoa/GnmWorkbook.h>
+#import <GnmCocoa/GnmCellFormat.h>
 #import <GnmCocoa/GnmSheet.h>
 #import <GnmCocoa/GnmRunLoopBridge.h>

@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import GnmCocoa
 
 @MainActor
@@ -149,6 +150,37 @@ enum Snapshot {
                               size, document.isDocumentEdited ? 1 : 0, document.fileURL?.lastPathComponent ?? "nil")
                     }
                 }
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FORMAT"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // The dialog's model and view, driven without clicks: format
+                // B5:B7 bold, centered, two decimals, yellow fill, thick bottom border.
+                sheet.selectRange(CellRange(start: CellCoordinate(column: 1, row: 4), end: CellCoordinate(column: 1, row: 6)),
+                                  editPosition: CellCoordinate(column: 1, row: 4))
+                let model = FormatCellsModel(format: sheet.formatOfSelection, isMultiCell: true)
+                let hosting = NSHostingController(rootView: FormatCellsView(model: model) { _ in })
+                hosting.view.frame = NSRect(x: 0, y: 0, width: 520, height: 420)
+                hosting.view.layoutSubtreeIfNeeded()
+                NSLog("format model: category=%@ code=%@ mixed=%d touched=%d",
+                      model.category.rawValue, model.numberFormatCode, model.mixed.count, model.touched.count)
+                model.category = .number
+                model.decimals = 2
+                model.thousandsSeparator = true
+                model.bold = true
+                model.horizontalAlignment = .center
+                model.fillsBackground = true
+                model.backgroundColor = .yellow
+                model.setBorder(.thick, edge: .bottom)
+                do {
+                    try sheet.apply(model.changes())
+                } catch {
+                    NSLog("format apply failed: %@", error.localizedDescription)
+                }
+                NSLog("format applied: B5=%@ touched=%d undo=%@", sheet.displayTextOfCell(atColumn: 1, row: 4) ?? "nil",
+                      model.touched.count, sheet.workbook?.undoLabel ?? "nil")
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }

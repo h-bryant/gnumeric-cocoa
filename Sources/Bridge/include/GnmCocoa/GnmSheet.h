@@ -4,6 +4,7 @@
 #import <Foundation/Foundation.h>
 #import <CoreGraphics/CoreGraphics.h>
 #import <GnmCocoa/GnmGeometry.h>
+#import <GnmCocoa/GnmCellFormat.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -127,6 +128,12 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 /// Frames (sheet pixels) of the ranges carrying marching ants: the source
 /// of the last copy or cut, until it is pasted or cleared.
 @property (nonatomic, readonly) NSArray<NSValue *> *marchingAntsFrames;
+/// The style shared by the selected cells; properties that differ across
+/// the selection are nil (`sheet_style_find_conflicts`).
+@property (nonatomic, readonly) GnmCellFormat *formatOfSelection;
+/// Apply the set properties of `format` to the selection as one undoable
+/// command (`cmd_selection_format`).
+- (BOOL)applyFormat:(GnmCellFormat *)format error:(NSError **)error NS_SWIFT_NAME(apply(_:));
 /// Hide or show the selected columns or rows (`cmd_selection_colrow_hide`).
 - (BOOL)setSelectedColumns:(BOOL)columns hidden:(BOOL)hidden error:(NSError **)error NS_SWIFT_NAME(setSelected(columns:hidden:));
 

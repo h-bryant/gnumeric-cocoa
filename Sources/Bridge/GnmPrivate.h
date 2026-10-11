@@ -25,6 +25,7 @@
 #include <style-border.h>
 #include <style-conditions.h>
 #include <mstyle.h>
+#include <style-color.h>
 #include <pattern.h>
 #include <position.h>
 #include <ranges.h>
@@ -124,6 +125,16 @@ GType gnm_cocoa_sheet_control_get_type (void);
 - (void)_controlMarchingAntsDidChange;
 - (void)_controlFrozenPanesDidChange;
 @end
+
+/// Color conversions shared by the drawing and style code.
+GdkRGBA gnm_cocoa_rgba_from_cgcolor (CGColorRef color);
+CGColorRef gnm_cocoa_cgcolor_from_go (GOColor c) CF_RETURNS_RETAINED;
+GOColor gnm_cocoa_go_from_cgcolor (CGColorRef color);
+/// The common style of a range (nil properties differ), and the partial
+/// style plus borders a GnmCellFormat describes, for cmd_selection_format.
+GnmCellFormat *gnm_cocoa_format_from_selection (Sheet const *sheet, GnmRange const *range);
+void gnm_cocoa_format_to_engine (GnmCellFormat *format, GnmStyle *_Nonnull *_Nonnull style_out,
+                                 GnmBorder *_Nullable borders[_Nonnull GNM_STYLE_BORDER_EDGE_MAX]);
 
 /// NSString from a UTF-8 C string, empty for NULL.
 NS_INLINE NSString *GnmString(const char *_Nullable s) {

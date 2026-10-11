@@ -672,8 +672,8 @@ object_pixel_frame (Sheet const *sheet, SheetObject const *so, double *coords)
 /* RGB and gray colors pass through untouched; anything else is matched to
  * sRGB.  (Matching an RGB color to another RGB space would shift its
  * components, which a caller passing a background color does not expect.) */
-static GdkRGBA
-rgba_from_cgcolor (CGColorRef color)
+GdkRGBA
+gnm_cocoa_rgba_from_cgcolor (CGColorRef color)
 {
     GdkRGBA rgba = { 1, 1, 1, 1 };
     CGColorSpaceModel model = CGColorSpaceGetModel (CGColorGetColorSpace (color));
@@ -1001,6 +1001,28 @@ cell_range_from (GnmRange const *r)
     return frames;
 }
 
+- (GnmCellFormat *)formatOfSelection
+{
+    GnmRange const *r = _sv ? selection_first_range (_sv, NULL, NULL) : NULL;
+    GnmRange single;
+    if (r == NULL) {
+        GnmCellCoordinate p = self.editPosition;
+        range_init (&single, (int) p.column, (int) p.row, (int) p.column, (int) p.row);
+        r = &single;
+    }
+    return gnm_cocoa_format_from_selection (_sheet, r);
+}
+
+- (BOOL)applyFormat:(GnmCellFormat *)format error:(NSError **)error
+{
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        GnmStyle *style;
+        GnmBorder *borders[GNM_STYLE_BORDER_EDGE_MAX];
+        gnm_cocoa_format_to_engine (format, &style, borders);
+        return cmd_selection_format (wbc, style, borders, NULL);   /* takes both */
+    } description:@"Could not format the selection." error:error];
+}
+
 - (BOOL)setSelectedColumns:(BOOL)columns hidden:(BOOL)hidden error:(NSError **)error
 {
     return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
@@ -1051,7 +1073,7 @@ cell_range_from (GnmRange const *r)
         return;
     GdkRGBA bg = { 1, 1, 1, 1 };
     if (backgroundColor)
-        bg = rgba_from_cgcolor (backgroundColor);
+        bg = gnm_cocoa_rgba_from_cgcolor (backgroundColor);
     GnmRange bound;
     range_init_full_sheet (&bound, _sheet);
 

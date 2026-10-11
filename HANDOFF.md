@@ -167,8 +167,8 @@ formulas, the editor in the cell's own font.
 
 The MVP is Phases 1, 2, and this one. It must be usable for daily spreadsheet work on real files.
 
-- **Read-only chart rendering:** draw existing `GogGraph` objects in their sheet positions via cairo-quartz. No chart creation or editing yet; files containing charts must round-trip through save unchanged.
-- **Basic Format Cells dialog:** number format, alignment, font, borders, and fill, as the first SwiftUI form hosted in `NSHostingController`. This establishes the dialog pattern for Phase 5.
+- **Read-only chart rendering:** draw existing `GogGraph` objects in their sheet positions via cairo-quartz. No chart creation or editing yet; files containing charts must round-trip through save unchanged. **Done** (Phase 1 drew them from the start; round trips are in the smoke tests).
+- **Basic Format Cells dialog:** number format, alignment, font, borders, and fill, as the first SwiftUI form hosted in `NSHostingController`. This establishes the dialog pattern for Phase 5. **Done 2026-10-11** (`FormatCellsView`, `FormatCellsModel`, `GnmCellFormat`).
 - Tag the release `v0.1.0` and write `docs/mvp-known-gaps.md` listing every GTK feature not yet ported.
 
 ### Phase 3 — Spreadsheet features
