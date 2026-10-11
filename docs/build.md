@@ -63,6 +63,7 @@ not a Homebrew formula; `dylibbundler` 1.0.5 is (Phase 6).
 | `Tests/BridgeTests/run.sh` | build the bridge, then compile and run each test program against it (no Xcode needed) |
 | `scripts/gen-xcconfig.sh` | write `build/engine.xcconfig` from pkg-config for `project.yml`; then `xcodegen generate` |
 | `scripts/build-app.sh` | swiftc build of `Sources/App` plus the bridge into `build/app/GnumericCocoa.app` (ad-hoc signed) |
+| `scripts/test-xcode.sh` | build the Xcode test bundle and run it with `xcrun xctest`; `--xcodebuild` uses `xcodebuild test` (needs developer mode) |
 | `scripts/run-app.sh [file ...]` | launch that app directly; `GNM_SNAPSHOT=out.png` renders the grid to a PNG and quits, `GNM_DEBUG_LAYOUT=1` logs view frames and grid draws |
 
 Configure flags used by `build-gnumeric.sh`: Homebrew's
@@ -120,6 +121,14 @@ scripts/gen-xcconfig.sh && xcodegen generate
 xcodebuild -scheme GnumericCocoa -configuration Debug -derivedDataPath build/DerivedData build
 GNM_PREFIX=$PWD/build/prefix build/DerivedData/Build/Products/Debug/GnumericCocoa.app/Contents/MacOS/GnumericCocoa file.gnumeric
 ```
+
+Tests: `scripts/test-xcode.sh` builds the `BridgeTests` bundle
+(`xcodebuild build-for-testing`) and runs it with `xcrun xctest`. The bundle
+launches the four test programs, built as tool targets next to it, as
+subprocesses, because the engine starts once per process. `xcodebuild test`
+(or `scripts/test-xcode.sh --xcodebuild`) is the official route but its test
+runner times out while preparing until macOS developer mode is enabled
+(`DevToolsSecurity -status`; enabling needs `sudo DevToolsSecurity -enable`).
 
 Two settings matter: the bridge target has `CLANG_ENABLE_MODULES = NO`
 (with modules on, Homebrew's include paths break the SDK's own module

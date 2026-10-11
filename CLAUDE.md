@@ -25,6 +25,7 @@ scripts/build-app.sh             # Swift app with swiftc into build/app/Gnumeric
 scripts/run-app.sh [file]        # launch it; GNM_SNAPSHOT=out.png renders the grid and quits
 scripts/gen-xcconfig.sh && xcodegen generate   # regenerate the Xcode project
 xcodebuild -scheme GnumericCocoa -derivedDataPath build/DerivedData build
+scripts/test-xcode.sh            # XCTest bundle via xcrun xctest (xcodebuild test needs developer mode)
 ```
 
 Bridge rules: public headers under `Sources/Bridge/include/GnmCocoa/` never

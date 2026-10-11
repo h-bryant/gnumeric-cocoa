@@ -1,8 +1,10 @@
 # XcodeGen spec (HANDOFF.md §4, Phase 1).  Generate with:
 #   scripts/gen-xcconfig.sh && xcodegen generate
 # The .xcodeproj is ignored by git; this file and build/engine.xcconfig are
-# the source of truth.  Test targets are added once Xcode.app (and with it
-# XCTest) is installed; until then Tests/BridgeTests/run.sh is the harness.
+# the source of truth.  `xcodebuild test -scheme GnumericCocoa` runs the
+# bridge tests: each program in Tests/BridgeTests is a tool target that the
+# BridgeTests bundle launches as a subprocess (one engine per process).
+# Tests/BridgeTests/run.sh does the same without Xcode.
 name: GnumericCocoa
 options:
   bundleIdPrefix: io.github.h-bryant
@@ -26,7 +28,46 @@ settings:
     MACOSX_DEPLOYMENT_TARGET: "15.0"
     CODE_SIGN_STYLE: Manual
     CODE_SIGN_IDENTITY: "-"
+targetTemplates:
+  BridgeTestProgram:
+    type: tool
+    platform: macOS
+    sources:
+      - path: Tests/BridgeTests/${target_name}.m
+      - path: Tests/BridgeTests/GnmTest.h
+        buildPhase: none
+    dependencies:
+      - target: GnmCocoa
+    settings:
+      base:
+        CLANG_ENABLE_MODULES: NO
+        HEADER_SEARCH_PATHS: "$(SRCROOT)/Sources/Bridge/include $(GNM_HEADER_SEARCH_PATHS)"
+        OTHER_CFLAGS: "$(GNM_OTHER_CFLAGS)"
+        LIBRARY_SEARCH_PATHS: "$(GNM_LIBRARY_SEARCH_PATHS)"
+        OTHER_LDFLAGS: "$(GNM_OTHER_LDFLAGS) -framework Foundation -framework CoreGraphics -framework ImageIO -framework CoreServices"
 targets:
+  engine_lifecycle:
+    templates: [BridgeTestProgram]
+  workbook_io:
+    templates: [BridgeTestProgram]
+  render:
+    templates: [BridgeTestProgram]
+  runloop:
+    templates: [BridgeTestProgram]
+  BridgeTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/BridgeTests/XCTest
+    dependencies:
+      - target: engine_lifecycle
+      - target: workbook_io
+      - target: render
+      - target: runloop
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.h-bryant.gnumeric-cocoa.BridgeTests
+        GENERATE_INFOPLIST_FILE: YES
   GnmCocoa:
     type: library.static
     platform: macOS
@@ -74,7 +115,15 @@ schemes:
     build:
       targets:
         GnumericCocoa: all
+        BridgeTests: [test]
     run:
       config: Debug
       environmentVariables:
         GNM_PREFIX: "$(GNM_PREFIX)"
+    test:
+      config: Debug
+      targets:
+        - BridgeTests
+      environmentVariables:
+        GNM_PREFIX: "$(GNM_PREFIX)"
+        GNM_REPO_ROOT: "$(SRCROOT)"

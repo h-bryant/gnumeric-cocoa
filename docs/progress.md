@@ -123,6 +123,16 @@
   annotated tag `upstream-baseline-2026-10-11` marks this point for a later
   return to upstream work.
 
+## 2026-10-11: XCTest integration
+
+- `project.yml` gains four `tool` targets (one per program in
+  `Tests/BridgeTests`, via a target template) and a `BridgeTests` XCTest
+  bundle that launches them as subprocesses and fails on exit status or
+  engine warnings; the scheme's test action runs it. All four pass under
+  `xcrun xctest` (`scripts/test-xcode.sh`). `xcodebuild test` times out
+  "while preparing to run tests" because developer mode is disabled on the
+  machine (`DevToolsSecurity -status`); enabling it is Henry's `sudo`.
+
 ## How to resume
 
 1. Upstream engagement is deferred; see ADR-011 before touching

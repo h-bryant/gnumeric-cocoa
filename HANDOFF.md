@@ -277,9 +277,9 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    upgrade`, re-pin per `docs/decisions.md` ADR-003 and re-run
    `scripts/gen-xcconfig.sh`.
 2. Build with Xcode: `scripts/gen-xcconfig.sh && xcodegen generate && xcodebuild
-   -scheme GnumericCocoa build` (works since 2026-10-10; `docs/build.md`). Add
-   XCTest targets to `project.yml` wrapping `Tests/BridgeTests`, keeping
-   `Tests/BridgeTests/run.sh` as the no-Xcode path.
+   -scheme GnumericCocoa build` (works since 2026-10-10; `docs/build.md`), and
+   run the XCTest bundle with `scripts/test-xcode.sh` (`xcodebuild test` itself
+   waits on Henry enabling developer mode: `sudo DevToolsSecurity -enable`).
 3. Upstream engagement is deferred (§2, ADR-011): do not post or extend
    `docs/upstream-issue.md`; keep any engine patch minimal and upstreamable.
 4. Finish Phase 1 (see the gaps in `docs/progress.md`): frozen panes, header
