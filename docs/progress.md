@@ -209,6 +209,12 @@
   lays out, and applying produces "Changing format of B5:B7" with the
   expected render.
 
+## 2026-10-11: v0.1.0, the MVP
+
+- `docs/mvp-known-gaps.md` lists every GTK menu item (202, extracted from
+  `src/GNOME_Gnumeric-gtk.xml`) and the non-menu features with a status and
+  phase. Tagged `v0.1.0` locally (not pushed). Phase 3 starts next.
+
 ## How to resume
 
 1. Upstream engagement is deferred; see ADR-011 before touching

@@ -1,10 +1,11 @@
 # gnumeric-cocoa — Handoff for Claude Code
 
-Status: Phase 0 complete (2026-10-10). Phase 1 complete except frozen panes and
-right-to-left sheets (deferred to Phases 3 and 7). Phase 2 in progress
-(2026-10-11): editing, undo/redo, clipboard, and saving work in the app, built
-with Xcode 27 or the clang/swiftc scripts. §8 questions 1 to 5 are resolved;
-upstream engagement is deferred (ADR-011). `docs/progress.md` has the session log.
+Status: MVP reached and tagged `v0.1.0` on 2026-10-11 (Phases 0, 1, 2, 2b;
+frozen panes and right-to-left sheets deferred to Phases 3 and 7). The app
+opens, edits, formats, and saves real files with undo and clipboard, built with
+Xcode 27 or the clang/swiftc scripts. `docs/mvp-known-gaps.md` lists what is
+missing; Phase 3 is next. §8 questions 1 to 5 are resolved; upstream engagement
+is deferred (ADR-011). `docs/progress.md` has the session log.
 Owner: Henry.
 Goal: a native macOS (AppKit) front end for Gnumeric that reuses Gnumeric's existing
 C engine (`libspreadsheet`), `goffice`, and `libgsf`, replacing only the GTK user interface.
@@ -169,7 +170,7 @@ The MVP is Phases 1, 2, and this one. It must be usable for daily spreadsheet wo
 
 - **Read-only chart rendering:** draw existing `GogGraph` objects in their sheet positions via cairo-quartz. No chart creation or editing yet; files containing charts must round-trip through save unchanged. **Done** (Phase 1 drew them from the start; round trips are in the smoke tests).
 - **Basic Format Cells dialog:** number format, alignment, font, borders, and fill, as the first SwiftUI form hosted in `NSHostingController`. This establishes the dialog pattern for Phase 5. **Done 2026-10-11** (`FormatCellsView`, `FormatCellsModel`, `GnmCellFormat`).
-- Tag the release `v0.1.0` and write `docs/mvp-known-gaps.md` listing every GTK feature not yet ported.
+- Tag the release `v0.1.0` and write `docs/mvp-known-gaps.md` listing every GTK feature not yet ported. **Done 2026-10-11**: tag `v0.1.0` (local), `docs/mvp-known-gaps.md` from the GTK menu structure (202 items) plus non-menu features.
 
 ### Phase 3 — Spreadsheet features
 
@@ -290,6 +291,7 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    waits on Henry enabling developer mode: `sudo DevToolsSecurity -enable`).
 3. Upstream engagement is deferred (§2, ADR-011): do not post or extend
    `docs/upstream-issue.md`; keep any engine patch minimal and upstreamable.
-4. Phase 2b (read-only charts already draw): the Format Cells dialog as the
-   first SwiftUI form in an `NSHostingController`, then `v0.1.0` and
-   `docs/mvp-known-gaps.md`.
+4. Phase 3 (`docs/mvp-known-gaps.md` says what the MVP lacks): start with
+   what the bridge already wraps (Insert/Delete rows and columns, hide and
+   unhide, clear variants) as menu items, then fill and autofill, column and
+   row resizing in the headers, freeze panes, and the status bar.
