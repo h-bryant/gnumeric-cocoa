@@ -348,12 +348,21 @@
 - `docs/mvp-known-gaps.md` updated. Next in Phase 3: the filtered Clear
   variants (with autofilter), sheet resize, tab colors, the Sort dialog.
 
-## How to resume
+## How to resume (updated 2026-10-11)
 
-1. Upstream engagement is deferred; see ADR-011 before touching
-   `docs/upstream-issue.md`.
-2. Claude Code: `claude --enable-auto-mode` here, then "read HANDOFF.md and
-   docs/progress.md and continue with Phase 1". `scripts/smoke-test.sh` first,
-   then `scripts/gen-xcconfig.sh && xcodegen generate && xcodebuild -scheme
-   GnumericCocoa build`. Next work: XCTest targets around `Tests/BridgeTests`,
-   the Phase 1 gaps listed above, then Phase 2.
+1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
+   continue with Phase 3". `HANDOFF.md` §9 is the checklist: smoke tests,
+   the Xcode build, the ADR-011 rule on upstream, what Henry has and has
+   not seen on screen, and the Phase 3 items left (autofilter with the
+   filtered Clear variants, sheet resize, tab colors, the Sort dialog),
+   then Phase 4 from `docs/mvp-known-gaps.md`.
+2. Working pattern that held up: wrap the engine call in the bridge with a
+   test in `Tests/BridgeTests/editing.m` (mirror the GTK callback in
+   `wbc-gtk-actions.c` or `wbc-gtk.c`), add the menu item (string selector
+   on `MainMenu`, action on `GridView` or the window controller), drive it
+   from a `GNM_SNAPSHOT_*` hook in `AppDelegate.swift`, look at the
+   `-window.png` capture, update `docs/mvp-known-gaps.md`, commit.
+3. The state at the end of 2026-10-11: `main` at the "Paste Special and the
+   quick sort" commit, clean tree, nothing pushed, `v0.1.0` and
+   `upstream-baseline-2026-10-11` tagged. The engine in `build/prefix` has
+   both patches applied.

@@ -1,11 +1,13 @@
 # gnumeric-cocoa — Handoff for Claude Code
 
-Status: MVP reached and tagged `v0.1.0` on 2026-10-11 (Phases 0, 1, 2, 2b;
-frozen panes and right-to-left sheets deferred to Phases 3 and 7). The app
-opens, edits, formats, and saves real files with undo and clipboard, built with
-Xcode 27 or the clang/swiftc scripts. `docs/mvp-known-gaps.md` lists what is
-missing; Phase 3 is next. §8 questions 1 to 5 are resolved; upstream engagement
-is deferred (ADR-011). `docs/progress.md` has the session log.
+Status: MVP tagged `v0.1.0` on 2026-10-11 (Phases 0, 1, 2, 2b), and Phase 3
+mostly done the same day (menu commands, fill handle, header resizing, merge,
+status bar, freeze panes, sheet management, Paste Special, quick sort; left:
+autofilter, sheet resize, tab colors, the Sort dialog). The app opens, edits,
+formats, and saves real files with undo and clipboard, built with Xcode 27 or
+the clang/swiftc scripts. `docs/mvp-known-gaps.md` lists what is missing. §8
+questions 1 to 5 are resolved; upstream engagement is deferred (ADR-011).
+`docs/progress.md` has the session log; §9 says where to pick up.
 Owner: Henry.
 Goal: a native macOS (AppKit) front end for Gnumeric that reuses Gnumeric's existing
 C engine (`libspreadsheet`), `goffice`, and `libgsf`, replacing only the GTK user interface.
@@ -292,10 +294,23 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    waits on Henry enabling developer mode: `sudo DevToolsSecurity -enable`).
 3. Upstream engagement is deferred (§2, ADR-011): do not post or extend
    `docs/upstream-issue.md`; keep any engine patch minimal and upstreamable.
-4. Phase 3 (`docs/mvp-known-gaps.md` says what the MVP lacks). Done on
+4. Henry has used the app once (2026-10-11, confirming the blank-grid fix).
+   Everything Phase 3 added after that (fill handle, header resizing, the
+   status pull-down, freeze panes, tab context menu, the Paste Special and
+   size sheets) is verified only headlessly: ask what he sees before
+   changing UI behavior, and take his report over the captures.
+5. Phase 3 (`docs/mvp-known-gaps.md` says what the MVP lacks). Done on
    2026-10-11: insert/delete rows and columns, hide and unhide, clear
    variants, fill and autofill (fill handle), column and row sizes with
    header drag-resizing, merge, recalc, the auto-expression in the tab bar,
    freeze panes, sheet management, Paste Special, quick sort. Next: the
-   autofilter with the filtered Clear variants, sheet resize
-   (`cmd_resize_sheets`), tab colors, the Sort dialog, then Phase 4.
+   autofilter (`gnm_filter_new`, `cmd_autofilter_add_remove` in
+   `commands.h`) with the filtered Clear variants, sheet resize
+   (`cmd_resize_sheets`), tab colors (`notify::tab-background`), the Sort
+   dialog, then Phase 4.
+6. Headless checks for all of it: `GNM_SNAPSHOT=out.png scripts/run-app.sh
+   file` plus `GNM_SNAPSHOT_TYPE`, `_FORMAT`, `_PHASE3`, `_FREEZE`,
+   `_SHEETS`, `_ZOOM` (`docs/build.md`); compare `out.png` with
+   `out-window.png`. Engine fixes go to `patches/` (0001 decouplings, 0002
+   Merge and Center); `scripts/build-gnumeric.sh` re-applies them and
+   takes a few minutes.

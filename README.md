@@ -3,7 +3,9 @@
 Gnumeric with a native macOS (AppKit) front end: the upstream C engine
 (`libspreadsheet`, goffice, libgsf) unchanged, the GTK user interface replaced.
 
-Status (2026-10-10): Phase 1 in progress. The Objective-C bridge and a Swift
-read-only viewer build and open `.gnumeric`, `.xlsx`, and the other formats
-the engine reads. See `HANDOFF.md` for goals, decisions, and the phase plan,
-and `docs/build.md` for how to build.
+Status (2026-10-11): MVP `v0.1.0` plus most of Phase 3. The app opens every
+format the engine reads, edits with the engine's undo and clipboard, formats
+cells, resizes, fills, sorts, freezes panes, manages sheets, and saves
+`.gnumeric`, `.xml`, and `.xlsx`. See `HANDOFF.md` for goals, decisions, the
+phase plan, and where to pick up; `docs/mvp-known-gaps.md` for what is
+missing; `docs/build.md` for how to build.
