@@ -26,6 +26,12 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(WorkbookDelegate)
 - (void)workbook:(GnmWorkbook *)workbook undoLabelDidChange:(nullable NSString *)undoLabel
        redoLabel:(nullable NSString *)redoLabel NS_SWIFT_NAME(workbook(_:undoLabelDidChange:redoLabel:));
 - (void)workbookMenuStateDidChange:(GnmWorkbook *)workbook NS_SWIFT_NAME(workbookMenuStateDidChange(_:));
+/// The document's dirty flag changed (`go_doc_set_dirty`).
+- (void)workbookModifiedStateDidChange:(GnmWorkbook *)workbook NS_SWIFT_NAME(workbookModifiedStateDidChange(_:));
+/// A command needs a yes/no answer (for example hiding every row, or
+/// pasting more than ten thousand copies).  Return the answer; when the
+/// delegate does not implement this, the command gets `defaultAnswer`.
+- (BOOL)workbook:(GnmWorkbook *)workbook askYesNo:(NSString *)question defaultAnswer:(BOOL)defaultAnswer NS_SWIFT_NAME(workbook(_:askYesNo:defaultAnswer:));
 @end
 
 NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Workbook)
@@ -55,6 +61,16 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Workbook)
 
 /// Recalculate cells that need it (`workbook_recalc`).
 - (void)recalculate;
+
+// Undo and redo come from the engine's command stack, which is the only
+// source of truth (never mirror it in NSUndoManager).  Labels are the
+// command descriptions the engine reports, for the Edit menu.
+@property (nonatomic, readonly) BOOL canUndo;
+@property (nonatomic, readonly) BOOL canRedo;
+@property (nonatomic, readonly, copy, nullable) NSString *undoLabel;
+@property (nonatomic, readonly, copy, nullable) NSString *redoLabel;
+- (void)undo;
+- (void)redo;
 
 /// Save with the saver goffice picks from the file name (for example
 /// `.gnumeric` or `.xlsx`).  On success the workbook adopts the URL.

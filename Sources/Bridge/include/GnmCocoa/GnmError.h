@@ -15,6 +15,9 @@ typedef NS_ERROR_ENUM(GnmErrorDomain, GnmErrorCode) {
     GnmErrorSaveFailed = 4,
     GnmErrorUnknownFormat = 5,
     GnmErrorEngineReported = 6,
+    /// An engine command refused or failed; the engine's own messages are in
+    /// the recovery suggestion and the underlying error.
+    GnmErrorCommandFailed = 7,
 };
 
 NS_ASSUME_NONNULL_END

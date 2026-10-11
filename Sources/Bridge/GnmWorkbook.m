@@ -66,6 +66,14 @@ cwbc_menu_state_update (WorkbookControl *wbc, int flags)
     [wbc_owner (wbc) _controlMenuStateDidChange:flags];
 }
 
+/* patches/0001: commands ask through the control instead of a GTK dialog. */
+static gboolean
+cwbc_query_yes_no (WorkbookControl *wbc, gboolean default_answer, char const *question)
+{
+    GnmWorkbook *owner = wbc_owner (wbc);
+    return owner ? [owner _controlAskYesNo:question defaultAnswer:default_answer] : default_answer;
+}
+
 /* Commands report errors through the control's GOCmdContext interface
  * (go_cmd_context_error_invalid (GO_CMD_CONTEXT (wbc), ...) in commands.c),
  * so the subclass must provide the interface methods the base leaves NULL. */
@@ -142,6 +150,15 @@ cwbc_class_init (GObjectClass *object_class)
     wbc_class->sheet.remove_all = cwbc_sheet_remove_all;
     wbc_class->undo_redo.labels = cwbc_undo_redo_labels;
     wbc_class->menu_state.update = cwbc_menu_state_update;
+    wbc_class->query_yes_no = cwbc_query_yes_no;
+}
+
+static void
+cb_dirty_changed (GObject *doc, GParamSpec *pspec, gpointer owner)
+{
+    GnmWorkbook *wb = (__bridge GnmWorkbook *) owner;
+    if ([wb.delegate respondsToSelector:@selector(workbookModifiedStateDidChange:)])
+        [wb.delegate workbookModifiedStateDidChange:wb];
 }
 
 GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
@@ -155,6 +172,8 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
     Workbook *_wb;
     GnmCocoaWorkbookControl *_wbc;
     NSMutableArray<GnmSheet *> *_sheetWrappers;   /* one per attached SheetView */
+    gulong _dirtyHandler;
+    NSString *_undoLabel, *_redoLabel;
 }
 
 - (instancetype)initWithWorkbookView:(WorkbookView *)view engine:(GnmEngine *)engine
@@ -177,6 +196,8 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
         wb_control_style_feedback (wbc, NULL);
     }
     wb_control_init_state (wbc);   /* sheet.add for every existing SheetView */
+    _dirtyHandler = g_signal_connect (G_OBJECT (_wb), "notify::dirty",
+                                      G_CALLBACK (cb_dirty_changed), (__bridge void *) self);
     [engine _registerWorkbook:self];
     return self;
 }
@@ -189,6 +210,8 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
          * touching freed state. */
         return;
     }
+    if (_dirtyHandler)
+        g_signal_handler_disconnect (G_OBJECT (_wb), _dirtyHandler);
     for (GnmSheet *sheet in _sheetWrappers)
         [sheet _detachFromEngine];
     [_sheetWrappers removeAllObjects];
@@ -275,6 +298,45 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
 - (void)recalculate
 {
     workbook_recalc (_wb);
+}
+
+#pragma mark - Commands, undo, redo
+
+- (BOOL)_runCommand:(gboolean (NS_NOESCAPE ^)(WorkbookControl *wbc))command
+        description:(NSString *)description error:(NSError **)error
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    [_engine _beginCollectingMessages];
+    gboolean failed = command ((WorkbookControl *) _wbc);
+    NSArray<NSError *> *messages = [_engine _endCollectingMessages];
+    if (failed) {
+        if (error)
+            *error = [_engine _errorWithCode:GnmErrorCommandFailed description:description collected:messages];
+        return NO;
+    }
+    /* A command that succeeded may still have reported (for example a
+     * warning); pass those on rather than lose them. */
+    for (NSError *message in messages)
+        if (_engine.messageHandler)
+            _engine.messageHandler (message);
+    return YES;
+}
+
+- (BOOL)canUndo { return _wb->undo_commands != NULL; }
+- (BOOL)canRedo { return _wb->redo_commands != NULL; }
+- (NSString *)undoLabel { return _undoLabel; }
+- (NSString *)redoLabel { return _redoLabel; }
+
+- (void)undo
+{
+    if (_wb->undo_commands)
+        command_undo ((WorkbookControl *) _wbc);
+}
+
+- (void)redo
+{
+    if (_wb->redo_commands)
+        command_redo ((WorkbookControl *) _wbc);
 }
 
 - (void)resendDelegateState
@@ -384,6 +446,8 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
 
 - (void)_controlUndoLabelDidChange:(const char *)undo redoLabel:(const char *)redo
 {
+    _undoLabel = undo ? GnmString (undo) : nil;
+    _redoLabel = redo ? GnmString (redo) : nil;
     if ([self.delegate respondsToSelector:@selector(workbook:undoLabelDidChange:redoLabel:)])
         [self.delegate workbook:self undoLabelDidChange:undo ? GnmString (undo) : nil
                       redoLabel:redo ? GnmString (redo) : nil];
@@ -393,6 +457,13 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
 {
     if ([self.delegate respondsToSelector:@selector(workbookMenuStateDidChange:)])
         [self.delegate workbookMenuStateDidChange:self];
+}
+
+- (BOOL)_controlAskYesNo:(const char *)question defaultAnswer:(BOOL)defaultAnswer
+{
+    if ([self.delegate respondsToSelector:@selector(workbook:askYesNo:defaultAnswer:)])
+        return [self.delegate workbook:self askYesNo:GnmString (question) defaultAnswer:defaultAnswer];
+    return defaultAnswer;
 }
 
 @end

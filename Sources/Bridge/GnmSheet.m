@@ -888,6 +888,84 @@ cell_range_from (GnmRange const *r)
     return s;
 }
 
+#pragma mark - Editing
+
+- (NSString *)editingTextOfCellAtColumn:(NSInteger)column row:(NSInteger)row
+{
+    GnmCell *cell = sheet_cell_get (_sheet, (int) column, (int) row);
+    if (cell == NULL || gnm_cell_is_empty (cell))
+        return nil;
+    gboolean quoted = FALSE;
+    int cursor = 0;
+    char *text = gnm_cell_get_text_for_editing (cell, &quoted, &cursor);
+    NSString *s = GnmString (text);
+    g_free (text);
+    return s;
+}
+
+- (BOOL)setText:(NSString *)text atColumn:(NSInteger)column row:(NSInteger)row
+    autocorrect:(BOOL)autocorrect error:(NSError **)error
+{
+    GnmCellPos pos = { (int) column, (int) row };
+    const char *utf8 = text.UTF8String;
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_set_text (wbc, _sheet, &pos, utf8, NULL, autocorrect);
+    } description:[NSString stringWithFormat:@"Could not set the text of %@.",
+                   GnmString (cell_coord_name ((int) column, (int) row))] error:error];
+}
+
+- (BOOL)fillSelectionWithText:(NSString *)text error:(NSError **)error
+{
+    if (_sv == NULL)
+        return NO;
+    const char *utf8 = text.UTF8String;
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_area_set_text (wbc, _sv, utf8, NULL);
+    } description:@"Could not fill the selection." error:error];
+}
+
+- (BOOL)clearSelection:(GnmClearOptions)options error:(NSError **)error
+{
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_selection_clear (wbc, (int) options);
+    } description:@"Could not clear the selection." error:error];
+}
+
+- (BOOL)insertColumns:(NSInteger)count atColumn:(NSInteger)column error:(NSError **)error
+{
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_insert_cols (wbc, _sheet, (int) column, (int) count);
+    } description:@"Could not insert columns." error:error];
+}
+
+- (BOOL)insertRows:(NSInteger)count atRow:(NSInteger)row error:(NSError **)error
+{
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_insert_rows (wbc, _sheet, (int) row, (int) count);
+    } description:@"Could not insert rows." error:error];
+}
+
+- (BOOL)deleteColumns:(NSRange)columns error:(NSError **)error
+{
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_delete_cols (wbc, _sheet, (int) columns.location, (int) columns.length);
+    } description:@"Could not delete columns." error:error];
+}
+
+- (BOOL)deleteRows:(NSRange)rows error:(NSError **)error
+{
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_delete_rows (wbc, _sheet, (int) rows.location, (int) rows.length);
+    } description:@"Could not delete rows." error:error];
+}
+
+- (BOOL)setSelectedColumns:(BOOL)columns hidden:(BOOL)hidden error:(NSError **)error
+{
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_selection_colrow_hide (wbc, columns, !hidden);
+    } description:hidden ? @"Could not hide." : @"Could not unhide." error:error];
+}
+
 #pragma mark - Selection
 
 - (GnmCellCoordinate)editPosition

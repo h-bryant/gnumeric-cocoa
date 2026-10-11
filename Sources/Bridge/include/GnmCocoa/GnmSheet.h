@@ -9,6 +9,15 @@ NS_ASSUME_NONNULL_BEGIN
 
 @class GnmWorkbook, GnmSheet;
 
+/// What `clearSelection:` removes; mirrors the engine's CLEAR_* flags.
+typedef NS_OPTIONS(NSUInteger, GnmClearOptions) {
+    GnmClearValues = 1 << 0,
+    GnmClearFormats = 1 << 1,
+    GnmClearComments = 1 << 2,
+    GnmClearMerges = 1 << 6,
+    GnmClearObjects = 1 << 7,
+} NS_SWIFT_NAME(ClearOptions);
+
 /// Requests the engine makes through the SheetControl vtable
 /// (docs/architecture.md §3).  All optional; all on the main thread.
 NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(SheetDelegate)
@@ -89,6 +98,26 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 @property (nonatomic, readonly) GnmCellRange selectedRange;
 - (void)selectCellAtColumn:(NSInteger)column row:(NSInteger)row NS_SWIFT_NAME(selectCell(atColumn:row:));
 - (void)selectRange:(GnmCellRange)range editPosition:(GnmCellCoordinate)editPosition NS_SWIFT_NAME(selectRange(_:editPosition:));
+
+// Editing.  Every method runs an undoable engine command through the
+// workbook's control; a NO return carries the engine's message in `error`.
+
+/// What the user typed, prepared for editing (`gnm_cell_get_text_for_editing`:
+/// formulas keep their leading "=", quoted text keeps its quote).
+- (nullable NSString *)editingTextOfCellAtColumn:(NSInteger)column row:(NSInteger)row NS_SWIFT_NAME(editingTextOfCell(atColumn:row:));
+/// Set a cell's content from text, as the in-cell editor commits it
+/// (`cmd_set_text`).  `autocorrect` applies the engine's autocorrections.
+- (BOOL)setText:(NSString *)text atColumn:(NSInteger)column row:(NSInteger)row autocorrect:(BOOL)autocorrect error:(NSError **)error NS_SWIFT_NAME(setText(_:atColumn:row:autocorrect:));
+/// Fill the whole selection with the text (`cmd_area_set_text`).
+- (BOOL)fillSelectionWithText:(NSString *)text error:(NSError **)error NS_SWIFT_NAME(fillSelection(with:));
+/// Clear parts of the selected cells (`cmd_selection_clear`).
+- (BOOL)clearSelection:(GnmClearOptions)options error:(NSError **)error NS_SWIFT_NAME(clearSelection(_:));
+- (BOOL)insertColumns:(NSInteger)count atColumn:(NSInteger)column error:(NSError **)error NS_SWIFT_NAME(insertColumns(_:at:));
+- (BOOL)insertRows:(NSInteger)count atRow:(NSInteger)row error:(NSError **)error NS_SWIFT_NAME(insertRows(_:at:));
+- (BOOL)deleteColumns:(NSRange)columns error:(NSError **)error NS_SWIFT_NAME(deleteColumns(_:));
+- (BOOL)deleteRows:(NSRange)rows error:(NSError **)error NS_SWIFT_NAME(deleteRows(_:));
+/// Hide or show the selected columns or rows (`cmd_selection_colrow_hide`).
+- (BOOL)setSelectedColumns:(BOOL)columns hidden:(BOOL)hidden error:(NSError **)error NS_SWIFT_NAME(setSelected(columns:hidden:));
 
 // Drawing, using the engine's own cell, border, and object renderers through
 // cairo-quartz (docs/architecture.md §6).  `rect` is in sheet pixels and the

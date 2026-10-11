@@ -74,5 +74,6 @@
 - (void)testWorkbookIO { [self runProgram:@"workbook_io"]; }
 - (void)testRender { [self runProgram:@"render"]; }
 - (void)testRunLoop { [self runProgram:@"runloop"]; }
+- (void)testEditing { [self runProgram:@"editing"]; }
 
 @end

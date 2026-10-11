@@ -89,6 +89,11 @@ GType gnm_cocoa_sheet_control_get_type (void);
 - (void)_controlSelectionDescriptionDidChange:(nullable const char *)text;
 - (void)_controlUndoLabelDidChange:(nullable const char *)undo redoLabel:(nullable const char *)redo;
 - (void)_controlMenuStateDidChange:(int)flags;
+- (BOOL)_controlAskYesNo:(nullable const char *)question defaultAnswer:(BOOL)defaultAnswer;
+/// Run an engine command that returns TRUE on failure, turning messages it
+/// reported into `error`.
+- (BOOL)_runCommand:(gboolean (NS_NOESCAPE ^)(WorkbookControl *wbc))command
+        description:(NSString *)description error:(NSError **)error;
 @end
 
 @interface GnmSheet ()

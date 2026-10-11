@@ -1,0 +1,249 @@
+Decouple the command layer's dialogs from the GTK control.
+
+Seven places reachable from a generic WorkbookControl cast it to WBCGtk
+without a type check (docs/architecture.md section 5), so a Cocoa control
+would crash on the error, confirmation, and progress paths of
+cmd_insert_cols, cmd_insert_rows, cmd_selection_colrow_hide,
+cmd_paste_copy, cmd_shift_rows, cmd_shift_cols, and the filter undo.
+
+This routes the four error notices through the control's GOCmdContext
+(wb_control_error_message), the two yes/no questions through a new
+WorkbookControlClass slot (query_yes_no, with wb_control_query_yes_no
+returning the default answer when a control has no handler), and the
+progress text through go_cmd_context_progress_message_set.  WBCGtk
+implements the slot with go_gtk_query_yes_no and its command context
+already shows notices and progress text the same way, so the GTK front
+end behaves exactly as before.
+
+Written against GNUMERIC_1_12_62; applied by scripts/build-gnumeric.sh to
+the build copy (never to the submodule).  Upstream engagement is deferred
+(docs/decisions.md ADR-011); the change is kept in upstreamable form.
+
+diff -u -r a/src/cmd-edit.c b/src/cmd-edit.c
+--- a/src/cmd-edit.c	2026-10-11 06:52:58
++++ b/src/cmd-edit.c	2026-10-11 06:52:58
+@@ -417,9 +417,9 @@
+ 		r.start.col = r.end.col - count + 1;
+ 
+ 		if (!sheet_is_region_empty (sheet, &r)) {
+-			go_gtk_notice_dialog (wbcg_toplevel (WBC_GTK (wbc)), GTK_MESSAGE_ERROR,
+-					      _("Inserting these cells would push data off the sheet. "
+-						"Please enlarge the sheet first."));
++			wb_control_error_message (wbc,
++				_("Inserting these cells would push data off the sheet. "
++				  "Please enlarge the sheet first."));
+ 			return;
+ 		}
+ 		rinfo.origin.end.col -= count;
+@@ -466,9 +466,9 @@
+ 		r.start.row = r.end.row - count + 1;
+ 
+ 		if (!sheet_is_region_empty (sheet, &r)) {
+-			go_gtk_notice_dialog (wbcg_toplevel (WBC_GTK (wbc)), GTK_MESSAGE_ERROR,
+-					      _("Inserting these cells would push data off the sheet. "
+-						"Please enlarge the sheet first."));
++			wb_control_error_message (wbc,
++				_("Inserting these cells would push data off the sheet. "
++				  "Please enlarge the sheet first."));
+ 			return;
+ 		}
+ 		rinfo.origin.end.row -= count;
+diff -u -r a/src/commands.c b/src/commands.c
+--- a/src/commands.c	2026-10-11 06:52:58
++++ b/src/commands.c	2026-10-11 06:52:58
+@@ -1494,13 +1494,15 @@
+ 	r.start.col = r.end.col - count + 1;
+ 
+ 	if (!sheet_range_trim (sheet, &r, FALSE, FALSE)) {
+-		go_gtk_notice_dialog (wbcg_toplevel (WBC_GTK (wbc)), GTK_MESSAGE_ERROR,
+-				      ngettext ("Inserting %i column before column %s would push data off the sheet. "
+-						"Please enlarge the sheet first.",
+-						"Inserting %i columns before column %s would push data off the sheet. "
+-						"Please enlarge the sheet first.",
+-						count),
+-				      count, col_name (start_col));
++		mesg = g_strdup_printf
++			(ngettext ("Inserting %i column before column %s would push data off the sheet. "
++				   "Please enlarge the sheet first.",
++				   "Inserting %i columns before column %s would push data off the sheet. "
++				   "Please enlarge the sheet first.",
++				   count),
++			 count, col_name (start_col));
++		wb_control_error_message (wbc, mesg);
++		g_free (mesg);
+ 		return TRUE;
+ 	}
+ 
+@@ -1532,13 +1534,15 @@
+ 	r.start.row = r.end.row - count + 1;
+ 
+ 	if (!sheet_range_trim (sheet, &r, FALSE, FALSE)) {
+-		go_gtk_notice_dialog (wbcg_toplevel (WBC_GTK (wbc)), GTK_MESSAGE_ERROR,
+-				      ngettext ("Inserting %i row before row %s would push data off the sheet. "
+-						"Please enlarge the sheet first.",
+-						"Inserting %i rows before row %s would push data off the sheet. "
+-						"Please enlarge the sheet first.",
+-						count),
+-				      count, row_name (start_row));
++		mesg = g_strdup_printf
++			(ngettext ("Inserting %i row before row %s would push data off the sheet. "
++				   "Please enlarge the sheet first.",
++				   "Inserting %i rows before row %s would push data off the sheet. "
++				   "Please enlarge the sheet first.",
++				   count),
++			 count, row_name (start_row));
++		wb_control_error_message (wbc, mesg);
++		g_free (mesg);
+ 		return TRUE;
+ 	}
+ 
+@@ -2458,8 +2462,7 @@
+ 				  "If you do so you can unhide them with the "
+ 				  "'Format\342\206\222Row\342\206\222Unhide' "
+ 				  "menu item.");
+-			if (!go_gtk_query_yes_no (wbcg_toplevel (WBC_GTK (wbc)),
+-						  FALSE, "%s", text)) {
++			if (!wb_control_query_yes_no (wbc, FALSE, text)) {
+ 				colrow_vis_list_destroy (show);
+ 				colrow_vis_list_destroy (hide);
+ 				return TRUE;
+@@ -3351,11 +3354,10 @@
+ 	}
+ 
+ 	if (n_c * (long)n_r > 10000) {
+-		char *number = g_strdup_printf ("%ld",	(long)n_c * n_r);
+-		gboolean result = go_gtk_query_yes_no (wbcg_toplevel (WBC_GTK (wbc)), FALSE,
+-						       _("Do you really want to paste "
+-							 "%s copies?"), number);
+-		g_free (number);
++		char *question = g_strdup_printf (_("Do you really want to paste "
++						    "%ld copies?"), (long)n_c * n_r);
++		gboolean result = wb_control_query_yes_no (wbc, FALSE, question);
++		g_free (question);
+ 		if (!result) {
+ 			g_object_unref (me);
+ 			return TRUE;
+diff -u -r a/src/undo.c b/src/undo.c
+--- a/src/undo.c	2026-10-11 06:52:58
++++ b/src/undo.c	2026-10-11 06:52:58
+@@ -216,11 +216,9 @@
+ static void
+ cb_filter_set_condition_undo_set_pb (SheetControl *control, char *text)
+ {
+-	SheetControlGUI *scg = (SheetControlGUI *) control;
+-	WBCGtk *wbcg = scg_wbcg (scg);
+-	if (wbcg != NULL)
+-		gtk_progress_bar_set_text
+-			(GTK_PROGRESS_BAR (wbcg->progress_bar), text);
++	WorkbookControl *wbc = sc_wbc (control);
++	if (wbc != NULL)
++		go_cmd_context_progress_message_set (GO_CMD_CONTEXT (wbc), text);
+ }
+ 
+ static void
+diff -u -r a/src/wbc-gtk.c b/src/wbc-gtk.c
+--- a/src/wbc-gtk.c	2026-10-11 06:52:58
++++ b/src/wbc-gtk.c	2026-10-11 06:52:58
+@@ -5022,6 +5022,14 @@
+ 
+ /*************************************************************************/
+ 
++static gboolean
++wbcg_query_yes_no (WorkbookControl *wbc, gboolean default_answer,
++		   char const *question)
++{
++	return go_gtk_query_yes_no (wbcg_toplevel (WBC_GTK (wbc)),
++				    default_answer, "%s", question);
++}
++
+ static void
+ wbc_gtk_class_init (GObjectClass *gobject_class)
+ {
+@@ -5056,6 +5064,7 @@
+ 	wbc_class->claim_selection	= wbcg_claim_selection;
+ 	wbc_class->paste_from_selection	= wbcg_paste_from_selection;
+ 	wbc_class->validation_msg	= wbcg_validation_msg;
++	wbc_class->query_yes_no		= wbcg_query_yes_no;
+ 
+ 	wbc_class->control_new		= wbc_gtk_control_new;
+ 	wbc_class->init_state		= wbc_gtk_init_state;
+diff -u -r a/src/workbook-control-priv.h b/src/workbook-control-priv.h
+--- a/src/workbook-control-priv.h	2026-10-11 06:52:58
++++ b/src/workbook-control-priv.h	2026-10-11 06:52:58
+@@ -50,6 +50,9 @@
+ 					  GnmPasteTarget const *pt);
+ 	int	  (*validation_msg)	 (WorkbookControl *wbc, ValidationStyle v,
+ 					  char const *title, char const *msg);
++	gboolean  (*query_yes_no)	 (WorkbookControl *wbc,
++					  gboolean default_answer,
++					  char const *question);
+ } WorkbookControlClass;
+ 
+ #define GNM_WBC_CLASS(k) (G_TYPE_CHECK_CLASS_CAST ((k), GNM_WBC_TYPE, WorkbookControlClass))
+diff -u -r a/src/workbook-control.c b/src/workbook-control.c
+--- a/src/workbook-control.c	2026-10-11 06:52:58
++++ b/src/workbook-control.c	2026-10-11 06:52:58
+@@ -189,6 +189,50 @@
+ }
+ 
+ /**
++ * wb_control_query_yes_no:
++ * @wbc: #WorkbookControl
++ * @default_answer: the answer to suggest, and to return when the control
++ * cannot ask
++ * @question: the question text
++ *
++ * Asks the user a yes/no question through the control.
++ *
++ * Returns: %TRUE for yes.
++ **/
++gboolean
++wb_control_query_yes_no (WorkbookControl *wbc, gboolean default_answer,
++			 char const *question)
++{
++	WorkbookControlClass *wbc_class;
++
++	g_return_val_if_fail (GNM_IS_WBC (wbc), default_answer);
++
++	wbc_class = WBC_CLASS (wbc);
++	if (wbc_class != NULL && wbc_class->query_yes_no != NULL)
++		return wbc_class->query_yes_no (wbc, default_answer, question);
++	return default_answer;
++}
++
++/**
++ * wb_control_error_message:
++ * @wbc: #WorkbookControl
++ * @msg: the message
++ *
++ * Reports an error to the user through the control's #GOCmdContext.
++ **/
++void
++wb_control_error_message (WorkbookControl *wbc, char const *msg)
++{
++	GError *err;
++
++	g_return_if_fail (GNM_IS_WBC (wbc));
++
++	err = g_error_new_literal (go_error_invalid (), 0, msg);
++	go_cmd_context_error (GO_CMD_CONTEXT (wbc), err);
++	g_error_free (err);
++}
++
++/**
+  * wb_control_view:
+  * @wbc: #WorkbookControl
+  *
+diff -u -r a/src/workbook-control.h b/src/workbook-control.h
+--- a/src/workbook-control.h	2026-10-11 06:52:58
++++ b/src/workbook-control.h	2026-10-11 06:52:58
+@@ -39,6 +39,9 @@
+ 				      char const *undo, char const *redo);
+ int  wb_control_validation_msg	     (WorkbookControl *wbc, ValidationStyle v,
+ 				      char const *title, char const *msg);
++gboolean wb_control_query_yes_no     (WorkbookControl *wbc, gboolean default_answer,
++				      char const *question);
++void wb_control_error_message	     (WorkbookControl *wbc, char const *msg);
+ 
+ /* Menu state update flags, use them to specify which menu items to update */
+ enum {
