@@ -151,8 +151,43 @@ GType gnm_cocoa_sheet_control_get_type (void);
 @interface GnmSheetObject ()
 - (instancetype)initWithObject:(SheetObject *)object sheet:(GnmSheet *)sheet NS_DESIGNATED_INITIALIZER;
 @property (nonatomic, readonly, nullable) SheetObject *engineObject;
+/// The sheet wrapper that made this object's wrapper.
+@property (nonatomic, readonly, weak, nullable) GnmSheet *_ownerSheet;
 - (void)_detachFromEngine;
 - (void)_engineObjectDidChange;
+@end
+
+@interface GnmChartProperty ()
+- (instancetype)initWithName:(NSString *)name label:(NSString *)label kind:(GnmChartPropertyKind)kind value:(nullable id)value
+                     choices:(NSArray<NSString *> *)choices choiceLabels:(NSArray<NSString *> *)choiceLabels
+                     minimum:(double)minimum maximum:(double)maximum NS_DESIGNATED_INITIALIZER;
+@end
+
+@interface GnmChartDimension ()
+- (instancetype)initWithIndex:(NSInteger)index label:(NSString *)label kind:(GnmChartDataKind)kind text:(NSString *)text
+                        isSet:(BOOL)isSet NS_DESIGNATED_INITIALIZER;
+@end
+
+@interface GnmChartStyle ()
+- (instancetype)initWithStyle:(GOStyle const *)style NS_DESIGNATED_INITIALIZER;
+- (instancetype)initPrivate;
+/// Write the fields into an engine style (a duplicate the caller owns).
+- (void)writeToStyle:(GOStyle *)style;
+@end
+
+@interface GnmChartNode ()
+/// Keeps a reference on the object; the editor caches one node per object.
+- (instancetype)initWithObject:(GogObject *)object editor:(GnmChartEditor *)editor NS_DESIGNATED_INITIALIZER;
+@property (nonatomic, readonly) GogObject *object;
+@end
+
+@interface GnmChartEditor ()
+/// The working copy.
+@property (nonatomic, readonly) GogGraph *graph;
+/// The sheet the chart is on, for expressions and their dependencies.
+@property (nonatomic, readonly, nullable) Sheet *sheet;
+- (GnmChartNode *)_nodeForObject:(GogObject *)object;
+- (void)_didChange;
 @end
 
 @interface GnmPlotType ()
@@ -186,6 +221,11 @@ GType gnm_cocoa_sheet_control_get_type (void);
 - (instancetype)initWithValues:(GPtrArray *)values labels:(NSArray<NSString *> *)labels
                      hasBlanks:(BOOL)hasBlanks current:(GnmFilterCriterion *)current NS_DESIGNATED_INITIALIZER;
 @end
+
+/// A cairo context drawing into a CGContext (y downward, the CTM kept),
+/// clipped to `rect`; the caller destroys the context, then flushes and
+/// destroys the surface (GnmSheet.m).
+cairo_t *gnm_cocoa_cairo_for_context (CGContextRef context, CGRect rect, cairo_surface_t *_Nonnull *_Nonnull surface_out);
 
 /// The pixel rectangle of a sheet object (x0, y0, x1, y1), and the
 /// column or row at a sheet pixel position with its edge (GnmSheet.m).

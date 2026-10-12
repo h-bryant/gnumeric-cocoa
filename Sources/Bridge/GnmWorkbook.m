@@ -563,14 +563,26 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
 
 - (void)undo
 {
-    if (_wb->undo_commands)
+    if (_wb->undo_commands) {
         command_undo ((WorkbookControl *) _wbc);
+        [self _objectsMayHaveChanged];
+    }
 }
 
 - (void)redo
 {
-    if (_wb->redo_commands)
+    if (_wb->redo_commands) {
         command_redo ((WorkbookControl *) _wbc);
+        [self _objectsMayHaveChanged];
+    }
+}
+
+/* Reconfigure Graph swaps a chart's graph without any signal the grid
+ * could hear (the GTK canvas item listens to the renderer instead), so
+ * every undo and redo tells the current sheet its objects may differ. */
+- (void)_objectsMayHaveChanged
+{
+    [self.currentSheet _objectsDidChange];
 }
 
 - (void)resendDelegateState

@@ -3,7 +3,9 @@
 Status: MVP tagged `v0.1.0` on 2026-10-11 (Phases 0, 1, 2, 2b), and the
 Phase 3 list done on 2026-10-11 and 2026-10-12 (menu commands, fill handle,
 header resizing, merge, status bar, freeze panes, sheet management, Paste
-Special, sorting with its dialog, autofilter, sheet resize, tab colors).
+Special, sorting with its dialog, autofilter, sheet resize, tab colors);
+Phase 4 on 2026-10-12 has sheet objects (select, move, resize, delete,
+restack, cut, copy, paste), the chart guru, images, and the chart editor.
 The app opens, edits, formats, and saves real files with undo and
 clipboard, built with Xcode 27 or the clang/swiftc scripts. `docs/mvp-known-gaps.md` lists what is missing. §8
 questions 1 to 5 are resolved; upstream engagement is deferred (ADR-011).
@@ -299,7 +301,7 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    status pull-down, freeze panes, tab context menu, the Paste Special,
    size, resize, tab color, sort, and filter sheets, the filter buttons
    and their pop-up, the object handles and drags, the chart guru, the
-   image open panel) is verified only
+   image open panel, the chart editor) is verified only
    headlessly: ask what he sees before
    changing UI behavior, and take his report over the captures.
 5. Phase 3 (`docs/mvp-known-gaps.md` says what the MVP lacks). Done on
@@ -313,15 +315,17 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    `Tests/BridgeTests/objects.m`), and Insert → Chart… builds a chart
    from the selection with every goffice plot type (`GnmPlotType`,
    `ChartGuru.swift`); objects cut, copy, and paste, and images come
-   from files or the pasteboard. Next: the chart and object editors
-   (the guru's later pages: `cmd_so_graph_config` on a `gog_graph_dup`;
-   `cmd_so_set_*` for widgets), then Phase 5; the smaller Phase 3 gaps
-   (Insert/Delete Cells,
+   from files or the pasteboard; the chart editor (`GnmChartEditor`,
+   `ChartEditorWindow.swift`, `Tests/BridgeTests/chart.m`) edits a copy
+   of the graph and commits it as "Reconfigure Graph". Next: the smaller
+   object items (Save as Image…, a plot type change in place, image and
+   widget editors with `cmd_so_set_*`) or Phase 5; the smaller Phase 3
+   gaps (Insert/Delete Cells,
    Goto and the name box, the formula bar, autocomplete, drag and drop,
    outlines) as filler.
 6. Headless checks for all of it: `GNM_SNAPSHOT=out.png scripts/run-app.sh
    file` plus `GNM_SNAPSHOT_TYPE`, `_FORMAT`, `_PHASE3`, `_FREEZE`,
-   `_SHEETS`, `_FILTER`, `_OBJECTS`, `_CHART`, `_ZOOM` (`docs/build.md`); compare `out.png` with
+   `_SHEETS`, `_FILTER`, `_OBJECTS`, `_CHART`, `_EDITOR`, `_ZOOM` (`docs/build.md`); compare `out.png` with
    `out-window.png`. Engine fixes go to `patches/` (0001 decouplings, 0002
    Merge and Center); `scripts/build-gnumeric.sh` re-applies them and
    takes a few minutes.

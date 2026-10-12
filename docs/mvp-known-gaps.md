@@ -66,7 +66,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | InsertCells | no | Phase 3 |
 | InsertColumns, InsertRows | ported | Insert menu; as many as the selection spans, before it |
 | SheetInsert | ported | Edit → Sheet → Insert |
-| ChartGuru | partial | Insert → Chart… (2026-10-12): every goffice plot type with its sample image, series from the selection, the two guru options; no later guru pages (chart, plot, series properties) |
+| ChartGuru | ported | Insert → Chart… (2026-10-12): every goffice plot type with its sample image, series from the selection, the two guru options; the later pages are the chart editor (double-click, Properties…, Format → Object Properties…): object tree with add, remove, reorder, live preview, every object's data expressions, properties, and style; not in it: changing a plot's type in place, error bars, gradient and image fills, manual positions |
 | InsertImage | ported | Insert → Image… (2026-10-12), and PNG or TIFF pasted from other applications |
 | InsertComponent, InsertShapedComponent, NewGOComponent, GOComponentFromFile | no | Phase 4; goffice components (equations, embedded documents) |
 | InsertFormula (function selector), InsertNames | no | Phase 5 |
@@ -128,7 +128,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | In-cell editor: cell's own font and alignment, autocomplete, range selection by mouse or keyboard while typing a formula, array formulas (Ctrl-Shift-Enter) | no | Phase 3 (`cmd_area_set_array_expr` is not wrapped yet) |
 | Cell comments (display, tooltips) | no | Phase 5 |
 | Hyperlinks (activation) | no | Phase 5 (`gnm_hlink_activate` takes `WBCGtk`) |
-| Sheet objects: selection handles, move, resize, context menus, editing, form widgets | partial | 2026-10-12: click to select, handles, drag to move and resize (Option symmetric, Shift snaps), Delete, arrows nudge, Tab cycles, context menu with Delete and the stacking order, cut, copy, and paste (a PNG goes to other applications); no editors, no live preview while dragging, widgets draw but do not act |
+| Sheet objects: selection handles, move, resize, context menus, editing, form widgets | partial | 2026-10-12: click to select, handles, drag to move and resize (Option symmetric, Shift snaps), Delete, arrows nudge, Tab cycles, context menu with Properties… (charts), Delete, and the stacking order, cut, copy, and paste (a PNG goes to other applications), the chart editor; no Save as Image…, no editors for images and widgets, no live preview while dragging, widgets draw but do not act |
 | Frozen panes | ported | 2026-10-11: frozen strips painted as overlays on one document view, scrolling clamped to the first unfrozen cell |
 | Right-to-left sheets | no | Phase 7; drawn left-to-right |
 | Marching ants animation | partial | static dashed outline |

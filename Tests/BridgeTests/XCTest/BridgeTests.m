@@ -77,5 +77,6 @@
 - (void)testEditing { [self runProgram:@"editing"]; }
 - (void)testFormat { [self runProgram:@"format"]; }
 - (void)testObjects { [self runProgram:@"objects"]; }
+- (void)testChart { [self runProgram:@"chart"]; }
 
 @end

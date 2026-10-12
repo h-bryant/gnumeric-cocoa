@@ -108,6 +108,8 @@ enum MainMenu {
         formatMenu.addItem(withTitle: "Merge Cells", action: Selector(("mergeCells:")), keyEquivalent: "")
         formatMenu.addItem(withTitle: "Merge and Center", action: Selector(("mergeAndCenter:")), keyEquivalent: "")
         formatMenu.addItem(withTitle: "Unmerge Cells", action: Selector(("unmergeCells:")), keyEquivalent: "")
+        formatMenu.addItem(.separator())
+        formatMenu.addItem(withTitle: "Object Properties…", action: Selector(("editObjectProperties:")), keyEquivalent: "")
         menuBar.addItem(submenu(formatMenu, title: "Format"))
 
         let dataMenu = NSMenu(title: "Data")

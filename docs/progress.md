@@ -514,14 +514,76 @@
   copy, paste, undo, cut and paste, the PNG on the pasteboard, an image
   from data, a refused non-image, and an image pasted from the pasteboard.
 
+## 2026-10-12: Phase 4, fourth step: the chart editor
+
+- `GnmChartEditor` (bridge): the guru's later pages over a working copy of
+  a chart's graph. The editor duplicates the graph (`gog_graph_dup`; the
+  data objects come along bound to their sheet, so the copy evaluates live
+  cells), the app edits the copy, and `apply` commits it with the engine's
+  own "Reconfigure Graph" command (`cmd_so_graph_config (wbc, so, copy,
+  old)`), undoable; cancel is releasing the editor. The copy's objects are
+  `GnmChartNode`s (stable per object): name, role, type, children,
+  deletable, reorderable (`gog_object_can_reorder`), the roles a child can
+  take (`gog_object_possible_additions`), the generic GObject properties
+  of the class (booleans, integers, doubles, texts, and the string
+  properties the GTK editor shows as combos, with their choices: position
+  compass and alignment, axis position and scale, interpolation, the
+  bar/column/line/area "type", label justification, theme, regression
+  drawing bounds; identity, layout, and cross-reference properties stay
+  hidden), the data dimensions (`gog_dataset_get_dim`: series name and
+  values, axis bounds, label texts) as expressions in the sheet's syntax
+  read and written the way the GTK data allocator does (`go_data_serialize`
+  with the sheet's conventions; `gnm_expr_parse_str` with unknown names as
+  strings and lists for vectors, a scalar that does not parse is the text
+  itself, `gnm_go_data_*_new_expr`), and the style as a value
+  (`GnmChartStyle`: line, fill, marker, font, text angle, each with its
+  automatic flag, applied through `go_style_dup` and
+  `go_styled_object_set_style`). The preview renders the copy with
+  `gog_graph_render_to_cairo`.
+- A trap found by the test: a duplicated graph's data register as sheet
+  dependents (`gnm_go_data_dup` calls `dependent_set_sheet`), and nothing
+  unlinks them when an object leaves the copy or the copy goes, so a node
+  outliving the workbook crashed in `dependent_unlink`. The editor now
+  binds the copy's data the way a sheet object does (the graph's
+  `add_data` and `remove_data` signals) and unlinks everything before
+  releasing the copy.
+- `ChartEditorWindow.swift` (double-click on a chart, its context menu's
+  Properties…, Format → Object Properties…): a resizable sheet with the
+  object tree, Add (the selected object's roles), Remove, and reorder
+  buttons on the left, the live preview on the right, and below it the
+  selected object's data fields, properties (checkboxes, number and text
+  fields, pop-ups by kind), and style controls (color wells, dash and
+  marker pop-ups, font family, size, bold, italic, angle). Every edit goes
+  to the copy at once; Apply commits. A nested function in the style
+  section held `self` through the handler closures (a cycle that kept the
+  copy alive until quit); closures with weak captures now. The guru and
+  editor sheets close their windows when done, so they leave the app's
+  window list.
+- Undo and redo of "Reconfigure Graph" give the grid no signal (the GTK
+  canvas item listens to the renderer), so the bridge now tells the
+  current sheet its objects may have changed after every undo and redo.
+- `GNM_SNAPSHOT_EDITOR=1` opens the editor on the sheet's first chart,
+  adds a title, inverts the X axis, colors the first series red, writes
+  the editor to `-editor.png`, and applies before the grid capture.
+  `Tests/BridgeTests/chart.m` (a new program, in the Xcode project and
+  the XCTest bundle) covers the tree, property kinds and clamping, the
+  hidden set, titles with literal and cell text, series names and
+  values with a refused bad range, styles read back, legend position,
+  adding, reordering, and removing, the preview, apply with undo and
+  redo, and an editor whose chart was deleted.
+- Not in it: changing a plot's type in place (insert a new chart), error
+  bars, gradient and image fills, the guru's manual object positions,
+  "Save as Image…", editors for images and widgets (`cmd_so_set_*`).
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
    continue with Phase 4". `HANDOFF.md` §9 is the checklist: smoke tests,
    the Xcode build, the ADR-011 rule on upstream, what Henry has and has
    not seen on screen, and the rest of Phase 4 (object selection, move,
-   resize, delete, stacking, the chart guru, the object clipboard, and
-   images are done; next the chart and object editors, then Phase 5) from
+   resize, delete, stacking, the chart guru, the object clipboard, images,
+   and the chart editor are done; next the smaller object items (Save as
+   Image…, plot type changes, image editors) or Phase 5) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -531,8 +593,8 @@
    on `MainMenu`, action on `GridView` or the window controller), drive it
    from a `GNM_SNAPSHOT_*` hook in `AppDelegate.swift`, look at the
    `-window.png` capture, update `docs/mvp-known-gaps.md`, commit.
-3. The state at the end of 2026-10-12: `main` at the object clipboard
-   and images commit (after the chart guru, sheet objects, and autofilter
+3. The state at the end of 2026-10-12: `main` at the chart editor commit
+   (after the object clipboard, chart guru, sheet objects, and autofilter
    ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in
    `build/prefix` has both patches applied.

@@ -720,8 +720,8 @@ gnm_cocoa_rgba_from_cgcolor (CGColorRef color)
  * translated one behind, which put every glyph off-screen when a header
  * view had drawn into the same context before the grid (whole-window
  * captures, 2026-10-11).  Reset it here; callers restore it. */
-static cairo_t *
-cairo_for_context (CGContextRef context, CGRect rect, cairo_surface_t **surface_out)
+cairo_t *
+gnm_cocoa_cairo_for_context (CGContextRef context, CGRect rect, cairo_surface_t **surface_out)
 {
     unsigned w = (unsigned) MAX (ceil (CGRectGetMaxX (rect)), 1.0);
     unsigned h = (unsigned) MAX (ceil (CGRectGetMaxY (rect)), 1.0);
@@ -1651,7 +1651,7 @@ pixels_from_points (Sheet const *sheet, gboolean horizontal, double points)
     CGContextSaveGState (context);
     CGContextClipToRect (context, rect);
     cairo_surface_t *surface;
-    cairo_t *cr = cairo_for_context (context, rect, &surface);
+    cairo_t *cr = gnm_cocoa_cairo_for_context (context, rect, &surface);
     draw_region (&dc, cr,
                  (gint64) floor (CGRectGetMinX (rect)), (gint64) floor (CGRectGetMinY (rect)),
                  (gint64) ceil (CGRectGetMaxX (rect)), (gint64) ceil (CGRectGetMaxY (rect)),
@@ -1671,7 +1671,7 @@ pixels_from_points (Sheet const *sheet, gboolean horizontal, double points)
     CGContextSaveGState (context);
     CGContextClipToRect (context, rect);
     cairo_surface_t *surface;
-    cairo_t *cr = cairo_for_context (context, rect, &surface);
+    cairo_t *cr = gnm_cocoa_cairo_for_context (context, rect, &surface);
     /* The list is front to back; draw back to front (print.c does the same). */
     GSList *back_to_front = g_slist_reverse (g_slist_copy (_sheet->sheet_objects));
     for (GSList *l = back_to_front; l; l = l->next) {

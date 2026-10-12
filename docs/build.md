@@ -93,7 +93,7 @@ Rebuild from scratch with `rm -rf build && scripts/build-gnumeric.sh`.
 
 ```sh
 scripts/build-bridge.sh          # build/bridge/libGnmCocoa.a
-Tests/BridgeTests/run.sh         # four headless test programs; outputs in build/bridge-tests
+Tests/BridgeTests/run.sh         # the headless test programs; outputs in build/bridge-tests
 scripts/build-app.sh             # build/app/GnumericCocoa.app
 scripts/run-app.sh upstream/gnumeric/samples/chart-tests.gnumeric
 GNM_SNAPSHOT=/tmp/grid.png scripts/run-app.sh upstream/gnumeric/samples/format-tests.gnumeric
@@ -101,12 +101,15 @@ GNM_SNAPSHOT=/tmp/grid.png scripts/run-app.sh upstream/gnumeric/samples/format-t
 
 `GNM_SNAPSHOT_ZOOM=1.5`, `GNM_SNAPSHOT_TYPE=text`, `GNM_SNAPSHOT_FORMAT=1`,
 `GNM_SNAPSHOT_PHASE3=1`, `GNM_SNAPSHOT_FREEZE=1`, `GNM_SNAPSHOT_SHEETS=1`,
-`GNM_SNAPSHOT_FILTER=1`, `GNM_SNAPSHOT_OBJECTS=1`, and `GNM_SNAPSHOT_CHART=1`
+`GNM_SNAPSHOT_FILTER=1`, `GNM_SNAPSHOT_OBJECTS=1`, `GNM_SNAPSHOT_CHART=1`,
+and `GNM_SNAPSHOT_EDITOR=1`
 exercise zoom, editing and saving, the Format Cells model, the Phase 3
 commands, frozen panes, sheet management, the autofilter with the Sort
 command, a sheet resize, and a tab color, the sheet objects (select, move,
-resize, delete, undo, copy and paste, an inserted image), and chart
-insertion (which also writes the guru sheet to `-guru.png`) before the
+resize, delete, undo, copy and paste, an inserted image), chart
+insertion (which also writes the guru sheet to `-guru.png`), and the chart
+editor on the sheet's first chart (a title, an inverted axis, a red series,
+the editor written to `-editor.png`, then applied) before the
 capture (`AppDelegate.swift`, `Snapshot`). The three snapshot files should agree. The grid capture draws the grid view
 alone; the window captures draw the whole hierarchy and are what caught the
 blank grid of 2026-10-11 (`docs/progress.md`). SwiftUI-hosted controls (the

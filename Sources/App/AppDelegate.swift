@@ -347,6 +347,63 @@ enum Snapshot {
             }
             }
             autoreleasepool {
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_EDITOR"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet,
+               let chart = sheet.sheetObjects.first(where: { $0.typeName == "SheetObjectGraph" }) {
+                // The chart editor over the sheet's first chart: a title,
+                // an inverted X axis, a red series line, the editor window
+                // captured to `-editor.png`, then applied so the grid
+                // capture shows the reconfigured chart.
+                let grid = controller.gridView
+                grid.select(objects: [chart])
+                controller.editObject(chart)
+                if let sheetWindow = controller.chartEditor {
+                    let editor = sheetWindow.editor
+                    let root = editor.root
+                    NSLog("editor: root=%@ children=%@", root.name, root.children.map(\.name))
+                    if let chartNode = root.children.first {
+                        sheetWindow.select(node: chartNode)
+                        NSLog("editor: chart addable=%@ properties=%ld", chartNode.addableRoles, chartNode.properties.count)
+                        if let title = sheetWindow.addChild(role: "Title") {
+                            sheetWindow.select(node: title)
+                            sheetWindow.setText("Edited in Cocoa", forDimensionLabeled: "Text")
+                            NSLog("editor: title %@ dims=%@", title.name, title.dimensions)
+                        }
+                        if let axis = chartNode.children.first(where: { $0.role == "X-Axis" }) {
+                            sheetWindow.select(node: axis)
+                            sheetWindow.setProperty(named: "invert-axis", to: NSNumber(value: true))
+                            NSLog("editor: axis properties=%@", axis.properties.map { "\($0.name)=\($0.value ?? "nil")" })
+                        }
+                        if let plot = chartNode.children.first(where: { $0.role == "Plot" }),
+                           let series = plot.children.first, let style = series.style {
+                            style.lineAutomatic = false
+                            style.lineColor = NSColor.systemRed.cgColor
+                            style.lineWidth = 2.5
+                            _ = editor.apply(style, to: series)
+                            sheetWindow.select(node: series)
+                            NSLog("editor: series %@ dims=%@ style line auto=%d", series.name, series.dimensions.map(\.text),
+                                  series.style?.lineAutomatic == true ? 1 : 0)
+                        }
+                    }
+                    if let content = sheetWindow.window.contentView {
+                        content.layoutSubtreeIfNeeded()
+                        if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                            content.cacheDisplay(in: content.bounds, to: rep)
+                            let editorPath = (path as NSString).deletingPathExtension + "-editor.png"
+                            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: editorPath))
+                            NSLog("editor: captured %@ (%@) changes=%ld", editorPath, NSStringFromRect(content.bounds), editor.changeCount)
+                        }
+                        if ProcessInfo.processInfo.environment["GNM_DEBUG_LAYOUT"] != nil {
+                            dump(view: content, depth: 0)
+                        }
+                    }
+                    sheetWindow.apply()
+                    NSLog("editor: applied undo=%@ open=%d", sheet.workbook?.undoLabel ?? "nil", controller.chartEditor == nil ? 0 : 1)
+                }
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_CHART"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

@@ -617,6 +617,10 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
             select(objects: [object])
         }
         let menu = NSMenu(title: "Object")
+        if object.typeName == "SheetObjectGraph" {
+            menu.addItem(withTitle: "Properties…", action: #selector(editObjectProperties(_:)), keyEquivalent: "")
+            menu.addItem(.separator())
+        }
         menu.addItem(withTitle: "Delete", action: #selector(deleteObjects(_:)), keyEquivalent: "")
         menu.addItem(.separator())
         menu.addItem(withTitle: "Pull to Front", action: #selector(pullObjectToFront(_:)), keyEquivalent: "")
@@ -748,6 +752,15 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     /// Set by the window controller: the "(Custom…)" and "(Top 10…)"
     /// choices need a dialog (`custom` says which).
     var requestFilterDialog: ((_ button: FilterButton, _ choices: FilterChoices, _ custom: Bool) -> Void)?
+    /// Set by the window controller: a double-click on an object, or
+    /// Properties… for it, opens its editor (charts have one).
+    var requestObjectEditor: ((SheetObject) -> Void)?
+
+    /// Format → Object Properties… and the context menu's Properties…
+    @objc func editObjectProperties(_ sender: Any?) {
+        guard let object = selectedObjects.first else { return }
+        requestObjectEditor?(object)
+    }
     private var filterMenuButton: FilterButton?
     private var filterMenuChoices: FilterChoices?
 
@@ -897,6 +910,8 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         case #selector(showAllFilteredRows(_:)), #selector(clearAllFiltered(_:)), #selector(clearFormatsFiltered(_:)),
              #selector(clearCommentsFiltered(_:)), #selector(clearContentsFiltered(_:)):
             return sheet.hasFilteredRows
+        case #selector(editObjectProperties(_:)):
+            return selectedObjects.count == 1 && selectedObjects[0].typeName == "SheetObjectGraph" && window?.attachedSheet == nil
         default:
             return true
         }
@@ -933,6 +948,8 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
             if event.clickCount == 1 {
                 let frames = selectedObjects.map(\.frame)
                 objectDrag = ObjectDrag(handle: 8, start: point, originalFrames: frames, frames: frames)
+            } else if event.clickCount == 2 {
+                requestObjectEditor?(object)
             }
             return
         }

@@ -41,6 +41,7 @@ final class ChartGuru: NSObject, NSTableViewDataSource, NSTableViewDelegate {
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 660, height: 460),
                           styleMask: [.titled], backing: .buffered, defer: false)
         window.title = "Insert Chart"
+        window.isReleasedWhenClosed = false   // closed below, released with this object
         super.init()
         build()
     }
@@ -210,6 +211,7 @@ final class ChartGuru: NSObject, NSTableViewDataSource, NSTableViewDelegate {
     private func finish(_ choice: Choice?) {
         guard let parent = window.sheetParent else { return }
         parent.endSheet(window)
+        window.close()   // out of the app's window list
         let completion = self.completion
         self.completion = nil
         completion?(choice)

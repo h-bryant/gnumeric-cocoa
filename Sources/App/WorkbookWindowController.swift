@@ -180,6 +180,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         gridView.requestFilterDialog = { [weak self] button, choices, custom in
             self?.promptFilterCondition(for: button, choices: choices, custom: custom)
         }
+        gridView.requestObjectEditor = { [weak self] object in self?.editObject(object) }
     }
 
     private func present(_ error: Error) {
@@ -691,6 +692,27 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
                 gridView.scrollToVisible(frame.insetBy(dx: -8, dy: -8))
             } catch {
                 present(error)
+            }
+        }
+    }
+
+    // MARK: Chart Properties (the chart editor)
+
+    private(set) var chartEditor: ChartEditorWindow?
+
+    /// Open the editor of an object that has one: charts, through the
+    /// guru's later pages on a working copy.
+    func editObject(_ object: SheetObject) {
+        guard let window, chartEditor == nil, window.attachedSheet == nil else { return }
+        guard let editor = ChartEditor(editing: object) else { return }   // images have no editor yet
+        if gridView.isEditing { gridView.cancelEditing() }
+        let sheet = ChartEditorWindow(editor: editor)
+        chartEditor = sheet
+        sheet.run(in: window) { [weak self] applied in
+            guard let self else { return }
+            chartEditor = nil
+            if applied {
+                gridView.needsDisplay = true
             }
         }
     }

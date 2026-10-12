@@ -45,6 +45,7 @@ cb_object_changed (G_GNUC_UNUSED SheetObject *so, gpointer owner)
 }
 
 - (SheetObject *)engineObject { return _so; }
+- (GnmSheet *)_ownerSheet { return _owner; }
 
 - (void)_engineObjectDidChange
 {
