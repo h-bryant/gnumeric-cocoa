@@ -640,11 +640,21 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
 
     @objc func copy(_ sender: Any?) {
         if isEditing { commitEditing(text: editor.stringValue, movement: .none) }
+        if !selectedObjects.isEmpty {
+            sheet?.copySheetObjects(selectedObjects, cut: false)
+            return
+        }
         sheet?.copySelection()
     }
 
     @objc func cut(_ sender: Any?) {
         if isEditing { commitEditing(text: editor.stringValue, movement: .none) }
+        if !selectedObjects.isEmpty {
+            let doomed = selectedObjects
+            deselectObjects()
+            sheet?.copySheetObjects(doomed, cut: true)   // the engine deletes them now
+            return
+        }
         sheet?.cutSelection()
     }
 
@@ -869,7 +879,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
             }
             return sheet.workbook?.canRedo ?? false
         case #selector(paste(_:)):
-            return NSPasteboard.general.string(forType: .string) != nil
+            return sheet.workbook?.canPaste ?? false
         case #selector(mergeCells(_:)), #selector(mergeAndCenter(_:)):
             return selectionIsMultiCell
         case #selector(unmergeCells(_:)):

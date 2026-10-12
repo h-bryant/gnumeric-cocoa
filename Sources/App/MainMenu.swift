@@ -82,6 +82,7 @@ enum MainMenu {
         insertMenu.addItem(withTitle: "Rows", action: Selector(("insertRows:")), keyEquivalent: "")
         insertMenu.addItem(.separator())
         insertMenu.addItem(withTitle: "Chart…", action: Selector(("insertChart:")), keyEquivalent: "")
+        insertMenu.addItem(withTitle: "Image…", action: Selector(("insertImage:")), keyEquivalent: "")
         menuBar.addItem(submenu(insertMenu, title: "Insert"))
 
         let formatMenu = NSMenu(title: "Format")

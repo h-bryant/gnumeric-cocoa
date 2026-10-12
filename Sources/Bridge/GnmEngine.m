@@ -129,6 +129,7 @@ static BOOL engineWasStarted;   /* gnm_init cannot be repeated in one process */
 @implementation GnmEngine {
     GOCmdContext *_cc;
     NSMutableArray<NSError *> *_collected;   /* nil when not collecting */
+    NSUInteger _collectionDepth;             /* commands nest: a paste that inserts an image */
     NSHashTable<GnmWorkbook *> *_workbooks;
     char *_argv0;
 }
@@ -253,14 +254,21 @@ static BOOL engineWasStarted;   /* gnm_init cannot be repeated in one process */
 
 #pragma mark - Messages
 
+/* Collections nest: a command run from inside another (the paste of an
+ * image from the pasteboard inserts an object while the paste command is
+ * running) reports into the outer collection and gets none of its own. */
 - (void)_beginCollectingMessages
 {
-    NSAssert (_collected == nil, @"nested message collection");
-    _collected = [NSMutableArray array];
+    if (_collectionDepth++ == 0)
+        _collected = [NSMutableArray array];
 }
 
 - (NSArray<NSError *> *)_endCollectingMessages
 {
+    if (_collectionDepth == 0)
+        return @[];
+    if (--_collectionDepth > 0)
+        return @[];
     NSArray *result = _collected ?: @[];
     _collected = nil;
     return result;

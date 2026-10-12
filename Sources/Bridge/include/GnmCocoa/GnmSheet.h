@@ -324,6 +324,21 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 - (BOOL)restackSheetObject:(GnmSheetObject *)object direction:(GnmSheetObjectStacking)direction
                      error:(NSError **)error NS_SWIFT_NAME(restack(_:_:));
 
+/// Copy objects into the engine's clipboard (`gnm_app_clipboard_cut_copy_obj`),
+/// with a PNG of the first on the system pasteboard; a cut deletes them
+/// now ("Cut Object", undoable) and `paste` puts copies at the selection.
+- (void)copySheetObjects:(NSArray<GnmSheetObject *> *)objects cut:(BOOL)cut NS_SWIFT_NAME(copySheetObjects(_:cut:));
+
+// Images (Insert → Image…).
+/// The image's own size in sheet pixels at the current zoom (one image
+/// pixel per point, as the engine sizes a new image), or zero when the
+/// data is not an image the engine can decode.
+- (CGSize)naturalSizeOfImageData:(NSData *)data NS_SWIFT_NAME(naturalSize(ofImageData:));
+/// Insert an image (PNG, JPEG, and the other formats the engine decodes)
+/// at `frame`, as one undoable command ("Insert 1 Object").
+- (nullable GnmSheetObject *)insertImageData:(NSData *)data frame:(CGRect)frame
+                                       error:(NSError **)error NS_SWIFT_NAME(insertImage(_:frame:));
+
 // Charts (Insert → Chart…, the GTK chart guru's outcome).
 /// The engine's default chart size (12 by 8 cm) in sheet pixels.
 @property (nonatomic, readonly) CGSize defaultChartSize;

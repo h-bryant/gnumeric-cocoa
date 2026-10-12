@@ -1,6 +1,7 @@
 // GnmWorkbook and the Cocoa WorkbookControl (docs/architecture.md §3).
 #import "GnmPrivate.h"
 #import <AppKit/NSPasteboard.h>
+#import <AppKit/NSBitmapImageRep.h>
 #include <workbook-priv.h>
 
 /* ------------------------------------------------------------------------
@@ -477,6 +478,16 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
     return ok;
 }
 
+- (BOOL)canPaste
+{
+    NSPasteboard *pasteboard = NSPasteboard.generalPasteboard;
+    if (!gnm_app_clipboard_is_empty () && _claimedPasteboardChangeCount == pasteboard.changeCount)
+        return YES;
+    return [pasteboard stringForType:NSPasteboardTypeString] != nil
+        || [pasteboard dataForType:NSPasteboardTypePNG] != nil
+        || [pasteboard dataForType:NSPasteboardTypeTIFF] != nil;
+}
+
 - (void)recalculate
 {
     workbook_recalc (_wb);
@@ -702,6 +713,21 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
             [pasteboard setString:GnmString (text->str) forType:NSPasteboardTypeString];
             g_string_free (text, TRUE);
         }
+    } else if (content != NULL && content->objects != NULL) {
+        /* Copied objects: a PNG of the first for other applications. */
+        SheetObject *so = content->objects->data;
+        if (GNM_IS_SO_IMAGEABLE (so)) {
+            GsfOutput *output = gsf_output_memory_new ();
+            GError *err = NULL;
+            sheet_object_write_image (so, "png", -1, output, &err);
+            gsf_output_close (output);
+            if (err == NULL && gsf_output_size (output) > 0)
+                [pasteboard setData:[NSData dataWithBytes:gsf_output_memory_get_bytes (GSF_OUTPUT_MEMORY (output))
+                                                   length:(NSUInteger) gsf_output_size (output)]
+                            forType:NSPasteboardTypePNG];
+            g_clear_error (&err);
+            g_object_unref (output);
+        }
     }
     _claimedPasteboardChangeCount = pasteboard.changeCount;
     return TRUE;
@@ -745,11 +771,36 @@ region_from_text (Workbook *wb, NSString *string)
     return cr;
 }
 
+/* An image from another application lands as an image object at the
+ * target's first cell, at its own size (scg_paste_image). */
+- (void)_pasteImageData:(NSData *)png into:(GnmPasteTarget const *)target
+{
+    GnmSheet *sheet = [self wrapperForEngineSheet:target->sheet];
+    if (sheet == nil)
+        return;
+    CGSize size = [sheet naturalSizeOfImageData:png];
+    if (CGSizeEqualToSize (size, CGSizeZero))
+        return;
+    CGRect frame = CGRectMake ([sheet leftEdgeOfColumn:target->range.start.col],
+                               [sheet topEdgeOfRow:target->range.start.row], size.width, size.height);
+    [sheet insertImageData:png frame:frame error:NULL];
+}
+
 - (void)_controlPasteFromSelection:(GnmPasteTarget const *)target
 {
-    NSString *string = [NSPasteboard.generalPasteboard stringForType:NSPasteboardTypeString];
-    if (string == nil)
+    NSPasteboard *pasteboard = NSPasteboard.generalPasteboard;
+    NSString *string = [pasteboard stringForType:NSPasteboardTypeString];
+    if (string == nil) {
+        NSData *png = [pasteboard dataForType:NSPasteboardTypePNG];
+        if (png == nil) {
+            NSData *tiff = [pasteboard dataForType:NSPasteboardTypeTIFF];
+            if (tiff)
+                png = [[NSBitmapImageRep imageRepWithData:tiff] representationUsingType:NSBitmapImageFileTypePNG properties:@{}];
+        }
+        if (png)
+            [self _pasteImageData:png into:target];
         return;
+    }
     GnmCellRegion *cr = region_from_text (_wb, string);
     if (cr->cols > 0 && cr->rows > 0)
         cmd_paste_copy ((WorkbookControl *) _wbc, target, cr);

@@ -46,6 +46,7 @@
 #include <sheet-object-impl.h>
 #include <sheet-object-cell-comment.h>
 #include <sheet-object-graph.h>
+#include <sheet-object-image.h>
 #include <graph.h>
 #include <sheet-utils.h>
 #include <tools/filter.h>
@@ -54,6 +55,7 @@
 #include <goffice/graph/gog-plot-engine.h>
 #include <goffice/utils/go-rsm.h>
 #include <gsf/gsf-impl-utils.h>
+#include <gsf/gsf-output-memory.h>
 #include <cairo.h>
 #include <cairo-quartz.h>
 

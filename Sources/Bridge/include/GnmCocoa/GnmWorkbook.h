@@ -110,6 +110,11 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Workbook)
 /// recalc lag (a GLib timeout) after the selection changes.
 - (void)recomputeAutoExpression;
 
+/// Whether `GnmSheet.paste` has something to paste: the engine's
+/// clipboard when it is still current, else text or an image on the
+/// system pasteboard.
+@property (nonatomic, readonly) BOOL canPaste;
+
 /// Recalculate cells that need it (`workbook_recalc`).
 - (void)recalculate;
 /// Recalculate every cell (`workbook_recalc_all`, the GTK Recalculate).

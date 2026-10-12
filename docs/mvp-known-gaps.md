@@ -29,7 +29,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | Action | Status | Notes / Phase |
 |---|---|---|
 | Undo, Redo | ported | engine command stack, labels in the menu |
-| EditCut, EditCopy, EditPaste | ported | engine clipboard; text to and from other apps |
+| EditCut, EditCopy, EditPaste | ported | engine clipboard; text to and from other apps; selected objects, with a PNG out and images in |
 | EditPasteSpecial | ported | Edit → Paste Special… (⌘⇧V): what, operation, region transform, the four switches, Paste Link |
 | EditFind, EditReplace | no | Phase 5 |
 | EditRecalc | ported | Data → Recalculate (F9), `workbook_recalc_all` |
@@ -67,7 +67,8 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | InsertColumns, InsertRows | ported | Insert menu; as many as the selection spans, before it |
 | SheetInsert | ported | Edit → Sheet → Insert |
 | ChartGuru | partial | Insert → Chart… (2026-10-12): every goffice plot type with its sample image, series from the selection, the two guru options; no later guru pages (chart, plot, series properties) |
-| InsertComponent, InsertShapedComponent, NewGOComponent, GOComponentFromFile, InsertImage | no | Phase 4; existing images draw, move, resize, and delete |
+| InsertImage | ported | Insert → Image… (2026-10-12), and PNG or TIFF pasted from other applications |
+| InsertComponent, InsertShapedComponent, NewGOComponent, GOComponentFromFile | no | Phase 4; goffice components (equations, embedded documents) |
 | InsertFormula (function selector), InsertNames | no | Phase 5 |
 | InsertComment, InsertHyperlink | no | Phase 5 |
 | InsertSortDecreasing, InsertSortIncreasing | ported | Data → Sort Ascending / Descending (the GTK quick sort: by the selection's columns, heading kept) |
@@ -127,7 +128,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | In-cell editor: cell's own font and alignment, autocomplete, range selection by mouse or keyboard while typing a formula, array formulas (Ctrl-Shift-Enter) | no | Phase 3 (`cmd_area_set_array_expr` is not wrapped yet) |
 | Cell comments (display, tooltips) | no | Phase 5 |
 | Hyperlinks (activation) | no | Phase 5 (`gnm_hlink_activate` takes `WBCGtk`) |
-| Sheet objects: selection handles, move, resize, context menus, editing, form widgets | partial | 2026-10-12: click to select, handles, drag to move and resize (Option symmetric, Shift snaps), Delete, arrows nudge, Tab cycles, context menu with Delete and the stacking order; no cut/copy/paste of objects, no editors, no live preview while dragging, widgets draw but do not act |
+| Sheet objects: selection handles, move, resize, context menus, editing, form widgets | partial | 2026-10-12: click to select, handles, drag to move and resize (Option symmetric, Shift snaps), Delete, arrows nudge, Tab cycles, context menu with Delete and the stacking order, cut, copy, and paste (a PNG goes to other applications); no editors, no live preview while dragging, widgets draw but do not act |
 | Frozen panes | ported | 2026-10-11: frozen strips painted as overlays on one document view, scrolling clamped to the first unfrozen cell |
 | Right-to-left sheets | no | Phase 7; drawn left-to-right |
 | Marching ants animation | partial | static dashed outline |

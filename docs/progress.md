@@ -485,14 +485,43 @@
   for ink), undo and redo of the insertion, and a pie from one series
   with the options set.
 
+## 2026-10-12: Phase 4, third step: object clipboard and images
+
+- Objects copy and cut: `copySheetObjects:cut:` over
+  `gnm_app_clipboard_cut_copy_obj` (a cut deletes now, "Cut Object",
+  undoable), and the existing `paste` puts copies at the selection
+  through the engine's clipboard. The engine places a pasted copy's
+  anchor cell at the target and keeps the original's offset within its
+  cell, so a copy can land up to a cell away from the clicked cell (the
+  GTK front end does the same). Copy and Cut on the grid act on the
+  selected objects when there are any; the pasteboard gets a PNG of the
+  first copied object (`sheet_object_write_image`), so other
+  applications can take it.
+- Images: Insert → Image… (an open panel) and a paste of PNG or TIFF data
+  from the pasteboard (converted to PNG through `NSBitmapImageRep`) make
+  a `SheetObjectImage` at its own size (one image pixel per point, as the
+  engine sizes new images), as "Insert 1 Object". goffice guesses image
+  types through the shared MIME database, which Homebrew does not
+  install, so the bridge sniffs PNG, JPEG, GIF, BMP, and SVG itself and
+  passes the type. `GnmWorkbook.canPaste` replaces the pasteboard-string
+  check for the Paste items: the engine's clipboard when current, else
+  text or an image on the pasteboard.
+- The paste of an image runs an engine command inside the paste command,
+  which the bridge's message collection used to refuse (an assertion);
+  collections now nest, the inner command reporting into the outer.
+- `GNM_SNAPSHOT_OBJECTS=1` also copies the front object, pastes it at
+  A40, and inserts a green image; `Tests/BridgeTests/objects.m` covers
+  copy, paste, undo, cut and paste, the PNG on the pasteboard, an image
+  from data, a refused non-image, and an image pasted from the pasteboard.
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
    continue with Phase 4". `HANDOFF.md` §9 is the checklist: smoke tests,
    the Xcode build, the ADR-011 rule on upstream, what Henry has and has
    not seen on screen, and the rest of Phase 4 (object selection, move,
-   resize, delete, stacking, and the chart guru are done; next object
-   cut/copy/paste, the chart and object editors, images from files) from
+   resize, delete, stacking, the chart guru, the object clipboard, and
+   images are done; next the chart and object editors, then Phase 5) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -502,7 +531,8 @@
    on `MainMenu`, action on `GridView` or the window controller), drive it
    from a `GNM_SNAPSHOT_*` hook in `AppDelegate.swift`, look at the
    `-window.png` capture, update `docs/mvp-known-gaps.md`, commit.
-3. The state at the end of 2026-10-12: `main` at the chart guru commit
-   (after the sheet objects and autofilter ones), clean tree, nothing pushed,
+3. The state at the end of 2026-10-12: `main` at the object clipboard
+   and images commit (after the chart guru, sheet objects, and autofilter
+   ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in
    `build/prefix` has both patches applied.

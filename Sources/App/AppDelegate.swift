@@ -320,6 +320,27 @@ enum Snapshot {
                         NSLog("objects: after undo count=%ld attached=%d selected=%ld", sheet.sheetObjects.count,
                               objects[1].isAttached ? 1 : 0, grid.selectedObjects.count)
                     }
+                    // Copy the selected object and paste it at A40; then an
+                    // image made here, placed where the controller would put it.
+                    grid.copy(nil)
+                    sheet.selectCell(atColumn: 0, row: 39)
+                    grid.paste(nil)
+                    NSLog("objects: pasted copy count=%ld png=%ld bytes undo=%@", sheet.sheetObjects.count,
+                          NSPasteboard.general.data(forType: .png)?.count ?? 0, sheet.workbook?.undoLabel ?? "nil")
+                    let image = NSImage(size: NSSize(width: 60, height: 40), flipped: false) { rect in
+                        NSColor.systemGreen.setFill()
+                        rect.fill()
+                        return true
+                    }
+                    if let tiff = image.tiffRepresentation, let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) {
+                        let size = sheet.naturalSize(ofImageData: png)
+                        sheet.selectCell(atColumn: 6, row: 39)
+                        let frame = grid.suggestedFrameForNewObject(size: size)
+                        if let picture = try? sheet.insertImage(png, frame: frame) {
+                            grid.select(objects: [picture])
+                            NSLog("objects: image %@ at %@ undo=%@", picture.typeName, NSStringFromRect(picture.frame), sheet.workbook?.undoLabel ?? "nil")
+                        }
+                    }
                 }
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()

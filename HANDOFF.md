@@ -298,7 +298,8 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    Everything Phase 3 added after that (fill handle, header resizing, the
    status pull-down, freeze panes, tab context menu, the Paste Special,
    size, resize, tab color, sort, and filter sheets, the filter buttons
-   and their pop-up, the object handles and drags, the chart guru) is verified only
+   and their pop-up, the object handles and drags, the chart guru, the
+   image open panel) is verified only
    headlessly: ask what he sees before
    changing UI behavior, and take his report over the captures.
 5. Phase 3 (`docs/mvp-known-gaps.md` says what the MVP lacks). Done on
@@ -311,10 +312,11 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    moved, resized, deleted, and restacked (`GnmSheetObject`,
    `Tests/BridgeTests/objects.m`), and Insert → Chart… builds a chart
    from the selection with every goffice plot type (`GnmPlotType`,
-   `ChartGuru.swift`). Next: object cut/copy/paste
-   (`gnm_app_clipboard_cut_copy_obj`), the chart and object editors (the
-   guru's later pages: `cmd_so_graph_config`), images from files, then
-   Phase 5; the smaller Phase 3 gaps (Insert/Delete Cells,
+   `ChartGuru.swift`); objects cut, copy, and paste, and images come
+   from files or the pasteboard. Next: the chart and object editors
+   (the guru's later pages: `cmd_so_graph_config` on a `gog_graph_dup`;
+   `cmd_so_set_*` for widgets), then Phase 5; the smaller Phase 3 gaps
+   (Insert/Delete Cells,
    Goto and the name box, the formula bar, autocomplete, drag and drop,
    outlines) as filler.
 6. Headless checks for all of it: `GNM_SNAPSHOT=out.png scripts/run-app.sh

@@ -423,12 +423,13 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             return gridView.sheet != nil && formatSheetWindow == nil
         case #selector(setColumnWidth(_:)), #selector(setRowHeight(_:)),
              #selector(setDefaultColumnWidth(_:)), #selector(setDefaultRowHeight(_:)), #selector(renameSheet(_:)),
-             #selector(resizeSheet(_:)), #selector(setTabColor(_:)), #selector(sortCells(_:)), #selector(insertChart(_:)):
+             #selector(resizeSheet(_:)), #selector(setTabColor(_:)), #selector(sortCells(_:)), #selector(insertChart(_:)),
+             #selector(insertImage(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(removeSheet(_:)):
             return gridView.sheet != nil && workbook.canRemoveSheets
         case #selector(pasteSpecial(_:)):
-            return gridView.sheet != nil && window?.attachedSheet == nil && NSPasteboard.general.string(forType: .string) != nil
+            return gridView.sheet != nil && window?.attachedSheet == nil && workbook.canPaste
         case #selector(moveSheetLeft(_:)):
             return (gridView.sheet?.index ?? 0) > 0
         case #selector(moveSheetRight(_:)):
@@ -691,6 +692,39 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             } catch {
                 present(error)
             }
+        }
+    }
+
+    // MARK: Insert Image
+
+    @objc func insertImage(_ sender: Any?) {
+        guard let window, gridView.sheet != nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.image]
+        panel.allowsMultipleSelection = false
+        panel.message = "Choose an image to place on the sheet."
+        panel.beginSheetModal(for: window) { [weak self] response in
+            guard let self, response == .OK, let url = panel.url else { return }
+            insertImage(at: url)
+        }
+    }
+
+    func insertImage(at url: URL) {
+        guard let sheet = gridView.sheet else { return }
+        do {
+            let data = try Data(contentsOf: url)
+            let size = sheet.naturalSize(ofImageData: data)
+            guard size != .zero else {
+                throw NSError(domain: NSCocoaErrorDomain, code: NSFileReadCorruptFileError,
+                              userInfo: [NSLocalizedDescriptionKey: "“\(url.lastPathComponent)” is not an image the engine can read."])
+            }
+            let frame = gridView.suggestedFrameForNewObject(size: size)
+            let object = try sheet.insertImage(data, frame: frame)
+            gridView.select(objects: [object])
+            gridView.scrollToVisible(frame.insetBy(dx: -8, dy: -8))
+        } catch {
+            present(error)
         }
     }
 

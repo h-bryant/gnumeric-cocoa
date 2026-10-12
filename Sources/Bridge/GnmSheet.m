@@ -1856,6 +1856,98 @@ anchor_from_frame (Sheet const *sheet, CGRect frame, SheetObjectAnchor *in_out)
     } description:@"Could not restack the object." error:error];
 }
 
+#pragma mark - Object clipboard and images
+
+- (void)copySheetObjects:(NSArray<GnmSheetObject *> *)objects cut:(BOOL)cut
+{
+    if (_sv == NULL)
+        return;
+    GSList *list = NULL;
+    for (GnmSheetObject *wrapper in objects.reverseObjectEnumerator)
+        if (wrapper.isAttached)
+            list = g_slist_prepend (list, wrapper.engineObject);
+    if (list == NULL)
+        return;
+    [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        gnm_app_clipboard_cut_copy_obj (wbc, cut, _sv, list);   /* takes the list */
+        return FALSE;
+    } description:@"Could not copy the objects." error:NULL];
+}
+
+/* goffice guesses an image's type through the shared MIME database, which
+ * Homebrew does not install; sniff the common formats here instead. */
+static char const *
+image_type_for_data (NSData *data)
+{
+    unsigned char const *b = data.bytes;
+    NSUInteger n = data.length;
+    if (n >= 8 && memcmp (b, "\x89PNG\r\n\x1a\n", 8) == 0)
+        return "png";
+    if (n >= 3 && b[0] == 0xFF && b[1] == 0xD8 && b[2] == 0xFF)
+        return "jpeg";
+    if (n >= 6 && memcmp (b, "GIF8", 4) == 0)
+        return "gif";
+    if (n >= 2 && b[0] == 'B' && b[1] == 'M')
+        return "bmp";
+    if (n >= 5 && (memcmp (b, "<?xml", 5) == 0 || memcmp (b, "<svg", 4) == 0)) {
+        NSString *head = [[NSString alloc] initWithBytes:b length:MIN (n, 512) encoding:NSUTF8StringEncoding];
+        if ([head containsString:@"<svg"])
+            return "svg";
+    }
+    return NULL;
+}
+
+- (CGSize)naturalSizeOfImageData:(NSData *)data
+{
+    char const *type = image_type_for_data (data);
+    if (type == NULL)
+        return CGSizeZero;
+    GOImage *image = go_image_new_from_data (type, data.bytes, data.length, NULL, NULL);
+    if (image == NULL)
+        return CGSizeZero;
+    /* gnm_soi_default_size: the pixel size as points */
+    CGSize size = CGSizeMake (go_image_get_width (image) * colrow_compute_pixel_scale (_sheet, TRUE),
+                              go_image_get_height (image) * colrow_compute_pixel_scale (_sheet, FALSE));
+    g_object_unref (image);
+    return size;
+}
+
+/* Attach a new object at `frame` and commit it as a created object, as
+ * scg_objects_drag_commit does after a creation drag ("Insert 1 Object"). */
+- (GnmSheetObject *)_insertCreatedObject:(SheetObject *)so frame:(CGRect)frame anchorMode:(GnmSOAnchorMode)mode
+                             description:(NSString *)description error:(NSError **)error
+{
+    SheetObjectAnchor anchor;
+    sheet_object_anchor_init (&anchor, NULL, NULL, GOD_ANCHOR_DIR_DOWN_RIGHT, mode);
+    anchor_from_frame (_sheet, frame, &anchor);
+    sheet_object_set_anchor (so, &anchor);
+    sheet_object_set_sheet (so, _sheet);
+    GSList *objects = g_slist_prepend (NULL, so);
+    GSList *anchors = g_slist_prepend (NULL, sheet_object_anchor_dup (&anchor));
+    BOOL ok = [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_objects_move (wbc, objects, anchors, TRUE, "Insert 1 Object");   /* takes both lists */
+    } description:description error:error];
+    return ok ? [self _wrapperForObject:so] : nil;
+}
+
+- (GnmSheetObject *)insertImageData:(NSData *)data frame:(CGRect)frame error:(NSError **)error
+{
+    if (CGSizeEqualToSize ([self naturalSizeOfImageData:data], CGSizeZero)) {
+        if (error)
+            *error = [self.workbook.engine _errorWithCode:GnmErrorCommandFailed
+                                             description:@"The data is not an image the engine can read." collected:@[]];
+        return nil;
+    }
+    /* scg_image_create */
+    SheetObjectImage *soi = g_object_new (GNM_SO_IMAGE_TYPE, NULL);
+    sheet_object_image_set_image (soi, image_type_for_data (data), data.bytes, (unsigned) data.length);
+    SheetObject *so = GNM_SO (soi);
+    GnmSheetObject *wrapper = [self _insertCreatedObject:so frame:frame anchorMode:GNM_SO_ANCHOR_TWO_CELLS
+                                             description:@"Could not insert the image." error:error];
+    g_object_unref (so);
+    return wrapper;
+}
+
 #pragma mark - Charts
 
 - (CGSize)defaultChartSize
@@ -1904,19 +1996,9 @@ anchor_from_frame (Sheet const *sheet, CGRect frame, SheetObjectAnchor *in_out)
 
     SheetObject *so = sheet_object_graph_new (graph);   /* takes its own reference */
     g_object_unref (graph);
-    SheetObjectAnchor anchor;
-    sheet_object_anchor_init (&anchor, NULL, NULL, GOD_ANCHOR_DIR_DOWN_RIGHT, GNM_SO_ANCHOR_ONE_CELL);
-    anchor_from_frame (_sheet, frame, &anchor);
-    sheet_object_set_anchor (so, &anchor);
-    sheet_object_set_sheet (so, _sheet);
-    /* As scg_objects_drag_commit does for a created object: the command
-     * owns the insertion, so undo removes the chart again. */
-    GSList *objects = g_slist_prepend (NULL, so);
-    GSList *anchors = g_slist_prepend (NULL, sheet_object_anchor_dup (&anchor));
-    BOOL ok = [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
-        return cmd_objects_move (wbc, objects, anchors, TRUE, "Insert 1 Object");   /* takes both lists */
-    } description:@"Could not insert the chart." error:error];
-    GnmSheetObject *wrapper = ok ? [self _wrapperForObject:so] : nil;
+    /* Graphs do not resize with cells (the GTK closure's anchor mode). */
+    GnmSheetObject *wrapper = [self _insertCreatedObject:so frame:frame anchorMode:GNM_SO_ANCHOR_ONE_CELL
+                                             description:@"Could not insert the chart." error:error];
     g_object_unref (so);   /* the sheet and the command hold theirs */
     return wrapper;
 }

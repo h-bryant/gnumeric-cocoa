@@ -2,6 +2,28 @@
 // and resizing with undo, deleting with undo, restacking, what is not
 // selectable, and drawing with the stacking order.
 #import "GnmTest.h"
+#import <AppKit/NSPasteboard.h>
+#import <ImageIO/ImageIO.h>
+
+/* A solid PNG of the given pixel size. */
+static NSData *
+make_png (int w, int h)
+{
+    CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB ();
+    CGContextRef ctx = CGBitmapContextCreate (NULL, w, h, 8, 0, space, kCGImageAlphaPremultipliedLast);
+    CGContextSetRGBFillColor (ctx, 0.2, 0.4, 0.8, 1);
+    CGContextFillRect (ctx, CGRectMake (0, 0, w, h));
+    CGImageRef image = CGBitmapContextCreateImage (ctx);
+    NSMutableData *data = [NSMutableData data];
+    CGImageDestinationRef dest = CGImageDestinationCreateWithData ((__bridge CFMutableDataRef) data, CFSTR ("public.png"), 1, NULL);
+    CGImageDestinationAddImage (dest, image, NULL);
+    CGImageDestinationFinalize (dest);
+    CFRelease (dest);
+    CGImageRelease (image);
+    CGContextRelease (ctx);
+    CGColorSpaceRelease (space);
+    return data;
+}
 
 @interface ObjectRecorder : NSObject <GnmSheetDelegate>
 @property (nonatomic) NSInteger changes;
@@ -169,6 +191,63 @@ int main (void)
         inserted = [s insertChartOfType:pie seriesLayout:GnmChartSeriesLayoutColumns sharedAbscissa:YES frame:where error:&error];
         GNM_ASSERT (inserted != nil && inserted.isAttached, @"pie: %@", error);
         [wb undo];
+
+        /* copy and paste objects through the engine's clipboard; the
+         * pasteboard carries a PNG of the first for other applications */
+        NSUInteger n0 = s.sheetObjects.count;
+        [s copySheetObjects:@[chart] cut:NO];
+        GNM_ASSERT ([NSPasteboard.generalPasteboard dataForType:NSPasteboardTypePNG].length > 100, @"PNG on the pasteboard");
+        GNM_ASSERT (wb.canPaste, @"can paste");
+        [s selectCellAtColumn:30 row:30];
+        [s paste];
+        GNM_ASSERT (s.sheetObjects.count == n0 + 1, @"pasted a copy: %lu objects", (unsigned long) s.sheetObjects.count);
+        GnmSheetObject *pasted = s.sheetObjects.firstObject;
+        NSLog (@"pasted %@; AE31 at %g,%g; original %@", pasted, [s leftEdgeOfColumn:30], [s topEdgeOfRow:30], NSStringFromRect (f0));
+        /* paste_object puts the copy's anchor cell at the target, keeping
+         * the original's offset within its cell: within one cell of AE31 */
+        GNM_ASSERT (pasted != chart && [pasted.typeName isEqualToString:chart.typeName]
+                    && pasted.frame.origin.x >= [s leftEdgeOfColumn:30] - 1 && pasted.frame.origin.x <= [s leftEdgeOfColumn:31] + 1
+                    && pasted.frame.origin.y >= [s topEdgeOfRow:30] - 1 && pasted.frame.origin.y <= [s topEdgeOfRow:31] + 1,
+                    @"copy at AE31: %@", pasted);
+        NSLog (@"paste undo label: %@", wb.undoLabel);
+        [wb undo];
+        GNM_ASSERT (s.sheetObjects.count == n0 && !pasted.isAttached, @"paste undone: %lu objects", (unsigned long) s.sheetObjects.count);
+        /* a cut deletes now and pastes later */
+        [s copySheetObjects:@[chart] cut:YES];
+        GNM_ASSERT (!chart.isAttached && s.sheetObjects.count == n0 - 1, @"cut removed it");
+        GNM_ASSERT_EQ_STR (wb.undoLabel ?: @"", @"Cut Object");
+        [s selectCellAtColumn:30 row:40];
+        [s paste];
+        GNM_ASSERT (s.sheetObjects.count == n0, @"the cut object pasted back");
+        [wb undo];
+        [wb undo];
+        GNM_ASSERT (chart.isAttached && s.sheetObjects.count == n0, @"cut undone");
+        GNM_ASSERT (CGRectEqualToRect (chart.frame, f0), @"chart where it was");
+
+        /* an image from data, and one pasted from the system pasteboard */
+        NSData *solid = make_png (40, 30);
+        CGSize natural = [s naturalSizeOfImageData:solid];
+        GNM_ASSERT (natural.width > 30 && natural.width > natural.height, @"natural size %@", NSStringFromSize (natural));
+        GNM_ASSERT (CGSizeEqualToSize ([s naturalSizeOfImageData:[@"not an image" dataUsingEncoding:NSUTF8StringEncoding]], CGSizeZero),
+                    @"garbage is not an image");
+        GnmSheetObject *picture = [s insertImageData:solid frame:CGRectMake (100, 100, natural.width, natural.height) error:&error];
+        GNM_ASSERT (picture != nil && picture.isAttached && [picture.typeName isEqualToString:@"SheetObjectImage"], @"image: %@", error);
+        GNM_ASSERT (rect_close (picture.frame, CGRectMake (100, 100, natural.width, natural.height)), @"image at %@", NSStringFromRect (picture.frame));
+        GNM_ASSERT_EQ_STR (wb.undoLabel ?: @"", @"Insert 1 Object");
+        GNM_ASSERT ([s insertImageData:[@"junk" dataUsingEncoding:NSUTF8StringEncoding] frame:picture.frame error:&error] == nil, @"junk refused");
+        [wb undo];
+        GNM_ASSERT (!picture.isAttached, @"image insertion undone");
+        [NSPasteboard.generalPasteboard clearContents];
+        [NSPasteboard.generalPasteboard setData:solid forType:NSPasteboardTypePNG];
+        GNM_ASSERT (wb.canPaste, @"can paste an image");
+        [s selectCellAtColumn:5 row:60];
+        [s paste];
+        GnmSheetObject *pastedImage = s.sheetObjects.firstObject;
+        GNM_ASSERT ([pastedImage.typeName isEqualToString:@"SheetObjectImage"] && fabs (pastedImage.frame.origin.x - [s leftEdgeOfColumn:5]) <= 1
+                    && fabs (pastedImage.frame.origin.y - [s topEdgeOfRow:60]) <= 1, @"pasteboard image at F61: %@", pastedImage);
+        [wb undo];
+        GNM_ASSERT (!pastedImage.isAttached, @"pasteboard image undone");
+        [NSPasteboard.generalPasteboard clearContents];
 
         /* an autofilter's combo is a sheet object the user cannot select;
          * drawing with it present must not crash (no cairo renderer) */

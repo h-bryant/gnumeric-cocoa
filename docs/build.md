@@ -105,8 +105,9 @@ GNM_SNAPSHOT=/tmp/grid.png scripts/run-app.sh upstream/gnumeric/samples/format-t
 exercise zoom, editing and saving, the Format Cells model, the Phase 3
 commands, frozen panes, sheet management, the autofilter with the Sort
 command, a sheet resize, and a tab color, the sheet objects (select, move,
-resize, delete, undo), and chart insertion (which also writes the guru
-sheet to `-guru.png`) before the capture (`AppDelegate.swift`, `Snapshot`). The three snapshot files should agree. The grid capture draws the grid view
+resize, delete, undo, copy and paste, an inserted image), and chart
+insertion (which also writes the guru sheet to `-guru.png`) before the
+capture (`AppDelegate.swift`, `Snapshot`). The three snapshot files should agree. The grid capture draws the grid view
 alone; the window captures draw the whole hierarchy and are what caught the
 blank grid of 2026-10-11 (`docs/progress.md`). SwiftUI-hosted controls (the
 text fields, the tab control) may come out incomplete in the window
