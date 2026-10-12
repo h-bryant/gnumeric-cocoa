@@ -623,6 +623,11 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         let menu = NSMenu(title: "Object")
         if object.typeName == "SheetObjectGraph" {
             menu.addItem(withTitle: "Properties…", action: #selector(editObjectProperties(_:)), keyEquivalent: "")
+        }
+        if !sheet.imageFormats(for: object).isEmpty {
+            menu.addItem(withTitle: "Save as Image…", action: #selector(saveObjectAsImage(_:)), keyEquivalent: "")
+        }
+        if menu.items.count > 0 {
             menu.addItem(.separator())
         }
         menu.addItem(withTitle: "Delete", action: #selector(deleteObjects(_:)), keyEquivalent: "")
@@ -764,6 +769,15 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     @objc func editObjectProperties(_ sender: Any?) {
         guard let object = selectedObjects.first else { return }
         requestObjectEditor?(object)
+    }
+
+    /// Set by the window controller: the context menu's Save as Image…
+    /// needs a save panel.
+    var requestObjectImageSave: ((SheetObject) -> Void)?
+
+    @objc func saveObjectAsImage(_ sender: Any?) {
+        guard let object = selectedObjects.first else { return }
+        requestObjectImageSave?(object)
     }
     private var filterMenuButton: FilterButton?
     private var filterMenuChoices: FilterChoices?
@@ -916,6 +930,8 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
             return sheet.hasFilteredRows
         case #selector(editObjectProperties(_:)):
             return selectedObjects.count == 1 && selectedObjects[0].typeName == "SheetObjectGraph" && window?.attachedSheet == nil
+        case #selector(saveObjectAsImage(_:)):
+            return selectedObjects.count == 1 && !sheet.imageFormats(for: selectedObjects[0]).isEmpty && window?.attachedSheet == nil
         default:
             return true
         }

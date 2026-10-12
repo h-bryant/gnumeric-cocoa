@@ -299,41 +299,69 @@ set_color (CGColorRef *slot, CGColorRef color)
 
 /* ------------------------------------------------------------------------ */
 
+/* A node does not keep its object alive: goffice frees a tree parent
+ * first and children through it, and a series freed after its plot reads
+ * the plot's description from freed memory.  The editor's graph keeps
+ * everything attached alive; an object that leaves the tree goes at once,
+ * and its node becomes a tombstone (`isAttached` NO, empty name). */
+static void
+cb_node_object_gone (gpointer data, G_GNUC_UNUSED GObject *where)
+{
+    GnmChartNode *node = (__bridge GnmChartNode *) data;   /* held for the call: the editor may drop it */
+    [node _objectGone];
+}
+
 @implementation GnmChartNode {
     GogObject *_object;
     __weak GnmChartEditor *_editor;
+    NSString *_lastName;
 }
 
 - (instancetype)initWithObject:(GogObject *)object editor:(GnmChartEditor *)editor
 {
     if (!(self = [super init]))
         return nil;
-    _object = g_object_ref (object);
+    _object = object;
     _editor = editor;
+    g_object_weak_ref (G_OBJECT (object), cb_node_object_gone, (__bridge void *) self);
     return self;
 }
 
 - (void)dealloc
 {
     if (_object)
-        g_object_unref (_object);
+        g_object_weak_unref (G_OBJECT (_object), cb_node_object_gone, (__bridge void *) self);
+}
+
+- (void)_objectGone
+{
+    if (_object == NULL)
+        return;
+    GogObject *object = _object;   /* being finalized: not to be touched */
+    _object = NULL;
+    [_editor _forgetNodeForObject:object];
 }
 
 - (GogObject *)object { return _object; }
 
-- (NSString *)name { return GnmString (gog_object_get_name (_object)); }
-- (NSString *)role { return _object->role ? GnmString (_object->role->id) : @""; }
-- (NSString *)typeName { return GnmString (G_OBJECT_TYPE_NAME (_object)); }
+- (NSString *)name
+{
+    if (_object)
+        _lastName = GnmString (gog_object_get_name (_object));
+    return _lastName ?: @"";
+}
+- (NSString *)role { return _object && _object->role ? GnmString (_object->role->id) : @""; }
+- (NSString *)typeName { return _object ? GnmString (G_OBJECT_TYPE_NAME (_object)) : @""; }
 
 - (BOOL)isAttached
 {
     GnmChartEditor *editor = _editor;
-    return editor != nil && gog_object_get_graph (_object) == editor.graph;
+    return _object != NULL && editor != nil && gog_object_get_graph (_object) == editor.graph;
 }
 
 - (GnmChartNode *)parent
 {
-    GogObject *parent = gog_object_get_parent (_object);
+    GogObject *parent = _object ? gog_object_get_parent (_object) : NULL;
     return parent ? [_editor _nodeForObject:parent] : nil;
 }
 
@@ -341,32 +369,36 @@ set_color (CGColorRef *slot, CGColorRef color)
 {
     NSMutableArray *result = [NSMutableArray array];
     GnmChartEditor *editor = _editor;
-    if (editor == nil)
+    if (editor == nil || _object == NULL)
         return result;
     for (GSList *l = _object->children; l; l = l->next)
         [result addObject:[editor _nodeForObject:l->data]];
     return result;
 }
 
-- (BOOL)canDelete { return gog_object_is_deletable (_object); }
+- (BOOL)canDelete { return _object != NULL && gog_object_is_deletable (_object); }
 
 - (BOOL)canMoveForward
 {
     gboolean inc = FALSE, dec = FALSE;
-    gog_object_can_reorder (_object, &inc, &dec);
+    if (_object)
+        gog_object_can_reorder (_object, &inc, &dec);
     return inc;
 }
 
 - (BOOL)canMoveBackward
 {
     gboolean inc = FALSE, dec = FALSE;
-    gog_object_can_reorder (_object, &inc, &dec);
+    if (_object)
+        gog_object_can_reorder (_object, &inc, &dec);
     return dec;
 }
 
 - (NSArray<NSString *> *)addableRoles
 {
     NSMutableArray *result = [NSMutableArray array];
+    if (_object == NULL)
+        return result;
     GSList *roles = gog_object_possible_additions (_object);
     for (GSList *l = roles; l; l = l->next)
         [result addObject:GnmString (((GogObjectRole const *) l->data)->id)];
@@ -484,6 +516,8 @@ property_choices (GParamSpec *spec, NSArray<NSString *> **choices, NSArray<NSStr
 
 - (NSArray<GnmChartProperty *> *)properties
 {
+    if (_object == NULL)
+        return @[];
     guint n = 0;
     GParamSpec **specs = g_object_class_list_properties (G_OBJECT_GET_CLASS (_object), &n);
     /* Most specific class first (the GTK editor's page order), registration
@@ -573,7 +607,7 @@ property_choices (GParamSpec *spec, NSArray<NSString *> **choices, NSArray<NSStr
 - (NSArray<GnmChartDimension *> *)dimensions
 {
     NSMutableArray *result = [NSMutableArray array];
-    if (!GOG_IS_DATASET (_object))
+    if (_object == NULL || !GOG_IS_DATASET (_object))
         return result;
     GnmChartEditor *editor = _editor;
     Sheet *sheet = editor.sheet;
@@ -624,7 +658,7 @@ property_choices (GParamSpec *spec, NSArray<NSString *> **choices, NSArray<NSStr
 
 - (GnmChartStyle *)style
 {
-    if (!GO_IS_STYLED_OBJECT (_object))
+    if (_object == NULL || !GO_IS_STYLED_OBJECT (_object))
         return nil;
     GOStyle *style = go_styled_object_get_style (GO_STYLED_OBJECT (_object));
     return style ? [[GnmChartStyle alloc] initWithStyle:style] : nil;
@@ -633,7 +667,7 @@ property_choices (GParamSpec *spec, NSArray<NSString *> **choices, NSArray<NSStr
 - (NSString *)description
 {
     return [NSString stringWithFormat:@"<ChartNode %@ %@ (%@) %lu children>", self.role, self.name, self.typeName,
-            (unsigned long) g_slist_length (_object->children)];
+            _object ? (unsigned long) g_slist_length (_object->children) : 0UL];
 }
 
 @end
@@ -738,6 +772,11 @@ cb_copy_remove_data (G_GNUC_UNUSED GogGraph *graph, GOData *data, G_GNUC_UNUSED 
     return node;
 }
 
+- (void)_forgetNodeForObject:(GogObject *)object
+{
+    [_nodes removeObjectForKey:[NSValue valueWithPointer:object]];
+}
+
 - (void)_didChange
 {
     _changeCount++;
@@ -809,7 +848,8 @@ cb_copy_remove_data (G_GNUC_UNUSED GogGraph *graph, GOData *data, G_GNUC_UNUSED 
     if (!node.isAttached || !node.canDelete)
         return NO;
     GogObject *object = node.object;
-    /* The parent's reference comes to us (the GTK guru does the same). */
+    /* The parent's reference comes to us (the GTK guru does the same); it
+     * is the last one, so the object and its subtree go now. */
     if (!gog_object_clear_parent (object))
         return NO;
     g_object_unref (object);
@@ -912,6 +952,97 @@ cb_copy_remove_data (G_GNUC_UNUSED GogGraph *graph, GOData *data, G_GNUC_UNUSED 
     }
     [self _didChange];
     return YES;
+}
+
+- (GnmChartNode *)changeType:(GnmPlotType *)type ofPlot:(GnmChartNode *)node
+{
+    GogObject *old = node.object;
+    if (!node.isAttached || !GOG_IS_PLOT (old) || type.engineType == NULL)
+        return nil;
+    GogObject *chart = gog_object_get_parent (old);
+    if (!GOG_IS_CHART (chart))
+        return nil;
+    GogPlot *plot = gog_plot_new_by_type (type.engineType);
+    if (plot == NULL)
+        return nil;
+    /* The series in the tree's order, by Excel's dimension roles
+     * (gog_series_map_XL_dim: -1 is the name, below that the type has no
+     * such dimension).  A dimension the new type shares across its series
+     * (categories, say) comes from the first series that has one. */
+    GogSeriesDesc const *old_desc = &gog_plot_description (GOG_PLOT (old))->series;
+    GogSeriesDesc const *new_desc = &gog_plot_description (plot)->series;
+    gboolean *shared_done = g_new0 (gboolean, new_desc->num_dim + 1);
+    GSList *pairs = NULL;   /* (from, to) for the styles, once the plot is in the graph */
+    for (GSList const *l = old->children; l; l = l->next) {
+        if (!GOG_IS_SERIES (l->data))
+            continue;
+        GogSeries *from = l->data;
+        GogSeries *to = gog_plot_new_series (plot);
+        if (to == NULL)
+            break;   /* as many as the type holds */
+        pairs = g_slist_append (pairs, from);
+        pairs = g_slist_append (pairs, to);
+        GOData *name = gog_dataset_get_dim (GOG_DATASET (from), -1);
+        if (name)
+            gog_dataset_set_dim (GOG_DATASET (to), -1, go_data_dup (name), NULL);
+        for (unsigned i = 0; i < old_desc->num_dim; i++) {
+            GOData *data = gog_dataset_get_dim (GOG_DATASET (from), (int) i);
+            if (data == NULL)
+                continue;
+            int j = gog_series_map_XL_dim (to, old_desc->dim[i].ms_type);
+            if (j < 0 || (unsigned) j >= new_desc->num_dim)
+                continue;
+            if (new_desc->dim[j].is_shared) {
+                if (shared_done[j])
+                    continue;
+                shared_done[j] = TRUE;
+            }
+            gog_dataset_set_dim (GOG_DATASET (to), j, go_data_dup (data), NULL);
+        }
+    }
+    g_free (shared_done);
+    /* Out with the old plot (the node keeps its reference), the axes the
+     * new type wants (gog_chart_axis_set_assign adds the missing ones;
+     * the ones outside the set go here), then the new plot and the
+     * type's guru hints. */
+    gog_object_clear_parent (old);   /* the parent's reference is ours until the styles are copied */
+    gog_plot_axis_clear (GOG_PLOT (old), GOG_AXIS_SET_ALL);   /* no stale hold on the chart's axes */
+    GogAxisSet set = gog_plot_axis_set_pref (plot);
+    gog_chart_axis_set_assign (GOG_CHART (chart), set);
+    GSList *stale = NULL;
+    for (GSList *l = chart->children; l; l = l->next)
+        if (GOG_IS_AXIS (l->data) && !(set & (1 << gog_axis_get_atype (GOG_AXIS (l->data)))))
+            stale = g_slist_prepend (stale, l->data);
+    for (GSList *l = stale; l; l = l->next)
+        if (gog_object_is_deletable (l->data) && gog_object_clear_parent (l->data))
+            g_object_unref (l->data);
+    g_slist_free (stale);
+    gog_object_add_by_name (chart, "Plot", GOG_OBJECT (plot));
+    /* The styles, now that the theme has had its say on the new series:
+     * what was set by hand on the old ones stays set. */
+    for (GSList *l = pairs; l && l->next; l = l->next->next) {
+        GOStyle *from_style = go_styled_object_get_style (GO_STYLED_OBJECT (l->data));
+        GOStyle *to_style = go_styled_object_get_style (GO_STYLED_OBJECT (l->next->data));
+        if (from_style && to_style) {
+            GOStyle *copy = go_style_dup (from_style);
+            copy->interesting_fields = to_style->interesting_fields;
+            go_styled_object_set_style (GO_STYLED_OBJECT (l->next->data), copy);
+            g_object_unref (copy);
+        }
+    }
+    g_slist_free (pairs);
+    g_object_unref (old);   /* the last reference: the old plot and its series go now */
+    NSString *hints = [type propertyNamed:@"guru-hints"];
+    if ([hints containsString:@"backplane"] && gog_object_get_child_by_name (chart, "Backplane") == NULL)
+        gog_object_add_by_name (chart, "Backplane", NULL);
+    if ([hints containsString:@"major-grid"]) {
+        GSList *axes = gog_chart_get_axes (GOG_CHART (chart), GOG_AXIS_Y);
+        if (axes && gog_object_get_child_by_name (GOG_OBJECT (axes->data), "MajorGrid") == NULL)
+            gog_object_add_by_name (GOG_OBJECT (axes->data), "MajorGrid", NULL);
+        g_slist_free (axes);
+    }
+    [self _didChange];
+    return [self _nodeForObject:GOG_OBJECT (plot)];
 }
 
 - (BOOL)applyStyle:(GnmChartStyle *)style toNode:(GnmChartNode *)node

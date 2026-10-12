@@ -195,6 +195,15 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(ChartEditor)
 - (BOOL)setText:(NSString *)text forDimension:(GnmChartDimension *)dimension ofNode:(GnmChartNode *)node
           error:(NSError **)error NS_SWIFT_NAME(setText(_:for:of:));
 - (BOOL)applyStyle:(GnmChartStyle *)style toNode:(GnmChartNode *)node NS_SWIFT_NAME(apply(_:to:));
+/// Replace a plot with one of another type (the guru's type page on an
+/// existing chart).  The series come along: each one's name and the
+/// dimensions both types share, matched by their Excel roles
+/// (categories, values, bubbles, error bars); series beyond what the new
+/// type holds are dropped.  The chart's axes are reassigned to the new
+/// type's set, and its backplane and grid follow the type's guru hints as
+/// on insertion.  Returns the new plot's node, nil when `node` is not a
+/// plot or the type cannot be made.
+- (nullable GnmChartNode *)changeType:(GnmPlotType *)type ofPlot:(GnmChartNode *)node NS_SWIFT_NAME(changeType(_:ofPlot:));
 @end
 
 NS_ASSUME_NONNULL_END

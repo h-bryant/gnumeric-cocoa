@@ -30,6 +30,20 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(SheetObject)
 @property (nonatomic, readonly, getter=isSelectable) BOOL selectable;
 @end
 
+/// A format an object can be written as (`GnmSheet.imageFormatsForSheetObject:`).
+NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(ImageFormat)
+@interface GnmImageFormat : NSObject
+- (instancetype)init NS_UNAVAILABLE;
++ (instancetype)new NS_UNAVAILABLE;
+/// goffice's name: "png", "svg", "pdf", "jpeg", "ps", "eps".
+@property (nonatomic, readonly, copy) NSString *name;
+/// What to show ("PNG (raster)", "SVG (vector)").
+@property (nonatomic, readonly, copy) NSString *summary;
+@property (nonatomic, readonly, copy) NSString *fileExtension;
+/// Whether a resolution (dots per inch) applies: raster output of a chart.
+@property (nonatomic, readonly) BOOL usesResolution;
+@end
+
 /// `restackSheetObject:` directions (`cmd_object_raise`).
 typedef NS_ENUM(NSInteger, GnmSheetObjectStacking) {
     GnmSheetObjectPullToFront = 0,

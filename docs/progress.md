@@ -637,6 +637,49 @@
   same with Save As to a new name and to `.xml`; the captures say all
   three work, his screen decides.
 
+## 2026-10-12: Save as Image…, the plot type change, and weak chart nodes
+
+- Save as Image… (the object context menu, charts and images):
+  `GnmSheet.imageFormatsForSheetObject:` lists a chart's formats
+  (`gog_graph_get_supported_image_formats`: svg, png, jpeg, pdf, ps, eps)
+  or an image's own format first and the raster ones goffice can convert
+  to, as `GnmImageFormat` (name, summary, extension, whether a resolution
+  applies); `writeImageOfSheetObject:format:resolution:toURL:` writes
+  through `sheet_object_write_image` into a `GsfOutput` on the file. The
+  controller's save panel has a format pop-up that switches the allowed
+  type and the name's extension, and a resolution field (150 dpi, the GTK
+  dialog's) for a chart's raster formats. `objects.m` writes a chart as
+  PNG and SVG and an image back as PNG, and refuses an unwritable path.
+- The plot type change in place (`GnmChartEditor.changeType:ofPlot:`,
+  the editor's "Change Type…" button over the guru's type page with the
+  current type preselected and the series options hidden): a new plot of
+  the type, the series in the tree's order with their names and the
+  dimensions both types share matched by Excel's roles
+  (`gog_series_map_XL_dim`; a dimension the new type shares across its
+  series, such as a column plot's categories, comes from the first
+  series), the old plot out with its hold on the axes released
+  (`gog_plot_axis_clear`), the chart's axis set reassigned
+  (`gog_chart_axis_set_assign` adds what is missing; the axes outside the
+  set are removed here, since it leaves them), the new plot in, the
+  series' styles copied once the theme has had its say (copied earlier
+  they were reset), and the type's guru hints. XY to Column keeps axes
+  and their settings; to Pie and back makes new axes. `chart.m` covers
+  XY to Column to Pie and back, the carried names, values, categories,
+  and styles.
+- Chart nodes no longer keep their objects alive. goffice frees a tree
+  parent first and the children through it, and a series freed after its
+  plot reads the plot's description from freed memory, so nodes that
+  outlived the tree (the old plot's series after a type change) leaked
+  data on some runs and would have crashed on others. A node now watches
+  its object with `g_object_weak_ref`; the editor's graph keeps attached
+  objects alive, a removed object goes at once in tree order, and its
+  node becomes a tombstone (`isAttached` NO, the last name, nothing
+  else), forgotten by the editor's cache so a reused address gets a
+  fresh node. The style copy during a type change happens before the old
+  plot's last reference goes, for the same reason.
+- `GNM_SNAPSHOT_EDITOR=1` also changes the chart to columns before the
+  capture.
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -644,8 +687,8 @@
    the Xcode build, the ADR-011 rule on upstream, what Henry has and has
    not seen on screen, and the rest of Phase 4 (object selection, move,
    resize, delete, stacking, the chart guru, the object clipboard, images,
-   and the chart editor are done; next the smaller object items (Save as
-   Image…, plot type changes, image editors) or Phase 5) from
+   the chart editor with its plot type change, and Save as Image… are
+   done; next image and widget editors or Phase 5) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -668,8 +711,9 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-12: `main` at the chart editor commit
-   (after the object clipboard, chart guru, sheet objects, and autofilter
-   ones), clean tree, nothing pushed,
+3. The state at the end of 2026-10-12: `main` at the Save as Image and
+   plot type change commit (after the Quit fix, the plain-XML saves, the
+   chart editor, the object clipboard, chart guru, sheet objects, and
+   autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in
    `build/prefix` has both patches applied.

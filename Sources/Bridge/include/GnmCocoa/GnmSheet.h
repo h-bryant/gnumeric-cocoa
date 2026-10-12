@@ -352,6 +352,18 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
                                 sharedAbscissa:(BOOL)shared frame:(CGRect)frame
                                          error:(NSError **)error NS_SWIFT_NAME(insertChart(_:seriesLayout:sharedAbscissa:frame:));
 
+// Objects as image files (the GTK object menu's Save as Image…).
+/// The formats an object can be written as: a chart's vector and raster
+/// formats (`gog_graph_get_supported_image_formats`), an image's own
+/// format first and then the raster ones goffice can convert to; empty
+/// for objects that cannot be written.
+- (NSArray<GnmImageFormat *> *)imageFormatsForSheetObject:(GnmSheetObject *)object NS_SWIFT_NAME(imageFormats(for:));
+/// Write an object to a file in one of its formats
+/// (`sheet_object_write_image`); `resolution` in dots per inch matters
+/// for a chart's raster formats (the GTK dialog offers 150).
+- (BOOL)writeImageOfSheetObject:(GnmSheetObject *)object format:(GnmImageFormat *)format resolution:(double)resolution
+                          toURL:(NSURL *)url error:(NSError **)error NS_SWIFT_NAME(writeImage(of:format:resolution:to:));
+
 @end
 
 NS_ASSUME_NONNULL_END

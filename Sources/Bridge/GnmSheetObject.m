@@ -115,3 +115,28 @@ cb_object_changed (G_GNUC_UNUSED SheetObject *so, gpointer owner)
 }
 
 @end
+
+/* ------------------------------------------------------------------------ */
+
+@implementation GnmImageFormat
+
+- (instancetype)initWithFormat:(GOImageFormat)format
+{
+    GOImageFormatInfo const *info = go_image_get_format_info (format);
+    if (info == NULL || !(self = [super init]))
+        return nil;
+    _format = format;
+    _name = GnmString (info->name);
+    _fileExtension = GnmString (info->ext);
+    _usesResolution = info->is_dpi_useful;
+    NSString *kind = info->is_dpi_useful ? @"raster" : @"vector";
+    _summary = [NSString stringWithFormat:@"%@ (%@)", [_name uppercaseString], kind];
+    return self;
+}
+
+- (NSString *)description
+{
+    return [NSString stringWithFormat:@"<ImageFormat %@ .%@%@>", _name, _fileExtension, _usesResolution ? @" dpi" : @""];
+}
+
+@end

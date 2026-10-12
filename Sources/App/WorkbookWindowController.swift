@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import GnmCocoa
+import UniformTypeIdentifiers
 
 /// The document window: name box and formula line on top, the grid in a
 /// scroll view with column and row headers beside it, and sheet tabs at the
@@ -181,6 +182,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             self?.promptFilterCondition(for: button, choices: choices, custom: custom)
         }
         gridView.requestObjectEditor = { [weak self] object in self?.editObject(object) }
+        gridView.requestObjectImageSave = { [weak self] object in self?.saveObjectAsImage(object) }
     }
 
     private func present(_ error: Error) {
@@ -720,6 +722,76 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
                 gridView.needsDisplay = true
             }
         }
+    }
+
+    // MARK: Save as Image (the object context menu)
+
+    /// A save panel with the object's formats in a pop-up and, for a
+    /// chart's raster formats, the resolution (the GTK dialog's 150 dpi).
+    func saveObjectAsImage(_ object: SheetObject) {
+        guard let window, let sheet = gridView.sheet, window.attachedSheet == nil else { return }
+        let formats = sheet.imageFormats(for: object)
+        guard !formats.isEmpty else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let panel = NSSavePanel()
+        panel.message = "Save the \(object.typeName == "SheetObjectGraph" ? "chart" : "image") as a file."
+        panel.canCreateDirectories = true
+        panel.nameFieldStringValue = (object.name.isEmpty ? "Object" : object.name) + "." + formats[0].fileExtension
+        let formatPopUp = NSPopUpButton(frame: .zero, pullsDown: false)
+        for format in formats {
+            formatPopUp.addItem(withTitle: format.summary)
+        }
+        let resolution = NSTextField(string: "150")
+        resolution.translatesAutoresizingMaskIntoConstraints = false
+        resolution.widthAnchor.constraint(equalToConstant: 56).isActive = true
+        let dpiLabel = NSTextField(labelWithString: "Resolution (dpi):")
+        func applyFormat() {
+            let format = formats[max(0, formatPopUp.indexOfSelectedItem)]
+            if let type = UTType(filenameExtension: format.fileExtension) {
+                panel.allowedContentTypes = [type]
+            }
+            let name = (panel.nameFieldStringValue as NSString).deletingPathExtension
+            panel.nameFieldStringValue = name + "." + format.fileExtension
+            resolution.isEnabled = format.usesResolution
+            dpiLabel.textColor = format.usesResolution ? .labelColor : .disabledControlTextColor
+        }
+        let handler = FormatChangeHandler(applyFormat)
+        formatPopUp.target = handler
+        formatPopUp.action = #selector(FormatChangeHandler.changed(_:))
+        let row = NSStackView(views: [NSTextField(labelWithString: "Format:"), formatPopUp, dpiLabel, resolution])
+        row.orientation = .horizontal
+        row.spacing = 8
+        row.edgeInsets = NSEdgeInsets(top: 8, left: 12, bottom: 8, right: 12)
+        row.translatesAutoresizingMaskIntoConstraints = false
+        let accessory = NSView()
+        accessory.addSubview(row)
+        NSLayoutConstraint.activate([
+            row.centerXAnchor.constraint(equalTo: accessory.centerXAnchor),
+            row.topAnchor.constraint(equalTo: accessory.topAnchor),
+            row.bottomAnchor.constraint(equalTo: accessory.bottomAnchor),
+            accessory.widthAnchor.constraint(greaterThanOrEqualTo: row.widthAnchor),
+        ])
+        panel.accessoryView = accessory
+        applyFormat()
+        panel.beginSheetModal(for: window) { [weak self] response in
+            withExtendedLifetime(handler) {}
+            guard let self, response == .OK, let url = panel.url else { return }
+            let format = formats[max(0, formatPopUp.indexOfSelectedItem)]
+            let dpi = Double(resolution.stringValue) ?? 150
+            do {
+                try sheet.writeImage(of: object, format: format, resolution: format.usesResolution ? max(dpi, 1) : -1, to: url)
+            } catch {
+                present(error)
+            }
+        }
+    }
+
+    /// A target for the save panel's format pop-up (closures cannot be
+    /// targets).
+    private final class FormatChangeHandler: NSObject {
+        private let handler: () -> Void
+        init(_ handler: @escaping () -> Void) { self.handler = handler }
+        @objc func changed(_ sender: Any?) { handler() }
     }
 
     // MARK: Insert Image

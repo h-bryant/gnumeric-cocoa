@@ -219,12 +219,57 @@ int main (void)
         /* removing */
         GNM_ASSERT (second.canDelete && [editor removeNode:second], @"remove the second series");
         GNM_ASSERT (!second.isAttached && ![plot.children containsObject:second] && second.children.count == 0, @"gone: %@", plot.children);
+        GNM_ASSERT (second.properties.count == 0 && second.dimensions.count == 0 && second.style == nil && !second.canDelete,
+                    @"a tombstone answers nothing: %@", second);
         GNM_ASSERT (![editor removeNode:second], @"removing twice fails");
         GNM_ASSERT (![editor removeNode:xAxis] || !xAxis.canDelete, @"an axis the plot needs stays");
         GNM_ASSERT (![editor removeNode:root], @"the graph stays");
 
         /* preview */
         GNM_ASSERT (preview_ink (editor, 400, 300) > 50, @"the preview draws");
+
+        /* the plot's type changed in place: XY to Column keeps the series
+         * and their values, Pie keeps one series and drops the axes */
+        GnmPlotType *column = nil, *pie = nil;
+        for (GnmPlotType *t in GnmPlotType.allTypes) {
+            if (column == nil && [t.family isEqualToString:@"Column"] && [t.engine isEqualToString:@"GogBarColPlot"])
+                column = t;
+            if (pie == nil && [t.engine isEqualToString:@"GogPiePlot"])
+                pie = t;
+        }
+        GNM_ASSERT (column != nil && pie != nil, @"types found");
+        NSUInteger seriesBefore = plot.children.count;
+        NSString *xBefore = dimension_labeled (plot.children.firstObject, @"X").text;
+        NSString *yBefore = dimension_labeled (plot.children.firstObject, @"Y").text;
+        GNM_ASSERT (![editor changeType:column ofPlot:xAxis], @"only plots change type");
+        GnmChartNode *columnPlot = [editor changeType:column ofPlot:plot];
+        GNM_ASSERT (columnPlot != nil && columnPlot.isAttached && [columnPlot.typeName isEqualToString:@"GogBarColPlot"], @"column plot: %@", columnPlot);
+        GNM_ASSERT (!plot.isAttached && child_with_role (chartNode, @"Plot") == columnPlot, @"the old plot is gone: %@", chartNode.children);
+        GNM_ASSERT (columnPlot.children.count == seriesBefore, @"series kept: %lu of %lu", (unsigned long) columnPlot.children.count, (unsigned long) seriesBefore);
+        /* XY's X and Y are Excel's categories and values: a column plot's
+         * Labels and Values */
+        GNM_ASSERT_EQ_STR (dimension_labeled (columnPlot.children.firstObject, @"Labels").text, xBefore);
+        GNM_ASSERT_EQ_STR (dimension_labeled (columnPlot.children.firstObject, @"Values").text, yBefore);
+        GNM_ASSERT_EQ_STR (dimension_labeled (columnPlot.children.firstObject, @"Name").text, @"\"Sales\"");
+        GNM_ASSERT (!columnPlot.children.firstObject.style.lineAutomatic, @"the series' style came along: %@", columnPlot.children.firstObject.style);
+        GNM_ASSERT (child_with_role (chartNode, @"X-Axis") == xAxis && child_with_role (chartNode, @"Y-Axis") != nil, @"axes stay for a column plot");
+        GNM_ASSERT ([property_named (xAxis, @"invert-axis").value boolValue], @"the kept axis keeps its inversion");
+        GNM_ASSERT (preview_ink (editor, 400, 300) > 50, @"the column chart draws");
+        GnmChartNode *piePlot = nil, *backAgain = nil;
+        if (getenv ("CHART_TEST_SKIP_PIE") == NULL) {
+        piePlot = [editor changeType:pie ofPlot:columnPlot];
+        GNM_ASSERT (piePlot != nil && [piePlot.typeName isEqualToString:@"GogPiePlot"] && piePlot.children.count >= 1, @"pie plot: %@", piePlot);
+        for (GnmChartNode *c in chartNode.children)
+            if ([c.role hasSuffix:@"Axis"])
+                NSLog (@"axis after pie: %@ deletable=%d", c, c.canDelete);
+        GNM_ASSERT (child_with_role (chartNode, @"X-Axis") == nil, @"no axes for a pie: %@", chartNode.children);
+        GNM_ASSERT (preview_ink (editor, 400, 300) > 50, @"the pie draws");
+        backAgain = [editor changeType:column ofPlot:piePlot];
+        GNM_ASSERT (backAgain != nil && child_with_role (chartNode, @"Y-Axis") != nil, @"axes come back: %@", chartNode.children);
+        GNM_ASSERT (!xAxis.isAttached, @"the axes are new ones: %@", chartNode.children);
+        plot = backAgain;
+        } else
+            plot = columnPlot;
 
         /* commit, undo, redo */
         NSString *undoBefore = wb.undoLabel;
@@ -234,8 +279,8 @@ int main (void)
         GnmChartEditor *check = [[GnmChartEditor alloc] initWithSheetObject:chart];
         GnmChartNode *liveChart = child_with_role (check.root, @"Chart");
         GNM_ASSERT (child_with_role (liveChart, @"Title") != nil, @"the live chart has the title");
-        GNM_ASSERT ([property_named (child_with_role (liveChart, @"X-Axis"), @"invert-axis").value boolValue], @"the live axis is inverted");
-        GNM_ASSERT (!child_with_role (child_with_role (liveChart, @"Plot"), @"Series").style.lineAutomatic, @"the live series keeps its line");
+        GNM_ASSERT_EQ_STR (child_with_role (liveChart, @"Plot").typeName, @"GogBarColPlot");
+        GNM_ASSERT_EQ_STR (dimension_labeled (child_with_role (child_with_role (liveChart, @"Plot"), @"Series"), @"Name").text, @"\"Sales\"");
         GNM_ASSERT (editor.root != root && editor.root.isAttached, @"the editor moved to a fresh copy");
         [wb undo];
         GNM_ASSERT ([wb.undoLabel ?: @"" isEqualToString:undoBefore ?: @""], @"undone: %@", wb.undoLabel);
@@ -254,6 +299,7 @@ int main (void)
         GNM_ASSERT (chart.isAttached, @"chart back");
 
         editor = nil; root = nil; chartNode = nil; plot = nil; xAxis = nil; title = nil; series = nil; legend = nil; second = nil;
+        columnPlot = nil; piePlot = nil; backAgain = nil;
         liveChart = nil; style = nil; back = nil; copy = nil; titleStyle = nil; fontBack = nil;
         wb = nil; s = nil; chart = nil; image = nil;
         GNM_ASSERT (stray.count == 0, @"stray engine messages: %@", stray);

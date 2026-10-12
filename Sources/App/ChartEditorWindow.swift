@@ -22,6 +22,7 @@ final class ChartEditorWindow: NSObject, NSOutlineViewDataSource, NSOutlineViewD
     private var endEditingHandlers: [NSTextField: (String) -> Void] = [:]
     private var style: ChartStyle?
     private var completion: ((Bool) -> Void)?
+    private var typePicker: ChartGuru?
 
     init(editor: ChartEditor) {
         self.editor = editor
@@ -279,6 +280,10 @@ final class ChartEditorWindow: NSObject, NSOutlineViewDataSource, NSOutlineViewD
         subtitle.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
         form.addArrangedSubview(title)
         form.addArrangedSubview(subtitle)
+        if node.role == "Plot" {
+            let change = NSButton(title: "Change Type…", target: self, action: #selector(changeTypePressed(_:)))
+            form.addArrangedSubview(change)
+        }
 
         let dimensions = node.dimensions
         if !dimensions.isEmpty {
@@ -524,6 +529,29 @@ final class ChartEditorWindow: NSObject, NSOutlineViewDataSource, NSOutlineViewD
 
     @objc private func controlChanged(_ sender: NSControl) {
         handlers[sender]?()
+    }
+
+    /// The guru's type page over the selected plot: the series come along.
+    @objc private func changeTypePressed(_ sender: Any?) {
+        guard let node = selectedNode, node.role == "Plot", typePicker == nil else { return }
+        let picker = ChartGuru(typeOnly: true, preselecting: node.typeName)
+        typePicker = picker
+        picker.run(in: window) { [weak self] choice in
+            guard let self else { return }
+            typePicker = nil
+            if let choice {
+                changePlotType(to: choice.type)
+            }
+        }
+    }
+
+    /// Replace the selected plot with one of `type` (also the headless checks).
+    @discardableResult
+    func changePlotType(to type: PlotType) -> ChartNode? {
+        guard let node = selectedNode, node.role == "Plot", let plot = editor.changeType(type, ofPlot: node) else { return nil }
+        changed()
+        reloadTree(selecting: plot)
+        return plot
     }
 
     func controlTextDidEndEditing(_ notification: Notification) {

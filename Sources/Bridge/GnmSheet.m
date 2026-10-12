@@ -1993,6 +1993,76 @@ image_type_for_data (NSData *data)
                        GO_CM_TO_PT (8.0) * colrow_compute_pixel_scale (_sheet, FALSE));
 }
 
+#pragma mark - Objects as images
+
+- (NSArray<GnmImageFormat *> *)imageFormatsForSheetObject:(GnmSheetObject *)object
+{
+    NSMutableArray *result = [NSMutableArray array];
+    SheetObject *so = object.engineObject;
+    if (so == NULL)
+        return result;
+    GSList *formats = NULL;
+    if (GNM_IS_SO_GRAPH (so)) {
+        formats = gog_graph_get_supported_image_formats ();
+    } else if (GNM_IS_SO_IMAGE (so)) {
+        /* sheet-object-image.c soi_cb_save_as: the raster formats with a
+         * saver, the image's own format first */
+        formats = go_image_get_formats_with_pixbuf_saver ();
+        char *type = NULL;
+        g_object_get (so, "image-type", &type, NULL);
+        GOImageFormat own = type ? go_image_get_format_from_name (type) : GO_IMAGE_FORMAT_UNKNOWN;
+        g_free (type);
+        if (own != GO_IMAGE_FORMAT_UNKNOWN) {
+            formats = g_slist_remove (formats, GUINT_TO_POINTER (own));
+            formats = g_slist_prepend (formats, GUINT_TO_POINTER (own));
+        }
+    }
+    for (GSList *l = formats; l; l = l->next) {
+        GnmImageFormat *format = [[GnmImageFormat alloc] initWithFormat:(GOImageFormat) GPOINTER_TO_UINT (l->data)];
+        if (format)
+            [result addObject:format];
+    }
+    g_slist_free (formats);
+    return result;
+}
+
+- (BOOL)writeImageOfSheetObject:(GnmSheetObject *)object format:(GnmImageFormat *)format resolution:(double)resolution
+                          toURL:(NSURL *)url error:(NSError **)error
+{
+    SheetObject *so = object.engineObject;
+    NSString *failure = [NSString stringWithFormat:@"Could not write “%@”.", url.lastPathComponent];
+    if (so == NULL || !GNM_IS_SO_IMAGEABLE (so)) {
+        if (error)
+            *error = [self.workbook.engine _errorWithCode:GnmErrorSaveFailed description:failure
+                                              collected:@[[NSError errorWithDomain:GnmErrorDomain code:GnmErrorSaveFailed userInfo:@{
+                                                  NSLocalizedDescriptionKey: @"This object cannot be written as an image." }]]];
+        return NO;
+    }
+    GError *gerr = NULL;
+    GsfOutput *output = gsf_output_stdio_new (url.path.fileSystemRepresentation, &gerr);
+    if (output == NULL) {
+        if (error)
+            *error = [self.workbook.engine _errorWithCode:GnmErrorSaveFailed description:failure
+                                              collected:@[[NSError errorWithDomain:GnmErrorDomain code:GnmErrorSaveFailed userInfo:@{
+                                                  NSLocalizedDescriptionKey: GnmString (gerr ? gerr->message : "") }]]];
+        g_clear_error (&gerr);
+        return NO;
+    }
+    sheet_object_write_image (so, format.name.UTF8String, resolution, output, &gerr);
+    if (!gsf_output_is_closed (output))
+        gsf_output_close (output);
+    g_object_unref (output);
+    if (gerr) {
+        if (error)
+            *error = [self.workbook.engine _errorWithCode:GnmErrorSaveFailed description:failure
+                                              collected:@[[NSError errorWithDomain:GnmErrorDomain code:GnmErrorSaveFailed userInfo:@{
+                                                  NSLocalizedDescriptionKey: GnmString (gerr->message) }]]];
+        g_error_free (gerr);
+        return NO;
+    }
+    return YES;
+}
+
 - (GnmSheetObject *)insertChartOfType:(GnmPlotType *)type seriesLayout:(GnmChartSeriesLayout)layout
                        sharedAbscissa:(BOOL)shared frame:(CGRect)frame error:(NSError **)error
 {

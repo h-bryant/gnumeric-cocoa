@@ -224,6 +224,37 @@ int main (void)
         GNM_ASSERT (chart.isAttached && s.sheetObjects.count == n0, @"cut undone");
         GNM_ASSERT (CGRectEqualToRect (chart.frame, f0), @"chart where it was");
 
+        /* objects as image files: a chart in its vector and raster formats */
+        {
+            NSArray<GnmImageFormat *> *formats = [s imageFormatsForSheetObject:inserted.isAttached ? inserted : chart];
+            GnmSheetObject *graph = nil;
+            for (GnmSheetObject *o in s.sheetObjects)
+                if (graph == nil && [o.typeName isEqualToString:@"SheetObjectGraph"])
+                    graph = o;
+            formats = [s imageFormatsForSheetObject:graph];
+            NSArray *names = [formats valueForKey:@"name"];
+            GNM_ASSERT ([names containsObject:@"png"] && [names containsObject:@"svg"] && [names containsObject:@"pdf"], @"chart formats: %@", formats);
+            GnmImageFormat *png = nil, *svg = nil;
+            for (GnmImageFormat *f in formats) {
+                if ([f.name isEqualToString:@"png"]) png = f;
+                if ([f.name isEqualToString:@"svg"]) svg = f;
+            }
+            GNM_ASSERT (png.usesResolution && !svg.usesResolution && [png.fileExtension isEqualToString:@"png"], @"format details: %@ %@", png, svg);
+            NSString *outdir = gnm_test_env ("GNM_TEST_OUT");
+            NSURL *pngURL = [NSURL fileURLWithPath:[outdir stringByAppendingPathComponent:@"chart-export.png"]];
+            NSURL *svgURL = [NSURL fileURLWithPath:[outdir stringByAppendingPathComponent:@"chart-export.svg"]];
+            GNM_ASSERT ([s writeImageOfSheetObject:graph format:png resolution:150 toURL:pngURL error:&error], @"write png: %@", error);
+            GNM_ASSERT ([s writeImageOfSheetObject:graph format:svg resolution:-1 toURL:svgURL error:&error], @"write svg: %@", error);
+            NSData *pngHead = [[NSFileHandle fileHandleForReadingAtPath:pngURL.path] readDataOfLength:4];
+            unsigned char magic[] = { 0x89, 'P', 'N', 'G' };
+            GNM_ASSERT ([pngHead isEqualToData:[NSData dataWithBytes:magic length:4]], @"png written");
+            NSString *svgText = [NSString stringWithContentsOfFile:svgURL.path encoding:NSUTF8StringEncoding error:NULL];
+            GNM_ASSERT ([svgText containsString:@"<svg"], @"svg written: %@", [svgText substringToIndex:MIN (60, svgText.length)]);
+            NSURL *bad = [NSURL fileURLWithPath:@"/nonexistent-dir/chart.png"];
+            GNM_ASSERT (![s writeImageOfSheetObject:graph format:png resolution:150 toURL:bad error:&error] && error != nil, @"unwritable: %@", error);
+            error = nil;
+        }
+
         /* an image from data, and one pasted from the system pasteboard */
         NSData *solid = make_png (40, 30);
         CGSize natural = [s naturalSizeOfImageData:solid];
@@ -235,6 +266,13 @@ int main (void)
         GNM_ASSERT (rect_close (picture.frame, CGRectMake (100, 100, natural.width, natural.height)), @"image at %@", NSStringFromRect (picture.frame));
         GNM_ASSERT_EQ_STR (wb.undoLabel ?: @"", @"Insert 1 Object");
         GNM_ASSERT ([s insertImageData:[@"junk" dataUsingEncoding:NSUTF8StringEncoding] frame:picture.frame error:&error] == nil, @"junk refused");
+        /* the image's own format comes first; written back, it is a PNG */
+        NSArray<GnmImageFormat *> *pictureFormats = [s imageFormatsForSheetObject:picture];
+        GNM_ASSERT (pictureFormats.count > 0 && [pictureFormats.firstObject.name isEqualToString:@"png"], @"image formats: %@", pictureFormats);
+        NSURL *pictureURL = [NSURL fileURLWithPath:[gnm_test_env ("GNM_TEST_OUT") stringByAppendingPathComponent:@"image-export.png"]];
+        GNM_ASSERT ([s writeImageOfSheetObject:picture format:pictureFormats.firstObject resolution:-1 toURL:pictureURL error:&error], @"write image: %@", error);
+        NSData *written = [NSData dataWithContentsOfURL:pictureURL];
+        GNM_ASSERT (written.length > 8 && ((const unsigned char *) written.bytes)[1] == 'P', @"image written: %lu bytes", (unsigned long) written.length);
         [wb undo];
         GNM_ASSERT (!picture.isAttached, @"image insertion undone");
         [NSPasteboard.generalPasteboard clearContents];

@@ -26,7 +26,17 @@ final class ChartGuru: NSObject, NSTableViewDataSource, NSTableViewDelegate {
     private var images: [String: NSImage] = [:]
     private var completion: ((Choice?) -> Void)?
 
-    override init() {
+    /// Only the type: the chart editor's "Change Type…" (no series options).
+    private let typeOnly: Bool
+    private let preselectedEngine: String?
+
+    override convenience init() {
+        self.init(typeOnly: false, preselecting: nil)
+    }
+
+    init(typeOnly: Bool, preselecting engine: String?) {
+        self.typeOnly = typeOnly
+        self.preselectedEngine = engine
         var families: [String] = []
         var byFamily: [String: [PlotType]] = [:]
         for type in PlotType.allTypes {
@@ -40,10 +50,19 @@ final class ChartGuru: NSObject, NSTableViewDataSource, NSTableViewDelegate {
         self.typesByFamily = byFamily
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 660, height: 460),
                           styleMask: [.titled], backing: .buffered, defer: false)
-        window.title = "Insert Chart"
+        window.title = typeOnly ? "Change Plot Type" : "Insert Chart"
         window.isReleasedWhenClosed = false   // closed below, released with this object
         super.init()
         build()
+        if let engine = preselectedEngine, let family = families.first(where: { byFamily[$0]?.contains { $0.engine == engine } == true }),
+           let familyRow = families.firstIndex(of: family) {
+            familyTable.selectRowIndexes([familyRow], byExtendingSelection: false)
+            reloadTypes()
+            if let typeRow = byFamily[family]?.firstIndex(where: { $0.engine == engine }) {
+                typeTable.selectRowIndexes([typeRow], byExtendingSelection: false)
+                updateSummary()
+            }
+        }
     }
 
     private var selectedFamily: String? {
@@ -94,9 +113,11 @@ final class ChartGuru: NSObject, NSTableViewDataSource, NSTableViewDelegate {
         let options = NSStackView(views: [NSTextField(labelWithString: "Series as:"), layout, shared])
         options.orientation = .horizontal
         options.spacing = 8
+        options.isHidden = typeOnly
 
         let cancel = NSButton(title: "Cancel", target: self, action: #selector(cancelPressed(_:)))
         cancel.keyEquivalent = "\u{1b}"
+        insertButton.title = typeOnly ? "Change" : "Insert"
         insertButton.target = self
         insertButton.action = #selector(insertPressed(_:))
         insertButton.keyEquivalent = "\r"

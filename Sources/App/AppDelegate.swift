@@ -429,6 +429,13 @@ enum Snapshot {
                             sheetWindow.select(node: series)
                             NSLog("editor: series %@ dims=%@ style line auto=%d", series.name, series.dimensions.map(\.text),
                                   series.style?.lineAutomatic == true ? 1 : 0)
+                            // and the plot as columns (the Change Type… button's outcome)
+                            if let column = PlotType.allTypes.first(where: { $0.family == "Column" && $0.engine == "GogBarColPlot" }) {
+                                sheetWindow.select(node: plot)
+                                let changed = sheetWindow.changePlotType(to: column)
+                                NSLog("editor: plot now %@ with %ld series, old attached=%d", changed?.typeName ?? "nil",
+                                      changed?.children.count ?? 0, plot.isAttached ? 1 : 0)
+                            }
                         }
                     }
                     if let content = sheetWindow.window.contentView {

@@ -319,9 +319,9 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    `ChartGuru.swift`); objects cut, copy, and paste, and images come
    from files or the pasteboard; the chart editor (`GnmChartEditor`,
    `ChartEditorWindow.swift`, `Tests/BridgeTests/chart.m`) edits a copy
-   of the graph and commits it as "Reconfigure Graph". Next: the smaller
-   object items (Save as Image…, a plot type change in place, image and
-   widget editors with `cmd_so_set_*`) or Phase 5; the smaller Phase 3
+   of the graph and commits it as "Reconfigure Graph", changes a plot's
+   type in place, and objects save as image files. Next: image and widget
+   editors (`cmd_so_set_*`) or Phase 5; the smaller Phase 3
    gaps (Insert/Delete Cells,
    Goto and the name box, the formula bar, autocomplete, drag and drop,
    outlines) as filler.

@@ -162,6 +162,11 @@ GType gnm_cocoa_sheet_control_get_type (void);
 - (void)_engineObjectDidChange;
 @end
 
+@interface GnmImageFormat ()
+- (instancetype)initWithFormat:(GOImageFormat)format NS_DESIGNATED_INITIALIZER;
+@property (nonatomic, readonly) GOImageFormat format;
+@end
+
 @interface GnmChartProperty ()
 - (instancetype)initWithName:(NSString *)name label:(NSString *)label kind:(GnmChartPropertyKind)kind value:(nullable id)value
                      choices:(NSArray<NSString *> *)choices choiceLabels:(NSArray<NSString *> *)choiceLabels
@@ -181,9 +186,12 @@ GType gnm_cocoa_sheet_control_get_type (void);
 @end
 
 @interface GnmChartNode ()
-/// Keeps a reference on the object; the editor caches one node per object.
+/// Watches the object without keeping it alive (a weak reference); the
+/// editor caches one node per object and forgets it when the object goes.
 - (instancetype)initWithObject:(GogObject *)object editor:(GnmChartEditor *)editor NS_DESIGNATED_INITIALIZER;
-@property (nonatomic, readonly) GogObject *object;
+/// NULL once the object is gone.
+@property (nonatomic, readonly, nullable) GogObject *object;
+- (void)_objectGone;
 @end
 
 @interface GnmChartEditor ()
@@ -192,6 +200,7 @@ GType gnm_cocoa_sheet_control_get_type (void);
 /// The sheet the chart is on, for expressions and their dependencies.
 @property (nonatomic, readonly, nullable) Sheet *sheet;
 - (GnmChartNode *)_nodeForObject:(GogObject *)object;
+- (void)_forgetNodeForObject:(GogObject *)object;
 - (void)_didChange;
 @end
 

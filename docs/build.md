@@ -109,7 +109,8 @@ command, a sheet resize, and a tab color, the sheet objects (select, move,
 resize, delete, undo, copy and paste, an inserted image), chart
 insertion (which also writes the guru sheet to `-guru.png`), and the chart
 editor on the sheet's first chart (a title, an inverted axis, a red series,
-the editor written to `-editor.png`, then applied) before the
+the plot changed to columns, the editor written to `-editor.png`, then
+applied) before the
 capture (`AppDelegate.swift`, `Snapshot`). The typing hook saves as a
 Save As next to the snapshot; with `GNM_SNAPSHOT_SAVE_INPLACE=1` it saves
 the opened file in place instead (give it a copy). Should a quit ever go
