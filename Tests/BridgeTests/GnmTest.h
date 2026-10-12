@@ -21,16 +21,24 @@ static inline NSString *gnm_test_env (const char *name) {
     return [NSString stringWithUTF8String:v];
 }
 
-static inline GnmEngine *gnm_test_start_engine (BOOL runLoop) {
+static inline GnmEngineConfiguration *gnm_test_configuration (BOOL runLoop) {
     GnmEngineConfiguration *cfg = [[GnmEngineConfiguration alloc] init];
     cfg.programName = @"gnm-bridge-test";
     cfg.persistsPreferences = NO;                     /* docs/architecture.md §2 trap */
     cfg.settingsSchemaDirectory = gnm_test_env ("GNM_TEST_SCHEMA_DIR");
     cfg.integratesMainRunLoop = runLoop;
+    return cfg;
+}
+
+static inline GnmEngine *gnm_test_start_engine_with (GnmEngineConfiguration *cfg) {
     NSError *error = nil;
     GnmEngine *engine = [GnmEngine startWithConfiguration:cfg error:&error];
     if (!engine) { NSLog (@"engine start failed: %@", error); exit (1); }
     return engine;
+}
+
+static inline GnmEngine *gnm_test_start_engine (BOOL runLoop) {
+    return gnm_test_start_engine_with (gnm_test_configuration (runLoop));
 }
 
 static inline int gnm_test_finish (const char *name) {

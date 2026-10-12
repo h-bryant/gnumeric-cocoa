@@ -118,6 +118,7 @@ GSF_CLASS_FULL (GnmCocoaCmdContext, gnm_cocoa_cmd_context,
     c.settingsSchemaDirectory = self.settingsSchemaDirectory;
     c.extraPluginDirectories = self.extraPluginDirectories;
     c.integratesMainRunLoop = self.integratesMainRunLoop;
+    c.xmlCompressionLevel = self.xmlCompressionLevel;
     return c;
 }
 
@@ -175,6 +176,8 @@ static BOOL engineWasStarted;   /* gnm_init cannot be repeated in one process */
     gnm_pre_parse_init (1, argv);
     gnm_conf_set_persistence (_configuration.persistsPreferences);
     gnm_init ();
+    if (_configuration.xmlCompressionLevel != nil)
+        gnm_conf_set_core_xml_compression_level (_configuration.xmlCompressionLevel.intValue);
 
     _cc = g_object_new (gnm_cocoa_cmd_context_get_type (), NULL);
     ((GnmCocoaCmdContext *) _cc)->engine = (__bridge void *) self;

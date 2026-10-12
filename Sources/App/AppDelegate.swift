@@ -87,6 +87,11 @@ enum EngineLocator {
         if let prefix {
             configuration.settingsSchemaDirectory = prefix + "/share/glib-2.0/schemas"
         }
+        // Henry's standing choice (2026-10-12): `.gnumeric` files as plain
+        // XML, the GTK preference's 0, so they diff under version control.
+        // Set here at every launch until the Preferences window exists;
+        // remove this line when it does.
+        configuration.xmlCompressionLevel = 0
         return configuration
     }
 }

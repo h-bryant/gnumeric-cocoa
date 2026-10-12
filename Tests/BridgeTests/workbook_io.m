@@ -5,7 +5,10 @@
 int main (void)
 {
     @autoreleasepool {
-        GnmEngine *engine = gnm_test_start_engine (NO);
+        /* The app's choice: .gnumeric files as plain XML (level 0). */
+        GnmEngineConfiguration *cfg = gnm_test_configuration (NO);
+        cfg.xmlCompressionLevel = @0;
+        GnmEngine *engine = gnm_test_start_engine_with (cfg);
       @autoreleasepool {   /* every workbook must be gone before shutdown */
         NSMutableArray<NSError *> *stray = [NSMutableArray array];
         engine.messageHandler = ^(NSError *e) { [stray addObject:e]; };
@@ -36,6 +39,9 @@ int main (void)
         /* uncompressed XML must be diffable text (HANDOFF.md Phase 2) */
         NSData *head = [[NSFileHandle fileHandleForReadingAtPath:xml.path] readDataOfLength:5];
         GNM_ASSERT ([head isEqualToData:[@"<?xml" dataUsingEncoding:NSUTF8StringEncoding]], @".xml saver output is plain XML");
+        /* and with the compression level at 0, so is the .gnumeric file */
+        head = [[NSFileHandle fileHandleForReadingAtPath:gnm.path] readDataOfLength:5];
+        GNM_ASSERT ([head isEqualToData:[@"<?xml" dataUsingEncoding:NSUTF8StringEncoding]], @".gnumeric at level 0 is plain XML");
 
         for (NSURL *u in @[gnm, xml, x2]) {
             GnmWorkbook *back = [engine openWorkbookAtURL:u error:&error];

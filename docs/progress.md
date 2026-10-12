@@ -575,6 +575,20 @@
   bars, gradient and image fills, the guru's manual object positions,
   "Save as Image…", editors for images and widgets (`cmd_so_set_*`).
 
+## 2026-10-12: plain-XML `.gnumeric` saves (an interim preference)
+
+- Henry's request, pending the Preferences window: save `.gnumeric` files
+  uncompressed, the GTK preference "Default compression level for
+  Gnumeric files" at 0, so they diff under version control.
+  `GnmEngineConfiguration.xmlCompressionLevel` (nil keeps the stored
+  preference) is applied after `gnm_init()` through
+  `gnm_conf_set_core_xml_compression_level`, which with persistence on
+  stores it like any preference change, in the app's own defaults domain
+  (ADR-010), not the GTK Gnumeric's. `AppDelegate.configuration()` sets 0
+  at every launch; remove that line when the Preferences window arrives.
+  `Tests/BridgeTests/workbook_io.m` starts its engine at level 0 and
+  checks the `.gnumeric` output starts with `<?xml`.
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and

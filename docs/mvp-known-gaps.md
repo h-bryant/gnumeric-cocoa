@@ -33,7 +33,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | EditPasteSpecial | ported | Edit → Paste Special… (⌘⇧V): what, operation, region transform, the four switches, Paste Link |
 | EditFind, EditReplace | no | Phase 5 |
 | EditRecalc | ported | Data → Recalculate (F9), `workbook_recalc_all` |
-| EditPreferences | no | Phase 5 |
+| EditPreferences | no | Phase 5; until then `AppDelegate` sets the `.gnumeric` compression level to 0 (plain XML) at every launch |
 | EditClearContent | ported | Delete key and Edit → Delete |
 | EditClearAll, EditClearFormats, EditClearComments | ported | Edit → Clear submenu |
 | EditClear*Filtered (4) | ported | Edit → Clear → "… Filtered Rows" (2026-10-12); as in GTK they skip the rows a filter hides |

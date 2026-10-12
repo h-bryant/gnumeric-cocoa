@@ -31,6 +31,13 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(EngineConfiguration)
 /// Attach `GnmRunLoopBridge` to the main run loop at start.  Default YES.
 @property (nonatomic) BOOL integratesMainRunLoop;
 
+/// The gzip level for `.gnumeric` files (the GTK preference "Default
+/// compression level for Gnumeric files", 0 to 9; 0 writes plain XML),
+/// applied after `gnm_init()` and stored like any preference change when
+/// `persistsPreferences` is on.  Nil (the default) keeps the stored
+/// preference, which the engine defaults to 9.
+@property (nonatomic, copy, nullable) NSNumber *xmlCompressionLevel;
+
 @end
 
 /// Engine-reported messages that are not tied to a specific bridge call
