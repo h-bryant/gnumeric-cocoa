@@ -51,6 +51,14 @@ int main (void)
 
         /* set text: a number, a formula, a string */
         GNM_ASSERT ([s setText:@"42" atColumn:5 row:5 autocorrect:YES error:&error], @"set number: %@", error);
+        /* the same text again is nothing to do, not a failure (the engine
+         * returns TRUE without a message; the cell editor's end of editing
+         * used to turn that into an alert) */
+        NSString *undoBeforeRepeat = wb.undoLabel;
+        error = nil;
+        GNM_ASSERT ([s setText:@"42" atColumn:5 row:5 autocorrect:YES error:&error] && error == nil, @"unchanged text: %@", error);
+        GNM_ASSERT ([wb.undoLabel ?: @"" isEqualToString:undoBeforeRepeat ?: @""], @"no command for an unchanged cell: %@", wb.undoLabel);
+        GNM_ASSERT ([s setText:@"" atColumn:30 row:30 autocorrect:YES error:&error] && error == nil, @"blank into a blank cell: %@", error);
         GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:5 row:5], @"42");
         GNM_ASSERT ([s setText:@"=F6*2" atColumn:6 row:5 autocorrect:YES error:&error], @"set formula: %@", error);
         GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:6 row:5], @"84");

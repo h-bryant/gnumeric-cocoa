@@ -50,6 +50,7 @@
 #include <graph.h>
 #include <sheet-utils.h>
 #include <tools/filter.h>
+#include <tools/auto-correct.h>
 #include <goffice/goffice.h>
 #include <goffice/app/go-cmd-context-impl.h>
 #include <goffice/graph/gog-plot-engine.h>
@@ -123,6 +124,10 @@ GType gnm_cocoa_sheet_control_get_type (void);
 /// reported into `error`.
 - (BOOL)_runCommand:(gboolean (NS_NOESCAPE ^)(WorkbookControl *wbc))command
         description:(NSString *)description error:(NSError **)error;
+/// The same, telling the caller whether the engine reported anything: a
+/// TRUE with no message is how some commands say "nothing to do".
+- (BOOL)_runCommand:(gboolean (NS_NOESCAPE ^)(WorkbookControl *wbc))command
+        description:(NSString *)description reported:(nullable BOOL *)reported error:(NSError **)error;
 @end
 
 @interface GnmSheet ()

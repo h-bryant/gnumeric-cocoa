@@ -96,6 +96,22 @@ enum EngineLocator {
     }
 }
 
+/// The texts of a view tree (what an alert sheet says, in logs).
+@MainActor
+private func textFields(in view: NSView) -> [String] {
+    var texts: [String] = []
+    if let field = view as? NSTextField, !field.stringValue.isEmpty {
+        texts.append(field.stringValue)
+    }
+    if let button = view as? NSButton, !button.title.isEmpty {
+        texts.append("[\(button.title)]")
+    }
+    for sub in view.subviews {
+        texts += textFields(in: sub)
+    }
+    return texts
+}
+
 /// Development aid: log a view's subtree with frames and layer state
 /// (GNM_DEBUG_LAYOUT).  `contents=1` means the layer holds drawn pixels.
 @MainActor
@@ -143,7 +159,15 @@ enum Snapshot {
                 // too (2026-10-12, docs/progress.md): fall back to the
                 // delegate's own shutdown and a plain exit, said out loud.
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                    NSLog("snapshot: terminate was swallowed; shutting the engine down and exiting")
+                    for window in NSApp.windows {
+                        if let sheet = window.attachedSheet, let content = sheet.contentView {
+                            NSLog("snapshot: sheet on '%@' says: %@", window.title, textFields(in: content).joined(separator: " | "))
+                        }
+                    }
+                    NSLog("snapshot: terminate was swallowed; shutting the engine down and exiting (modal=%@ documents=%@ windows=%@)",
+                          NSApp.modalWindow.map { String(describing: type(of: $0)) } ?? "none",
+                          NSDocumentController.shared.documents.map { "\($0.fileURL?.lastPathComponent ?? "untitled") edited=\($0.isDocumentEdited) type=\($0.fileType ?? "nil")" }.joined(separator: "; "),
+                          NSApp.windows.map { "\(type(of: $0)) '\($0.title)' visible=\($0.isVisible) sheet=\($0.attachedSheet.map { String(describing: type(of: $0)) } ?? "none")" }.joined(separator: "; "))
                     (NSApp.delegate as? AppDelegate)?.applicationWillTerminate(Notification(name: NSApplication.willTerminateNotification))
                     exit(0)
                 }
@@ -174,7 +198,14 @@ enum Snapshot {
                       sheet.workbook?.isModified ?? false ? 1 : 0,
                       sheet.workbook?.undoLabel ?? "nil")
                 // and the NSDocument save path, next to the snapshot
-                if let document = controller.document as? WorkbookDocument {
+                if let document = controller.document as? WorkbookDocument,
+                   ProcessInfo.processInfo.environment["GNM_SNAPSHOT_SAVE_INPLACE"] != nil {
+                    // File → Save on the opened file itself (give the hook a
+                    // copy), the user's ⌘S.
+                    NSLog("document edited before save in place: %d type=%@", document.isDocumentEdited ? 1 : 0, document.fileType ?? "nil")
+                    document.save(nil)   // asynchronous: the file is written a turn later
+                    NSLog("save in place requested: fileURL=%@", document.fileURL?.lastPathComponent ?? "nil")
+                } else if let document = controller.document as? WorkbookDocument {
                     let saveURL = URL(fileURLWithPath: (path as NSString).deletingPathExtension + "-saved.gnumeric")
                     NSLog("document edited before save: %d", document.isDocumentEdited ? 1 : 0)
                     document.save(to: saveURL, ofType: WorkbookDocument.gnumericType, for: .saveAsOperation) { error in

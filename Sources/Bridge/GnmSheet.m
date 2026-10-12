@@ -945,15 +945,51 @@ cell_range_from (GnmRange const *r)
     return s;
 }
 
+/* The engine's own "is there anything to do" test (commands.c
+ * cmd_set_text_full and cmd_set_text_full_check_text), for a command
+ * that returns TRUE, as a failure would, when the text is unchanged. */
+static gboolean
+cell_already_has_text (Sheet *sheet, GnmCellPos pos, char const *new_text, gboolean autocorrect)
+{
+    GnmCell *cell = sheet_cell_get (sheet, pos.col, pos.row);
+    char *corrected = autocorrect ? autocorrect_tool (new_text) : g_strdup (new_text);
+    if (corrected && corrected[0] == '\'' && corrected[1] == '\0') {
+        g_free (corrected);
+        corrected = g_strdup ("");
+    }
+    gboolean same;
+    if (cell == NULL || gnm_cell_is_blank (cell))
+        same = corrected == NULL || corrected[0] == '\0';
+    else if (corrected == NULL || corrected[0] == '\0')
+        same = FALSE;
+    else {
+        gboolean quoted = FALSE;
+        char *old_text = gnm_cell_get_text_for_editing (cell, &quoted, NULL);
+        same = g_strcmp0 (old_text, corrected) == 0;
+        if (!same && !quoted && cell->value && VALUE_IS_STRING (cell->value) && corrected[0] == '\'')
+            same = g_strcmp0 (old_text, corrected + 1) == 0;
+        g_free (old_text);
+    }
+    g_free (corrected);
+    return same;
+}
+
 - (BOOL)setText:(NSString *)text atColumn:(NSInteger)column row:(NSInteger)row
     autocorrect:(BOOL)autocorrect error:(NSError **)error
 {
     GnmCellPos pos = { (int) column, (int) row };
     const char *utf8 = text.UTF8String;
-    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+    BOOL reported = NO;
+    NSError *commandError = nil;
+    BOOL ok = [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
         return cmd_set_text (wbc, _sheet, &pos, utf8, NULL, autocorrect);
     } description:[NSString stringWithFormat:@"Could not set the text of %@.",
-                   GnmString (cell_coord_name ((int) column, (int) row))] error:error];
+                   GnmString (cell_coord_name ((int) column, (int) row))] reported:&reported error:&commandError];
+    if (!ok && !reported && cell_already_has_text (_sheet, pos, utf8, autocorrect))
+        return YES;   /* the engine's "nothing to do", not a failure */
+    if (!ok && error)
+        *error = commandError;
+    return ok;
 }
 
 - (BOOL)fillSelectionWithText:(NSString *)text error:(NSError **)error

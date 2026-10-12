@@ -387,14 +387,18 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     /// stays open with the error shown.
     func commitEditing(text: String, movement: CellEditorField.Movement) {
         guard let sheet, let cell = editingCell else { return }
+        // The session ends before the command runs: a first-responder
+        // change while the engine works would otherwise end the editor's
+        // editing and commit a second time.
+        endEditingSession()
         do {
             try sheet.setText(text, atColumn: cell.column, row: cell.row, autocorrect: true)
         } catch {
             presentError?(error)
-            window?.makeFirstResponder(editor)
+            sheet.selectCell(atColumn: cell.column, row: cell.row)
+            beginEditing(initialText: text)
             return
         }
-        endEditingSession()
         switch movement {
         case .down: move(columns: 0, rows: 1, extend: false)
         case .up: move(columns: 0, rows: -1, extend: false)

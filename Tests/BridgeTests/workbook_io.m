@@ -43,6 +43,31 @@ int main (void)
         head = [[NSFileHandle fileHandleForReadingAtPath:gnm.path] readDataOfLength:5];
         GNM_ASSERT ([head isEqualToData:[@"<?xml" dataUsingEncoding:NSUTF8StringEncoding]], @".gnumeric at level 0 is plain XML");
 
+        /* a staged save (NSDocument's way): the file is written, the
+         * location stays until adopted */
+        wb = [engine openWorkbookAtURL:gnm error:&error];
+        GNM_ASSERT (wb != nil, @"reopen: %@", error);
+        NSURL *staged = [NSURL fileURLWithPath:[outdir stringByAppendingPathComponent:@"bridge-staged.gnumeric"]];
+        [[NSFileManager defaultManager] removeItemAtURL:staged error:NULL];
+        GNM_ASSERT ([wb writeToURL:staged adoptingURL:NO error:&error], @"staged save: %@", error);
+        GNM_ASSERT ([wb.fileURL.path isEqualToString:gnm.path], @"location kept: %@", wb.fileURL);
+        GNM_ASSERT (!wb.isModified, @"clean after a staged save");
+        head = [[NSFileHandle fileHandleForReadingAtPath:staged.path] readDataOfLength:5];
+        GNM_ASSERT ([head isEqualToData:[@"<?xml" dataUsingEncoding:NSUTF8StringEncoding]], @"staged file written");
+        [wb adoptFileURL:staged];
+        GNM_ASSERT ([wb.fileURL.path isEqualToString:staged.path], @"adopted: %@", wb.fileURL);
+        GNM_ASSERT_EQ_STR (wb.displayName, @"bridge-staged.gnumeric");
+        /* the document's saver for its .xml type: the always-uncompressed
+         * twin, by id, since a staged name lacks the extension */
+        NSURL *stagedXml = [NSURL fileURLWithPath:[outdir stringByAppendingPathComponent:@"bridge-staged.xml.sb-1234"]];
+        GNM_ASSERT ([wb writeToURL:stagedXml saverIdentifier:@"Gnumeric_XmlIO:sax:0" adoptingURL:NO error:&error], @"staged xml: %@", error);
+        GNM_ASSERT ([wb.fileURL.path isEqualToString:staged.path], @"location kept after the xml save");
+        head = [[NSFileHandle fileHandleForReadingAtPath:stagedXml.path] readDataOfLength:5];
+        GNM_ASSERT ([head isEqualToData:[@"<?xml" dataUsingEncoding:NSUTF8StringEncoding]], @"sax:0 writes plain XML under any name");
+        GNM_ASSERT ([engine saverIdentifierForFileName:@"x.gnumeric.sb-1234"] == nil, @"a staged name has no saver of its own");
+        [[NSFileManager defaultManager] removeItemAtURL:stagedXml error:NULL];
+        wb = nil;
+
         for (NSURL *u in @[gnm, xml, x2]) {
             GnmWorkbook *back = [engine openWorkbookAtURL:u error:&error];
             GNM_ASSERT (back != nil, @"reopen %@: %@", u.lastPathComponent, error);

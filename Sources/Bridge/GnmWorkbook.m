@@ -539,10 +539,18 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
 - (BOOL)_runCommand:(gboolean (NS_NOESCAPE ^)(WorkbookControl *wbc))command
         description:(NSString *)description error:(NSError **)error
 {
+    return [self _runCommand:command description:description reported:NULL error:error];
+}
+
+- (BOOL)_runCommand:(gboolean (NS_NOESCAPE ^)(WorkbookControl *wbc))command
+        description:(NSString *)description reported:(BOOL *)reported error:(NSError **)error
+{
     NSAssert (NSThread.isMainThread, @"engine access off the main thread");
     [_engine _beginCollectingMessages];
     gboolean failed = command ((WorkbookControl *) _wbc);
     NSArray<NSError *> *messages = [_engine _endCollectingMessages];
+    if (reported)
+        *reported = messages.count > 0;
     if (failed) {
         if (error)
             *error = [_engine _errorWithCode:GnmErrorCommandFailed description:description collected:messages];
@@ -599,6 +607,16 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
 
 - (BOOL)writeToURL:(NSURL *)url error:(NSError **)error
 {
+    return [self writeToURL:url adoptingURL:YES error:error];
+}
+
+- (BOOL)writeToURL:(NSURL *)url saverIdentifier:(NSString *)saverIdentifier error:(NSError **)error
+{
+    return [self writeToURL:url saverIdentifier:saverIdentifier adoptingURL:YES error:error];
+}
+
+- (BOOL)writeToURL:(NSURL *)url adoptingURL:(BOOL)adopt error:(NSError **)error
+{
     GOFileSaver *fs = go_file_saver_for_file_name (url.lastPathComponent.UTF8String);
     if (fs == NULL) {
         if (error)
@@ -607,10 +625,10 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
                                    collected:@[]];
         return NO;
     }
-    return [self writeToURL:url saver:fs error:error];
+    return [self writeToURL:url saver:fs adoptingURL:adopt error:error];
 }
 
-- (BOOL)writeToURL:(NSURL *)url saverIdentifier:(NSString *)saverIdentifier error:(NSError **)error
+- (BOOL)writeToURL:(NSURL *)url saverIdentifier:(NSString *)saverIdentifier adoptingURL:(BOOL)adopt error:(NSError **)error
 {
     GOFileSaver *fs = go_file_saver_for_id (saverIdentifier.UTF8String);
     if (fs == NULL) {
@@ -620,17 +638,46 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
                                    collected:@[]];
         return NO;
     }
-    return [self writeToURL:url saver:fs error:error];
+    return [self writeToURL:url saver:fs adoptingURL:adopt error:error];
 }
 
-- (BOOL)writeToURL:(NSURL *)url saver:(GOFileSaver *)fs error:(NSError **)error
+static char *
+uri_for_url (NSURL *url)
 {
-    char *uri = url.isFileURL ? go_shell_arg_to_uri (url.path.fileSystemRepresentation)
-                              : g_strdup (url.absoluteString.UTF8String);
+    return url.isFileURL ? go_shell_arg_to_uri (url.path.fileSystemRepresentation) : g_strdup (url.absoluteString.UTF8String);
+}
+
+- (BOOL)writeToURL:(NSURL *)url saver:(GOFileSaver *)fs adoptingURL:(BOOL)adopt error:(NSError **)error
+{
+    char *uri = uri_for_url (url);
     [_engine _beginCollectingMessages];
-    /* workbook_view_save_as adopts the uri and saver and clears the dirty
-     * flag; it reports through the command context and returns success. */
-    gboolean ok = workbook_view_save_as (_wbv, fs, uri, _engine.commandContext);
+    gboolean ok;
+    if (adopt) {
+        /* workbook_view_save_as adopts the uri and saver and clears the
+         * dirty flag; it reports through the command context. */
+        ok = workbook_view_save_as (_wbv, fs, uri, _engine.commandContext);
+    } else {
+        /* The same steps without go_doc_set_uri (workbook-view.c
+         * workbook_view_save_as): the file goes where asked, the saver and
+         * clean state are recorded, the location stays. */
+        GOCmdContext *cc = _engine.commandContext;
+        GOIOContext *io_context = go_io_context_new (cc);
+        go_cmd_context_set_sensitive (cc, FALSE);
+        workbook_view_save_to_uri (_wbv, fs, uri, io_context);
+        go_cmd_context_set_sensitive (cc, TRUE);
+        gboolean has_error = go_io_error_occurred (io_context);
+        gboolean has_warning = go_io_warning_occurred (io_context);
+        if (!has_error && workbook_set_saveinfo (_wb, go_file_saver_get_format_level (fs), fs)) {
+            go_doc_set_saved_state (GO_DOC (_wb), go_doc_get_state (GO_DOC (_wb)));
+            go_doc_set_dirty (GO_DOC (_wb), FALSE);
+            go_doc_set_pristine (GO_DOC (_wb), FALSE);
+            workbook_set_read_only (_wb, FALSE);
+        }
+        if (has_error || has_warning)
+            go_io_error_display (io_context);
+        g_object_unref (io_context);
+        ok = !has_error;
+    }
     NSArray<NSError *> *messages = [_engine _endCollectingMessages];
     g_free (uri);
     if (!ok && error)
@@ -638,6 +685,13 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
                              description:[NSString stringWithFormat:@"Could not save “%@”.", url.lastPathComponent]
                                collected:messages];
     return ok;
+}
+
+- (void)adoptFileURL:(NSURL *)url
+{
+    char *uri = uri_for_url (url);
+    go_doc_set_uri (GO_DOC (_wb), uri);
+    g_free (uri);
 }
 
 #pragma mark - Control callbacks

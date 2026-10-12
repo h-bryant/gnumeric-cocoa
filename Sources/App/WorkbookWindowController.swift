@@ -185,6 +185,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
 
     private func present(_ error: Error) {
         guard let window else { return }
+        NSLog("Gnumeric error: %@ %@", error.localizedDescription, (error as NSError).localizedRecoverySuggestion ?? "")
         let alert = NSAlert(error: error)
         if let suggestion = (error as NSError).localizedRecoverySuggestion {
             alert.informativeText = suggestion
@@ -275,12 +276,16 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         // (commands.c update_after_action); only a real change resets the grid.
         if gridView.sheet !== sheet {
             gridView.sheet = sheet
+            // Only then: taking the first responder during a command kicked
+            // the cell editor out, whose end of editing committed the same
+            // text again, which the engine reported as a failure (an alert
+            // the Quit then waited on, 2026-10-12).
+            window?.makeFirstResponder(gridView)
         }
         if let sheet, let index = tabSheets.firstIndex(of: sheet) {
             tabs.selectedSegment = index
             revealSelectedTab()
         }
-        window?.makeFirstResponder(gridView)
         updateSubtitle()
     }
 

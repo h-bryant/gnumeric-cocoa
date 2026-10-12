@@ -138,6 +138,19 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Workbook)
 /// Gnumeric XML when the file name ends in `.xml`) or `Gnumeric_Excel:xlsx2`.
 - (BOOL)writeToURL:(NSURL *)url saverIdentifier:(NSString *)saverIdentifier error:(NSError **)error NS_SWIFT_NAME(write(to:saverIdentifier:));
 
+/// The same two saves, with the choice of adopting the URL.  `NO` writes
+/// the file (the saver still picked by the name, so a staged copy keeps
+/// its extension's behavior), records the saver, and clears the dirty
+/// flag, but leaves the document's own location alone: what NSDocument
+/// needs when it writes to a staging location and moves the file into
+/// place itself (`WorkbookDocument`).  Follow with `adoptFileURL:`.
+- (BOOL)writeToURL:(NSURL *)url adoptingURL:(BOOL)adopt error:(NSError **)error NS_SWIFT_NAME(write(to:adoptingURL:));
+- (BOOL)writeToURL:(NSURL *)url saverIdentifier:(NSString *)saverIdentifier adoptingURL:(BOOL)adopt
+             error:(NSError **)error NS_SWIFT_NAME(write(to:saverIdentifier:adoptingURL:));
+/// Make `url` the document's location (`go_doc_set_uri`): after a save
+/// that did not adopt it, or a Save As that moved the file.
+- (void)adoptFileURL:(NSURL *)url NS_SWIFT_NAME(adoptFileURL(_:));
+
 @end
 
 NS_ASSUME_NONNULL_END

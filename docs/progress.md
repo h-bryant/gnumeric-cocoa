@@ -589,32 +589,53 @@
   `Tests/BridgeTests/workbook_io.m` starts its engine at level 0 and
   checks the `.gnumeric` output starts with `<?xml`.
 
-## 2026-10-12: a quit swallowed after an NSDocument save (open)
+## 2026-10-12: Quit did nothing after a save (fixed)
 
-- Found while checking the compression change: with `GNM_SNAPSHOT_TYPE`
-  (type, undo, redo, paste, then `NSDocument.save(to:for:)` as a Save
-  As), the app no longer quit. Not the compression change: the same at
-  the commit before it. `NSApp.terminate(nil)` returns at once without
-  ever reaching `applicationShouldTerminate`, and so does every later
-  call; the main thread sits idle in the run loop. A save that took
-  about 25 ms (some runs) quit fine; one that took about 300 ms did not,
-  and a terminate one or two seconds after the save's completion handler
-  was swallowed too, so it is not a race the hook can wait out. Some
-  runs also found a second document open at the destination URL at
-  launch (AppKit reopening what a killed run had saved), which the Save
-  As closes through `_closeOtherDocumentWithURL:`; that is not the
-  trigger either. Other hooks, which do not save, quit normally.
-- The hook now falls back: three seconds after the terminate request it
-  logs "terminate was swallowed", runs the delegate's own
-  `applicationWillTerminate` (documents closed, engine shut down) and
-  exits, so captures finish and the engine's leak check still runs. The
-  condition stays visible in the log.
-- Open question for Henry on screen: open a file, edit a cell, ⌘S, then
-  ⌘Q. If Quit does nothing, the swallowed terminate is real for users and
-  needs a fix in the save path (`WorkbookDocument.writeSafely` hands the
-  final URL to libgsf; AppKit's review of documents at quit may wait on
-  the save's file access that never ends); if it quits, the hang is
-  specific to the headless sequence.
+- Found while checking the compression change, then chased to the end:
+  after an NSDocument save (the typing hook's Save As, and the user's
+  ⌘S in place, checked with a new `GNM_SNAPSHOT_SAVE_INPLACE=1` variant
+  of the hook) the app's Quit did nothing, headlessly and, by the same
+  mechanism, on screen. `NSApp.terminate` never reached the delegate
+  because an alert sheet was attached to the document window, and
+  AppKit's review of documents at quit waits for sheets. The alert was
+  "Could not set the text of C3": three defects stacked.
+  1. `WorkbookWindowController.show(sheet:)` made the grid the first
+     responder on every engine command (the engine focuses the command's
+     sheet after each one), which ended the cell editor's editing in the
+     middle of its own commit, so the editor committed the same text a
+     second time. Now only a real sheet change takes the first responder,
+     and `GridView.commitEditing` ends the session before it runs the
+     command (and reopens the editor with the text if the command fails).
+  2. The engine's `cmd_set_text` returns TRUE, as a failure would, when
+     the text is unchanged ("nothing to do"), and the bridge turned that
+     into an error. `GnmSheet.setText` now recognizes the case the way
+     `cmd_set_text_full_check_text` does (a message-less TRUE with the
+     cell already holding the text, after autocorrection) and reports
+     success; `editing.m` covers it. Typing the same text into a cell
+     again, or F2 then Return, used to show the alert too.
+  3. Along the way the document's save moved to NSDocument's own staged
+     write: the earlier `writeSafely` override handed the final URL to
+     libgsf, which replaced the file under AppKit's coordinated write
+     and left NSDocument's own bookkeeping (modification date, file
+     presenter) behind. `write(to:ofType:)` now saves to the staged URL
+     without adopting it (`GnmWorkbook.write(to:saverIdentifier:
+     adoptingURL:)`, which records the saver and clears the dirty flag
+     but leaves the location), and `save(to:...)` adopts the final URL
+     when the save completes (`adoptFileURL`). The staged name is not
+     the final one (`name.gnumeric.sb-…` for a save in place), so the
+     saver comes from the document type (`Gnumeric_XmlIO:sax` for
+     `.gnumeric`, `Gnumeric_XmlIO:sax:0` for `.xml`, goffice's choice by
+     extension for `.xlsx`), not from the file name; `workbook_io.m`
+     covers the staged save, the adoption, and the `.xml` saver under a
+     staged name.
+- Diagnostics kept: `WorkbookWindowController.present` and
+  `WorkbookDocument.willPresentError` log every error they show, and the
+  snapshot's fallback (three seconds after a terminate that went
+  nowhere) logs the attached sheets' texts before exiting through the
+  delegate's shutdown; it no longer fires.
+- Still for Henry on screen: open a file, edit a cell, ⌘S, ⌘Q, and the
+  same with Save As to a new name and to `.xml`; the captures say all
+  three work, his screen decides.
 
 ## How to resume (updated 2026-10-12)
 
