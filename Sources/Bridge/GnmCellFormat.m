@@ -185,6 +185,48 @@ gnm_cocoa_format_from_selection (Sheet const *sheet, GnmRange const *range)
     return f;
 }
 
+/* A partial style's set elements as a format (a conditional overlay). */
+GnmCellFormat *
+gnm_cocoa_format_from_style (GnmStyle const *style)
+{
+    GnmCellFormat *f = [[GnmCellFormat alloc] init];
+    if (gnm_style_is_element_set (style, MSTYLE_FORMAT))
+        f.numberFormat = GnmString (go_format_as_XL (gnm_style_get_format (style)));
+    if (gnm_style_is_element_set (style, MSTYLE_ALIGN_H))
+        f.horizontalAlignment = @(gnm_style_get_align_h (style));
+    if (gnm_style_is_element_set (style, MSTYLE_ALIGN_V))
+        f.verticalAlignment = @(gnm_style_get_align_v (style));
+    if (gnm_style_is_element_set (style, MSTYLE_WRAP_TEXT))
+        f.wrapsText = @(gnm_style_get_wrap_text (style));
+    if (gnm_style_is_element_set (style, MSTYLE_FONT_NAME))
+        f.fontName = GnmString (gnm_style_get_font_name (style));
+    if (gnm_style_is_element_set (style, MSTYLE_FONT_SIZE))
+        f.fontSize = @(gnm_style_get_font_size (style));
+    if (gnm_style_is_element_set (style, MSTYLE_FONT_BOLD))
+        f.bold = @(gnm_style_get_font_bold (style));
+    if (gnm_style_is_element_set (style, MSTYLE_FONT_ITALIC))
+        f.italic = @(gnm_style_get_font_italic (style));
+    if (gnm_style_is_element_set (style, MSTYLE_FONT_UNDERLINE))
+        f.underline = @(gnm_style_get_font_uline (style));
+    if (gnm_style_is_element_set (style, MSTYLE_FONT_STRIKETHROUGH))
+        f.strikethrough = @(gnm_style_get_font_strike (style));
+    if (gnm_style_is_element_set (style, MSTYLE_FONT_COLOR)) {
+        CGColorRef c = gnm_cocoa_cgcolor_from_go (gnm_style_get_font_color (style)->go_color);
+        f.textColor = c;
+        CGColorRelease (c);
+    }
+    if (gnm_style_is_element_set (style, MSTYLE_PATTERN)) {
+        int pattern = gnm_style_get_pattern (style);
+        f.fillsBackground = @(pattern != 0);
+    }
+    if (gnm_style_is_element_set (style, MSTYLE_COLOR_BACK)) {
+        CGColorRef c = gnm_cocoa_cgcolor_from_go (gnm_style_get_back_color (style)->go_color);
+        f.backgroundColor = c;
+        CGColorRelease (c);
+    }
+    return f;
+}
+
 /* Builds the partial style and border set cmd_selection_format wants; both
  * are handed over to the command. */
 void

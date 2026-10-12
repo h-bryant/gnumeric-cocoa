@@ -455,7 +455,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         case #selector(showFindPanel(_:)), #selector(showReplacePanel(_:)), #selector(findNext(_:)), #selector(findPrevious(_:)):
             return gridView.sheet != nil
         case #selector(defineNames(_:)), #selector(insertName(_:)), #selector(fillSeries(_:)), #selector(textToColumns(_:)),
-             #selector(goalSeek(_:)):
+             #selector(goalSeek(_:)), #selector(conditionalFormatting(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(removeSheet(_:)):
             return gridView.sheet != nil && workbook.canRemoveSheets
@@ -897,6 +897,23 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         let alert = NSAlert()
         alert.messageText = text
         alert.beginSheetModal(for: window)
+    }
+
+    // MARK: Conditional Formatting (Format menu)
+
+    var conditionalDialog: ConditionalFormatDialog?
+
+    @objc func conditionalFormatting(_ sender: Any?) {
+        guard let window, let sheet = gridView.sheet, conditionalDialog == nil, window.attachedSheet == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let dialog = ConditionalFormatDialog(sheet: sheet)
+        conditionalDialog = dialog
+        dialog.run(in: window) { [weak self] conditions in
+            guard let self else { return }
+            conditionalDialog = nil
+            guard let conditions else { return }
+            runSizeCommand { sheet in try sheet.setConditionalFormats(conditions) }
+        }
     }
 
     // MARK: Goal Seek (Tools menu)

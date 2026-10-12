@@ -83,7 +83,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | Action | Status | Notes / Phase |
 |---|---|---|
 | FormatCells | partial | number, alignment, font, border, fill; no protection, validation, input message, or conditional pages; no format preview |
-| FormatCellsCond | no | Phase 5 |
+| FormatCellsCond | ported | Format → Conditional Formatting… (2026-10-12): the GTK operators, x and y, an overlay of fill, text color, bold, italic, number format |
 | FormatMergeCells, FormatUnmergeCells | ported | Format menu, with Merge and Center (`patches/0002` fixes an engine double-unref there) |
 | FormatCellsFitHeight, FormatCellsFitWidth | bridge | `autofitSelectedCells(width:)`; the menu has the whole-column/row Autofit |
 | FormatAuto | no | Phase 5 |

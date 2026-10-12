@@ -278,6 +278,7 @@ GOColor gnm_cocoa_go_from_cgcolor (CGColorRef color);
 /// The common style of a range (nil properties differ), and the partial
 /// style plus borders a GnmCellFormat describes, for cmd_selection_format.
 GnmCellFormat *gnm_cocoa_format_from_selection (Sheet const *sheet, GnmRange const *range);
+GnmCellFormat *gnm_cocoa_format_from_style (GnmStyle const *style);
 void gnm_cocoa_format_to_engine (GnmCellFormat *format, GnmStyle *_Nonnull *_Nonnull style_out,
                                  GnmBorder *_Nullable borders[_Nonnull GNM_STYLE_BORDER_EDGE_MAX]);
 

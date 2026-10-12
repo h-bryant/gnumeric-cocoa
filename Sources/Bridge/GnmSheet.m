@@ -538,6 +538,18 @@ plain_draw:
             if (dir < 0)
                 x -= ci->size_pixels;
             style = sr.styles[col];
+            {
+                /* item-grid.c item_grid_draw_background: the conditional
+                 * style that holds for this cell, if any */
+                GnmStyleConditions *conds = gnm_style_get_conditions (style);
+                if (conds) {
+                    GnmEvalPos ep;
+                    int res;
+                    eval_pos_init (&ep, (Sheet *) sheet, col, row);
+                    if ((res = gnm_style_conditions_eval (conds, &ep)) >= 0)
+                        style = gnm_style_get_cond_style (style, res);
+                }
+            }
             draw_background (cr, style, x, (int) y, ci->size_pixels, ri->size_pixels);
 
             if (NULL == ri->spans || NULL == (span = row_span_get (ri, col))) {

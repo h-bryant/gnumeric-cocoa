@@ -19,6 +19,7 @@
 #import <GnmCocoa/GnmPlotType.h>
 #import <GnmCocoa/GnmChartEditor.h>
 #import <GnmCocoa/GnmSheet.h>
+#import <GnmCocoa/GnmConditionalFormat.h>
 #import <GnmCocoa/GnmSearch.h>
 #import <GnmCocoa/GnmTextExport.h>
 #import <GnmCocoa/GnmTextImport.h>

@@ -112,6 +112,7 @@ enum MainMenu {
 
         let formatMenu = NSMenu(title: "Format")
         formatMenu.addItem(withTitle: "Cells…", action: Selector(("formatCells:")), keyEquivalent: "1")
+        formatMenu.addItem(withTitle: "Conditional Formatting…", action: Selector(("conditionalFormatting:")), keyEquivalent: "")
         formatMenu.addItem(.separator())
         let columnMenu = NSMenu(title: "Column")
         columnMenu.addItem(withTitle: "Width…", action: Selector(("setColumnWidth:")), keyEquivalent: "")

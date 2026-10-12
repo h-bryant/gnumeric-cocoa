@@ -472,6 +472,45 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_COND"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // Conditional formatting: B5:B12 gets "value > 100 → yellow
+                // fill, bold" through the dialog (captured to `-cond.png`),
+                // which the grid capture then shows.
+                sheet.selectRange(CellRange(start: CellCoordinate(column: 1, row: 4), end: CellCoordinate(column: 1, row: 11)),
+                                  editPosition: CellCoordinate(column: 1, row: 4))
+                controller.conditionalFormatting(nil)
+                if let dialog = controller.conditionalDialog {
+                    dialog.setEditor(op: .greaterThan, x: "100", fill: .yellow, bold: true)
+                    dialog.add(nil)
+                    NSLog("cond: dialog holds %ld condition(s): %@", dialog.conditions.count,
+                          dialog.conditions.map { ConditionalFormatDialog.describe($0) })
+                    if let content = dialog.window.contentView {
+                        content.layoutSubtreeIfNeeded()
+                        if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                            content.cacheDisplay(in: content.bounds, to: rep)
+                            let condPath = (path as NSString).deletingPathExtension + "-cond.png"
+                            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: condPath))
+                            NSLog("cond: captured %@ (%@)", condPath, NSStringFromRect(content.bounds))
+                        }
+                    }
+                    window.endSheet(dialog.window)
+                    dialog.window.close()
+                    controller.conditionalDialog = nil
+                    do {
+                        try sheet.setConditionalFormats(dialog.conditions)
+                    } catch {
+                        NSLog("cond: apply failed: %@", error.localizedDescription)
+                    }
+                }
+                let read = sheet.conditionalFormats(atColumn: 1, row: 6)
+                NSLog("cond: B7 has %ld condition(s) %@ undo=%@", read.count, read.map { "\($0.op.rawValue) \($0.firstExpression)" },
+                      sheet.workbook?.undoLabel ?? "nil")
+                controller.gridView.needsDisplay = true
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_GOAL"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

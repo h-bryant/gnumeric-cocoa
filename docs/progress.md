@@ -948,6 +948,38 @@
   The engine renders negative numbers with a true minus (U+2212).
   `GNM_SNAPSHOT_GOAL=1` seeks A30 headlessly.
 
+## 2026-10-12: Conditional formatting
+
+- `GnmConditionalFormat` (`GnmConditionalFormat.h`): an operator (the
+  engine's `GnmStyleCondOp`, whose values `.gnumeric` files store), its
+  one or two expressions, and the overlay as a `GnmCellFormat` of set
+  parts.  `GnmSheet.conditionalFormatsAtColumn:row:` reads a cell's
+  conditions (expressions written relative to the edit position, as the
+  GTK dialog shows them; `gnm_cocoa_format_from_style` turns the
+  overlay into a format); `setConditionalFormats:` builds a
+  `GnmStyleCond` per condition (`gnm_cocoa_format_to_engine` for the
+  overlay, expressions parsed with unknown names as strings) into a
+  `GnmStyleConditions` on a partial style, applied to the selection with
+  `cmd_selection_format` as "Set conditional formatting"; an empty array
+  clears them.
+- The grid now evaluates conditions when it draws a plain cell's
+  background (`item_grid_draw_background` did; the merged-cell path
+  already did), so conditional fills show.  Text styles come through
+  the cell's rendered value, which the engine computes from the
+  effective style.
+- `ConditionalFormatDialog.swift` (Format → Conditional Formatting…):
+  the conditions on the selection's cell in a table (described in the
+  dialog's words, with the overlay's parts), an editor for the chosen or
+  a new one (the operator pop-up in the GTK order, x and y, fill, text
+  color, bold, italic, number format), Add, Replace, Remove, Clear All,
+  and OK applying the list as one command.
+- `Tests/BridgeTests/conditional.m`: set, read back with the overlay,
+  the selection only, undo and redo, two operands, a custom condition
+  shown relative to the edit position, the errors, a save and reopen
+  keeping them, clearing.  `GNM_SNAPSHOT_COND=1` puts "value > 100 →
+  yellow, bold" on B5:B12 through the dialog (captured to `-cond.png`)
+  and the grid capture shows the fills.
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -960,9 +992,9 @@
    Insert and Delete Cells, the current date and time, Save As CSV,
    Find and Replace, the Settings window, and Export as Text with
    options, the text import assistant, cell comments, defined names,
-   Fill Series, Text to Columns, and Goal Seek; next the rest of Phase 5
-   by usage frequency: conditional formatting, the analysis tools, data
-   validation, Solver) from
+   Fill Series, Text to Columns, Goal Seek, and conditional formatting;
+   next the rest of Phase 5 by usage frequency: the analysis tools, data
+   validation, Solver, hyperlinks) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -985,8 +1017,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-12: `main` at the Goal Seek commit
-   (after Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-12: `main` at the conditional
+   formatting commit (after Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in
