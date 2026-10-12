@@ -83,5 +83,6 @@
 - (void)testTextExport { [self runProgram:@"text_export"]; }
 - (void)testTextImport { [self runProgram:@"text_import"]; }
 - (void)testComments { [self runProgram:@"comments"]; }
+- (void)testNames { [self runProgram:@"names"]; }
 
 @end

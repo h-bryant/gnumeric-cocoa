@@ -78,6 +78,8 @@ enum MainMenu {
         editMenu.addItem(withTitle: "Find Next", action: Selector(("findNext:")), keyEquivalent: "g")
         editMenu.addItem(withTitle: "Find Previous", action: Selector(("findPrevious:")), keyEquivalent: "G")
         editMenu.addItem(.separator())
+        editMenu.addItem(withTitle: "Define Names…", action: Selector(("defineNames:")), keyEquivalent: "")
+        editMenu.addItem(.separator())
         editMenu.addItem(submenu(sheetMenu(), title: "Sheet"))
         menuBar.addItem(submenu(editMenu, title: "Edit"))
 
@@ -99,6 +101,7 @@ enum MainMenu {
         insertMenu.addItem(withTitle: "Current Time", action: Selector(("insertCurrentTime:")), keyEquivalent: ":")
         insertMenu.addItem(withTitle: "Current Date and Time", action: Selector(("insertCurrentDateTime:")), keyEquivalent: "")
         insertMenu.addItem(.separator())
+        insertMenu.addItem(withTitle: "Name…", action: Selector(("insertName:")), keyEquivalent: "")
         insertMenu.addItem(withTitle: "Comment…", action: Selector(("insertComment:")), keyEquivalent: "")
         insertMenu.addItem(.separator())
         insertMenu.addItem(withTitle: "Chart…", action: Selector(("insertChart:")), keyEquivalent: "")

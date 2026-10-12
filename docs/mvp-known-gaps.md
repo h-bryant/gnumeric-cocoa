@@ -39,7 +39,8 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | EditClear*Filtered (4) | ported | Edit → Clear → "… Filtered Rows" (2026-10-12); as in GTK they skip the rows a filter hides |
 | EditDeleteColumns, EditDeleteRows | ported | Edit menu; the selection's columns or rows |
 | EditDeleteCells | ported | Edit → Delete Cells… (2026-10-12): shift left or up, entire rows or columns |
-| EditClearHyperlinks, EditHyperlink, EditNames | no | Phase 5 |
+| EditClearHyperlinks, EditHyperlink | no | Phase 5 |
+| EditNames | ported | Edit → Define Names… (2026-10-12): list, add or update, remove, workbook or sheet scope |
 | EditComment | ported | Insert → Comment… (Edit Comment… over one) and the cell's context menu (2026-10-12) |
 | InsertSheet, InsertSheetAtEnd, EditDuplicateSheet, SheetRemove, SheetChangeName | ported | Edit → Sheet and the tab context menu; rename through a prompt |
 | SheetReorder | partial | Move Left / Move Right; no Manage Sheets dialog or drag |
@@ -70,7 +71,8 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | ChartGuru | ported | Insert → Chart… (2026-10-12): every goffice plot type with its sample image, series from the selection, the two guru options; the later pages are the chart editor (double-click, Properties…, Format → Object Properties…): object tree with add, remove, reorder, live preview, every object's data expressions, properties, and style, Change Type… for a plot; not in it: error bars, gradient and image fills, manual positions |
 | InsertImage | ported | Insert → Image… (2026-10-12), and PNG or TIFF pasted from other applications |
 | InsertComponent, InsertShapedComponent, NewGOComponent, GOComponentFromFile | no | Phase 4; goffice components (equations, embedded documents) |
-| InsertFormula (function selector), InsertNames | no | Phase 5 |
+| InsertFormula (function selector) | no | Phase 5 |
+| InsertNames | ported | Insert → Name… puts a name into the cell editor (2026-10-12) |
 | InsertComment | ported | Insert → Comment…, an alert sheet with author and text (2026-10-12) |
 | InsertHyperlink | no | Phase 5 |
 | InsertSortDecreasing, InsertSortIncreasing | ported | Data → Sort Ascending / Descending (the GTK quick sort: by the selection's columns, heading kept) |

@@ -866,6 +866,37 @@
   context menu, the removal and its undo, and leaves the marker in the
   capture.
 
+## 2026-10-12: Defined names
+
+- `GnmNames.h`: `GnmDefinedName` (name, scope sheet or nil for the
+  workbook, the expression text relative to the sheet's edit position
+  as the GTK dialog shows it, editable unless permanent, in use) and a
+  `GnmWorkbook (Names)` category: `definedNamesForSheet:` (the
+  workbook's names and the sheet's, sorted, hidden and placeholder ones
+  left out), `defineName:expression:scope:inSheet:` (validated with
+  `expr_name_validate`, parsed with unknown names invalid and multiple
+  expressions permitted, then `cmd_define_name`, which also redefines),
+  `removeName:` (`cmd_remove_name`), `changeScopeOfName:toSheet:`
+  (`cmd_rescope_name`).
+- Link flag: the bridge's categories live in their own object files,
+  which a static link drops unless `-ObjC` is given; `run.sh`,
+  `build-app.sh`, and both Xcode targets now link with it (the earlier
+  categories survived only because their files also define classes the
+  app allocates).
+- `NamesDialog.swift` (Edit → Define Names…): the table of names with
+  their scope and expression, fields for the chosen or a new one, Add
+  or Update, Remove (asking first when the name is in use), Close.
+  Insert → Name… lists the names in a pop-up and puts the chosen one
+  into the cell editor (`GridView.insertName`: "=name" into an empty
+  cell, the name at the caret otherwise, as the GTK paste does).
+- Engine facts settled by `Tests/BridgeTests/names.m`: every sheet
+  carries the permanent `Print_Area` and `Sheet_Title` names; the
+  command labels carry the name ("Define Name total"); a sheet name's
+  expression is written without its own sheet's prefix, and relative
+  references move with the edit position; the name box's jump defines
+  names that the dialog then lists.  `GNM_SNAPSHOT_NAMES=1` adds a
+  name through the dialog (captured to `-names.png`) and inserts it.
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -877,9 +908,9 @@
    done; Phase 5 has begun with File → New, Go To and the name box,
    Insert and Delete Cells, the current date and time, Save As CSV,
    Find and Replace, the Settings window, and Export as Text with
-   options, the text import assistant, and cell comments; next the rest
-   of Phase 5 by usage frequency: names, Text to Columns, Fill Series,
-   conditional formatting, the analysis tools) from
+   options, the text import assistant, cell comments, and defined names;
+   next the rest of Phase 5 by usage frequency: Text to Columns, Fill
+   Series, conditional formatting, the analysis tools) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -902,8 +933,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-12: `main` at the cell comments
-   commit (after the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-12: `main` at the defined names
+   commit (after cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

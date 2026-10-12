@@ -454,6 +454,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(showFindPanel(_:)), #selector(showReplacePanel(_:)), #selector(findNext(_:)), #selector(findPrevious(_:)):
             return gridView.sheet != nil
+        case #selector(defineNames(_:)), #selector(insertName(_:)):
+            return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(removeSheet(_:)):
             return gridView.sheet != nil && workbook.canRemoveSheets
         case #selector(pasteSpecial(_:)):
@@ -817,6 +819,50 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
 
     @objc func insertCells(_ sender: Any?) { promptCellShift(insert: true) }
     @objc func deleteCells(_ sender: Any?) { promptCellShift(insert: false) }
+
+    // MARK: Names (Edit → Define Names…, Insert → Name…)
+
+    var namesDialog: NamesDialog?
+
+    @objc func defineNames(_ sender: Any?) {
+        guard let window, let sheet = gridView.sheet, namesDialog == nil, window.attachedSheet == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let dialog = NamesDialog(workbook: workbook, sheet: sheet)
+        namesDialog = dialog
+        dialog.run(in: window) { [weak self] in
+            guard let self else { return }
+            namesDialog = nil
+            workbook.resendDelegateState()
+            gridView.needsDisplay = true
+            window.makeFirstResponder(gridView)
+        }
+    }
+
+    /// The GTK Paste Names dialog as an alert: a pop-up of the names the
+    /// cell can use, inserted into the cell editor.
+    @objc func insertName(_ sender: Any?) {
+        guard let window, let sheet = gridView.sheet, window.attachedSheet == nil else { return }
+        let names = workbook.definedNames(for: sheet).filter(\.isEditable)
+        let alert = NSAlert()
+        alert.messageText = "Insert Name"
+        guard !names.isEmpty else {
+            alert.informativeText = "No names are defined. Edit → Define Names… defines one."
+            alert.beginSheetModal(for: window)
+            return
+        }
+        alert.informativeText = "The name goes into the cell as a formula, or into the formula being edited."
+        alert.addButton(withTitle: "Insert")
+        alert.addButton(withTitle: "Cancel")
+        let popUp = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 260, height: 26), pullsDown: false)
+        for name in names {
+            popUp.addItem(withTitle: name.scope == nil ? name.name : "\(name.name)  (\(name.scope!.name))")
+        }
+        alert.accessoryView = popUp
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard let self, response == .alertFirstButtonReturn, popUp.indexOfSelectedItem < names.count else { return }
+            gridView.insertName(names[popUp.indexOfSelectedItem].name)
+        }
+    }
 
     // MARK: Comments (Insert → Comment…, the cell's context menu)
 

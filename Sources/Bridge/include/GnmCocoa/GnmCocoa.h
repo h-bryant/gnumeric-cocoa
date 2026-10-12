@@ -22,4 +22,5 @@
 #import <GnmCocoa/GnmSearch.h>
 #import <GnmCocoa/GnmTextExport.h>
 #import <GnmCocoa/GnmTextImport.h>
+#import <GnmCocoa/GnmNames.h>
 #import <GnmCocoa/GnmRunLoopBridge.h>

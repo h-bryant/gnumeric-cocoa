@@ -44,7 +44,7 @@ targetTemplates:
         HEADER_SEARCH_PATHS: "$(SRCROOT)/Sources/Bridge/include $(GNM_HEADER_SEARCH_PATHS)"
         OTHER_CFLAGS: "$(GNM_OTHER_CFLAGS)"
         LIBRARY_SEARCH_PATHS: "$(GNM_LIBRARY_SEARCH_PATHS)"
-        OTHER_LDFLAGS: "$(GNM_OTHER_LDFLAGS) -framework Foundation -framework AppKit -framework CoreGraphics -framework ImageIO -framework CoreServices"
+        OTHER_LDFLAGS: "$(GNM_OTHER_LDFLAGS) -ObjC -framework Foundation -framework AppKit -framework CoreGraphics -framework ImageIO -framework CoreServices"
 targets:
   engine_lifecycle:
     templates: [BridgeTestProgram]
@@ -72,6 +72,8 @@ targets:
     templates: [BridgeTestProgram]
   comments:
     templates: [BridgeTestProgram]
+  names:
+    templates: [BridgeTestProgram]
   BridgeTests:
     type: bundle.unit-test
     platform: macOS
@@ -91,6 +93,7 @@ targets:
       - target: text_export
       - target: text_import
       - target: comments
+      - target: names
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.github.h-bryant.gnumeric-cocoa.BridgeTests
@@ -133,7 +136,7 @@ targets:
         SWIFT_INCLUDE_PATHS: "$(SRCROOT)/Sources/Bridge/include"
         HEADER_SEARCH_PATHS: "$(SRCROOT)/Sources/Bridge/include"
         LIBRARY_SEARCH_PATHS: "$(GNM_LIBRARY_SEARCH_PATHS)"
-        OTHER_LDFLAGS: "$(GNM_OTHER_LDFLAGS)"
+        OTHER_LDFLAGS: "$(GNM_OTHER_LDFLAGS) -ObjC"
         # Development builds run the engine from build/prefix (Phase 6 moves
         # it into the bundle); AppDelegate reads this key.
         INFOPLIST_PREPROCESS: NO

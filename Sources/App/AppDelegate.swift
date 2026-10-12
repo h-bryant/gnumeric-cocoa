@@ -472,6 +472,40 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_NAMES"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // Define Names: a workbook name added through the dialog
+                // (captured to `-names.png`), then inserted into a cell as
+                // a formula.
+                controller.defineNames(nil)
+                if let dialog = controller.namesDialog {
+                    NSLog("names: %ld listed before", dialog.names.count)
+                    dialog.setFields(name: "first_column", expression: "Sheet1!$A$1:$A$10", workbookScope: true)
+                    dialog.add(nil)
+                    NSLog("names: after add %@ undo=%@", dialog.names.filter(\.isEditable).map { "\($0.name)=\($0.expressionText)" },
+                          sheet.workbook?.undoLabel ?? "nil")
+                    if let content = dialog.window.contentView {
+                        content.layoutSubtreeIfNeeded()
+                        if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                            content.cacheDisplay(in: content.bounds, to: rep)
+                            let namesPath = (path as NSString).deletingPathExtension + "-names.png"
+                            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: namesPath))
+                            NSLog("names: captured %@ (%@)", namesPath, NSStringFromRect(content.bounds))
+                        }
+                    }
+                    window.endSheet(dialog.window)
+                    dialog.window.close()
+                    controller.namesDialog = nil
+                }
+                sheet.selectCell(atColumn: 4, row: 0)
+                controller.gridView.insertName("first_column")
+                controller.gridView.commitEditing(text: "=COUNT(first_column)", movement: .none)
+                NSLog("names: E1 shows '%@' from '%@'", sheet.displayTextOfCell(atColumn: 4, row: 0) ?? "nil",
+                      sheet.enteredTextOfCell(atColumn: 4, row: 0) ?? "nil")
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_COMMENT"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

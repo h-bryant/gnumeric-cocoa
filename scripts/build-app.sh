@@ -17,8 +17,9 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 # swiftc does not take -Wl, flags; rewrite pkg-config's framework syntax.
 # shellcheck disable=SC2046
 libs=($(pkg-config --libs libspreadsheet-1.12 cairo-quartz | sed 's/-Wl,-framework,/-framework /g'))
+# -ObjC keeps the bridge's categories, which sit in their own object files.
 swiftc -swift-version 6 -module-name GnumericCocoa -g \
-	-I "$PWD/Sources/Bridge/include" \
+	-I "$PWD/Sources/Bridge/include" -Xlinker -ObjC \
 	Sources/App/*.swift \
 	"$PWD/build/bridge/libGnmCocoa.a" "${libs[@]}" -framework Cocoa \
 	-o "$APP/Contents/MacOS/GnumericCocoa"

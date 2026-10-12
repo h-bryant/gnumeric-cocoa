@@ -744,6 +744,21 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         }
     }
 
+    /// Insert → Name…: the name into the cell being edited, or a formula
+    /// "=name" into the cell (dialog-define-names.c name_guru_paste).
+    func insertName(_ name: String) {
+        guard sheet != nil else { return }
+        if !isEditing {
+            beginEditing(initialText: "=" + name)
+            return
+        }
+        if let fieldEditor = editor.currentEditor() as? NSTextView {
+            let text = editor.stringValue.isEmpty ? "=" + name : name
+            fieldEditor.insertText(text, replacementRange: fieldEditor.selectedRange())
+            editingTextDidChange?(editor.stringValue)
+        }
+    }
+
     @objc func insertCurrentDate(_ sender: Any?) { insertDateTime(date: true, time: false) }
     @objc func insertCurrentTime(_ sender: Any?) { insertDateTime(date: false, time: true) }
     @objc func insertCurrentDateTime(_ sender: Any?) { insertDateTime(date: true, time: true) }

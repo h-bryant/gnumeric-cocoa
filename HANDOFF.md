@@ -330,16 +330,17 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    options (`GnmTextExport`, `TextExportSheet.swift`, `text_export.m`).
    The text import assistant followed (`GnmTextImport`,
    `TextImportAssistant.swift`, `text_import.m`), then cell comments
-   (markers, tool tips, the editor; `comments.m`). Next, by usage:
-   names, Text to Columns, Fill Series, conditional formatting, the
-   analysis tools;
+   (markers, tool tips, the editor; `comments.m`) and defined names
+   (`GnmNames`, `NamesDialog.swift`, `names.m`; the static link needs
+   `-ObjC` for the bridge's categories). Next, by usage: Text to
+   Columns, Fill Series, conditional formatting, the analysis tools;
    image and widget editors (`cmd_so_set_*`) later; the smaller Phase 3
    gaps (Insert/Delete Cells,
    Goto and the name box, the formula bar, autocomplete, drag and drop,
    outlines) as filler.
 6. Headless checks for all of it: `GNM_SNAPSHOT=out.png scripts/run-app.sh
    file` plus `GNM_SNAPSHOT_TYPE`, `_FORMAT`, `_PHASE3`, `_FREEZE`,
-   `_SHEETS`, `_FILTER`, `_OBJECTS`, `_CHART`, `_EDITOR`, `_EVERYDAY`, `_FIND`, `_PREFS`, `_TEXT`, `_IMPORT`, `_COMMENT`, `_ZOOM` (`docs/build.md`); compare `out.png` with
+   `_SHEETS`, `_FILTER`, `_OBJECTS`, `_CHART`, `_EDITOR`, `_EVERYDAY`, `_FIND`, `_PREFS`, `_TEXT`, `_IMPORT`, `_COMMENT`, `_NAMES`, `_ZOOM` (`docs/build.md`); compare `out.png` with
    `out-window.png`. Engine fixes go to `patches/` (0001 decouplings, 0002
    Merge and Center); `scripts/build-gnumeric.sh` re-applies them and
    takes a few minutes.
