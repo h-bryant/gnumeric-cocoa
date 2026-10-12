@@ -593,6 +593,19 @@
    on `MainMenu`, action on `GridView` or the window controller), drive it
    from a `GNM_SNAPSHOT_*` hook in `AppDelegate.swift`, look at the
    `-window.png` capture, update `docs/mvp-known-gaps.md`, commit.
+   For goffice questions (the chart editor needed many): write a probe
+   program that imports `Sources/Bridge/GnmPrivate.h` and
+   `Tests/BridgeTests/GnmTest.h`, compile it with
+   `scripts/build-bridge.sh --flags` plus `-I Sources/Bridge -I
+   Tests/BridgeTests` against `build/bridge/libGnmCocoa.a`, open a
+   sample, and print what the engine does (reference counts, property
+   lists, serialized data); goffice ships no source, but its reference
+   manual is at
+   `/opt/homebrew/Cellar/goffice/0.10.62/share/gtk-doc/html/goffice-0.10/`.
+   Facts the probes settled: `gog_object_clear_parent` hands the parent's
+   reference to the caller (unref it); `gog_graph_dup` duplicates the
+   data objects and `gnm_go_data_dup` links them as sheet dependents; a
+   command's `update_after_action` does not redraw objects.
 3. The state at the end of 2026-10-12: `main` at the chart editor commit
    (after the object clipboard, chart guru, sheet objects, and autofilter
    ones), clean tree, nothing pushed,
