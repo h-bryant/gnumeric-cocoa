@@ -104,7 +104,7 @@ GNM_SNAPSHOT=/tmp/grid.png scripts/run-app.sh upstream/gnumeric/samples/format-t
 `GNM_SNAPSHOT_FILTER=1`, `GNM_SNAPSHOT_OBJECTS=1`, `GNM_SNAPSHOT_CHART=1`,
 `GNM_SNAPSHOT_EDITOR=1`, `GNM_SNAPSHOT_EVERYDAY=1`, `GNM_SNAPSHOT_FIND=1`,
 `GNM_SNAPSHOT_PREFS=1`, `GNM_SNAPSHOT_TEXT=1`, `GNM_SNAPSHOT_IMPORT=1`,
-`GNM_SNAPSHOT_COMMENT=1`, and `GNM_SNAPSHOT_NAMES=1`
+`GNM_SNAPSHOT_COMMENT=1`, `GNM_SNAPSHOT_NAMES=1`, and `GNM_SNAPSHOT_FILL=1`
 exercise zoom, editing and saving, the Format Cells model, the Phase 3
 commands, frozen panes, sheet management, the autofilter with the Sort
 command, a sheet resize, and a tab color, the sheet objects (select, move,
@@ -124,7 +124,9 @@ assistant driven headlessly and written to `-import.png`, the new
 document's cells logged), and a cell comment (set on A3, its tool tip,
 the cell's context menu, the removal undone, the marker left in the
 capture), and defined names (one added through the dialog, captured to
-`-names.png`, then inserted into E1 as a formula) before the
+`-names.png`, then inserted into E1 as a formula), and Fill Series with
+Text to Columns (F1:F6 filled from 1 by 2, "a;b" and "c;d" in G1:G2 split
+through the assistant) before the
 capture (`AppDelegate.swift`, `Snapshot`). The typing hook saves as a
 Save As next to the snapshot; with `GNM_SNAPSHOT_SAVE_INPLACE=1` it saves
 the opened file in place instead (give it a copy). Should a quit ever go

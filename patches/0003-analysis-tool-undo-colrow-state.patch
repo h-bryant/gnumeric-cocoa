@@ -1,0 +1,26 @@
+Clear the saved column and row states after an analysis tool's undo.
+
+cmd_analysis_tool_undo restores the column and row states it saved and
+destroys the lists, but leaves the pointers set; cmd_analysis_tool_redo
+then destroys them again before saving fresh ones, a double free that
+aborts on macOS (malloc reports a pointer freed twice) and corrupts the
+heap elsewhere.  Any analysis tool writing into a range (Fill Series, the
+statistics tools) hits it on undo followed by redo.  Found through the
+Cocoa front end on 2026-10-12; the GTK front end runs the same code.  Set
+the pointers to NULL after destroying the lists.
+
+--- a/src/commands.c	2026-10-12 16:30:00
++++ b/src/commands.c	2026-10-12 16:30:00
+@@ -5389,10 +5389,12 @@
+ 		if (me->col_info) {
+ 			dao_set_colrow_state_list (me->dao, TRUE, me->col_info);
+ 			colrow_state_list_destroy (me->col_info);
++			me->col_info = NULL;
+ 		}
+ 		if (me->row_info) {
+ 			dao_set_colrow_state_list (me->dao, FALSE, me->row_info);
+ 			colrow_state_list_destroy (me->row_info);
++			me->row_info = NULL;
+ 		}
+ 		if (me->newSheetObjects == NULL)
+ 			me->newSheetObjects = dao_surrender_so (me->dao);

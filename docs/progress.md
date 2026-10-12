@@ -897,6 +897,40 @@
   names that the dialog then lists.  `GNM_SNAPSHOT_NAMES=1` adds a
   name through the dialog (captured to `-names.png`) and inserts it.
 
+## 2026-10-12: Fill Series and Text to Columns
+
+- Fill Series (`GnmSheet.fillSeriesInRange:byRows:kind:dateUnit:start:
+  step:stop:`): the engine's `GnmFillSeriesTool` through
+  `cmd_analysis_tool` with a range output description (`dao_init` with
+  the selection as `GNM_DAO_OUTPUT_RANGE`, as the GTK dialog's
+  `dao_parse_output` fills it), the command owning the description and
+  keeping the tool; `numberFromText:` reads the dialog's entries as the
+  GTK `entry_to_float` does (`format_match_number`, so dates and times
+  read as serials).  Edit → Fill → Series… is an alert sheet (series in
+  rows or columns, linear, growth, or date with its unit, start, step,
+  stop; start and stop from the selection's first and last cells).
+- Text to Columns (`GnmSheet (TextToColumns)` in `GnmTextImport.h`):
+  `textToColumnsSessionWithError:` builds an import session from the
+  selection's column (formulas as written, values as displayed, as
+  `stf_text_to_columns` does; one column only, and not empty);
+  `textToColumnsWithSession:` parses it into a cell region
+  (`stf_parse_region`), attaches the column formats as
+  `stf_dialog_result_attach_formats_to_cr` does, and pastes it into the
+  columns to the right with `cmd_text_to_columns`.  Data → Text to
+  Columns… runs the import assistant on it (titled accordingly).
+- Engine bug, patched: `cmd_analysis_tool_undo` destroyed its saved
+  column and row state lists without clearing the pointers, and the
+  redo destroyed them again, an abort on macOS for every range-output
+  analysis tool on undo then redo.  `patches/0003-analysis-tool-undo-
+  colrow-state.patch` sets the pointers to NULL; the GTK front end runs
+  the same code.
+- `Tests/BridgeTests/fill_series.m` (linear by step and by stop, a stop
+  cutting the range, growth across a row, month and weekday dates, the
+  number reader, undo and redo, the refusal without step or stop) and
+  the Text to Columns block of `text_import.m` (two columns refused,
+  the formula as written, the parse, undo, no data refused).
+  `GNM_SNAPSHOT_FILL=1` fills F1:F6 and splits G1:G2 headlessly.
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -908,9 +942,10 @@
    done; Phase 5 has begun with File → New, Go To and the name box,
    Insert and Delete Cells, the current date and time, Save As CSV,
    Find and Replace, the Settings window, and Export as Text with
-   options, the text import assistant, cell comments, and defined names;
-   next the rest of Phase 5 by usage frequency: Text to Columns, Fill
-   Series, conditional formatting, the analysis tools) from
+   options, the text import assistant, cell comments, defined names,
+   Fill Series, and Text to Columns; next the rest of Phase 5 by usage
+   frequency: conditional formatting, the analysis tools, Goal Seek,
+   data validation) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -933,8 +968,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-12: `main` at the defined names
-   commit (after cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-12: `main` at the Fill Series and
+   Text to Columns commit (after defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

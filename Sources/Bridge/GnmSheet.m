@@ -1771,6 +1771,57 @@ pixels_from_points (Sheet const *sheet, gboolean horizontal, double points)
     gnm_sheet_view_update (_sv);
 }
 
+#pragma mark - Fill Series
+
+- (NSNumber *)numberFromText:(NSString *)text
+{
+    if (_sheet == NULL || text.length == 0)
+        return nil;
+    GnmValue *v = format_match_number (text.UTF8String, NULL, sheet_date_conv (_sheet));
+    if (!v)
+        return nil;
+    NSNumber *result = VALUE_IS_NUMBER (v) ? @(value_get_as_float (v)) : nil;
+    value_release (v);
+    return result;
+}
+
+- (BOOL)fillSeriesInRange:(GnmCellRange)range byRows:(BOOL)byRows kind:(GnmFillSeriesKind)kind dateUnit:(GnmFillSeriesDateUnit)unit
+                    start:(double)start step:(NSNumber *)step stop:(NSNumber *)stop error:(NSError **)error
+{
+    if (_sheet == NULL || _workbook == nil)
+        return NO;
+    if (step == nil && stop == nil) {
+        if (error)
+            *error = [_workbook.engine _errorWithCode:GnmErrorCommandFailed
+                                          description:@"A step or a stop value is needed for a series." collected:@[]];
+        return NO;
+    }
+    /* dialog-fill-series.c cb_fill_series_ok_clicked */
+    GnmAnalysisTool *tool = gnm_fill_series_tool_new ();
+    GnmFillSeriesTool *ftool = GNM_FILL_SERIES_TOOL (tool);
+    ftool->series_in_rows = byRows;
+    ftool->type = (gnm_fill_series_type_t) kind;
+    ftool->date_unit = (gnm_fill_series_date_unit_t) unit;
+    ftool->start_value = start;
+    ftool->is_step_set = step != nil;
+    ftool->step_value = step.doubleValue;
+    ftool->is_stop_set = stop != nil;
+    ftool->stop_value = stop.doubleValue;
+    data_analysis_output_t *dao = dao_init (GNM_DAO_OUTPUT_RANGE);
+    dao->start_col = (int) range.start.column;
+    dao->start_row = (int) range.start.row;
+    dao->cols = (int) (range.end.column - range.start.column + 1);
+    dao->rows = (int) (range.end.row - range.start.row + 1);
+    dao->dst_sheet = _sheet;
+    Sheet *sheet = _sheet;
+    /* The command owns the output description and keeps the tool. */
+    BOOL ok = [_workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_analysis_tool (wbc, sheet, dao, tool);
+    } description:@"Could not fill the series." error:error];
+    g_object_unref (tool);
+    return ok;
+}
+
 #pragma mark - Comments
 
 - (GnmCellComment *)commentAtColumn:(NSInteger)column row:(NSInteger)row

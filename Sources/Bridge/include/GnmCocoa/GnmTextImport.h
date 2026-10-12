@@ -102,6 +102,18 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(TextImportSession)
 - (NSArray<NSArray<NSString *> *> *)previewLines:(NSInteger)maxLines NS_SWIFT_NAME(previewLines(_:));
 @end
 
+@interface GnmSheet (TextToColumns)
+/// Data → Text to Columns…: a session over the texts of the selection's
+/// column (formulas as written, values as displayed, one per line, as
+/// `stf_text_to_columns` builds them).  Nil with an error when the
+/// selection spans more than one column or holds no data.
+- (nullable GnmTextImportSession *)textToColumnsSessionWithError:(NSError **)error NS_SWIFT_NAME(textToColumnsSession());
+/// Parse the session's text with its options into the columns to the
+/// right of the selection (`stf_parse_region`, the column formats
+/// attached, `cmd_text_to_columns`), undoable.
+- (BOOL)textToColumnsWithSession:(GnmTextImportSession *)session error:(NSError **)error NS_SWIFT_NAME(textToColumns(_:));
+@end
+
 @interface GnmEngine (TextImport)
 /// Parse the session's chosen lines into a new workbook with one sheet
 /// named after the source (`stf_parse_sheet`, then the columns fitted

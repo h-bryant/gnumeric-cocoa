@@ -347,11 +347,11 @@ final class TextImportAssistant {
     let model: TextImportModel
     private var accepted = false
 
-    init(session: TextImportSession) {
+    init(session: TextImportSession, title: String = "Import Text") {
         model = TextImportModel(session: session)
         let hosting = NSHostingController(rootView: TextImportView(model: model) { _ in })
         window = NSWindow(contentViewController: hosting)
-        window.title = "Import Text"
+        window.title = title
         window.styleMask = [.titled]
         window.isReleasedWhenClosed = false
         hosting.rootView = TextImportView(model: model) { [weak self] accepted in self?.finish(accepted) }

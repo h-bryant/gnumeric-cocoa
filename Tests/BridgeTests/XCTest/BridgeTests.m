@@ -84,5 +84,6 @@
 - (void)testTextImport { [self runProgram:@"text_import"]; }
 - (void)testComments { [self runProgram:@"comments"]; }
 - (void)testNames { [self runProgram:@"names"]; }
+- (void)testFillSeries { [self runProgram:@"fill_series"]; }
 
 @end

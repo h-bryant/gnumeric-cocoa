@@ -51,6 +51,9 @@
 #include <sheet-utils.h>
 #include <tools/filter.h>
 #include <tools/auto-correct.h>
+#include <tools/dao.h>
+#include <tools/fill-series.h>
+#include <tools/analysis-tools.h>
 #include <goffice/goffice.h>
 #include <goffice/app/go-cmd-context-impl.h>
 #include <goffice/graph/gog-plot-engine.h>
@@ -162,6 +165,13 @@ GType gnm_cocoa_sheet_control_get_type (void);
 @property (nonatomic, readonly, weak, nullable) GnmSheet *_ownerSheet;
 - (void)_detachFromEngine;
 - (void)_engineObjectDidChange;
+@end
+
+@interface GnmTextImportSession ()
+- (instancetype)initWithText:(GString *)text name:(NSString *)name encoding:(NSString *)encoding url:(nullable NSURL *)url;
+- (GnmStfParseOptions *)_parseOptions;
+/// The chosen lines, NUL-terminated; the caller frees it.
+- (char *)_copyOfRange;
 @end
 
 @interface GnmCellComment ()

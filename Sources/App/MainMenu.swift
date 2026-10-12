@@ -59,6 +59,8 @@ enum MainMenu {
         let fillMenu = NSMenu(title: "Fill")
         fillMenu.addItem(withTitle: "Down", action: Selector(("fillDown:")), keyEquivalent: "d")
         fillMenu.addItem(withTitle: "Right", action: Selector(("fillRight:")), keyEquivalent: "r")
+        fillMenu.addItem(.separator())
+        fillMenu.addItem(withTitle: "Series…", action: Selector(("fillSeries:")), keyEquivalent: "")
         editMenu.addItem(submenu(fillMenu, title: "Fill"))
         editMenu.addItem(withTitle: "Delete Cells…", action: Selector(("deleteCells:")), keyEquivalent: "")
         editMenu.addItem(withTitle: "Delete Columns", action: Selector(("deleteColumns:")), keyEquivalent: "")
@@ -144,6 +146,8 @@ enum MainMenu {
         filterMenu.addItem(withTitle: "Add Auto Filter", action: Selector(("toggleAutofilter:")), keyEquivalent: "")
         filterMenu.addItem(withTitle: "Show All", action: Selector(("showAllFilteredRows:")), keyEquivalent: "")
         dataMenu.addItem(submenu(filterMenu, title: "Filter"))
+        dataMenu.addItem(.separator())
+        dataMenu.addItem(withTitle: "Text to Columns…", action: Selector(("textToColumns:")), keyEquivalent: "")
         dataMenu.addItem(.separator())
         let recalc = dataMenu.addItem(withTitle: "Recalculate", action: Selector(("recalculate:")),
                                       keyEquivalent: String(Character(UnicodeScalar(NSF9FunctionKey)!)))

@@ -83,6 +83,19 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(SheetDelegate)
 - (void)sheetObjectsDidChange:(GnmSheet *)sheet NS_SWIFT_NAME(sheetObjectsDidChange(_:));
 @end
 
+typedef NS_ENUM(NSInteger, GnmFillSeriesKind) {
+    GnmFillSeriesLinear = 0,
+    GnmFillSeriesGrowth,
+    GnmFillSeriesDate,
+} NS_SWIFT_NAME(Sheet.FillSeriesKind);
+
+typedef NS_ENUM(NSInteger, GnmFillSeriesDateUnit) {
+    GnmFillSeriesDateUnitDay = 0,
+    GnmFillSeriesDateUnitWeekday,
+    GnmFillSeriesDateUnitMonth,
+    GnmFillSeriesDateUnitYear,
+} NS_SWIFT_NAME(Sheet.FillSeriesDateUnit);
+
 /// A cell's comment (`GnmComment`): its position, author, and text.
 NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(CellComment)
 @interface GnmCellComment : NSObject
@@ -179,6 +192,20 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 - (BOOL)fillSelectionWithText:(NSString *)text error:(NSError **)error NS_SWIFT_NAME(fillSelection(with:));
 /// Clear parts of the selected cells (`cmd_selection_clear`).
 - (BOOL)clearSelection:(GnmClearOptions)options error:(NSError **)error NS_SWIFT_NAME(clearSelection(_:));
+
+// Fill Series (`tools/fill-series.h`, the GTK dialog-fill-series.c).
+/// A number from text the way the dialogs read their entries: a plain
+/// number, or a date or time in the sheet's conventions, as its serial;
+/// nil when the text is neither.
+- (nullable NSNumber *)numberFromText:(NSString *)text NS_SWIFT_NAME(number(from:));
+/// Fill `range` with a series from `start`: linear (adding `step`),
+/// growth (multiplying by it), or dates (stepping by `step` of
+/// `unit`).  Without a step, it is found from `stop` over the range;
+/// with both, the series ends at `stop` or the range's end, whichever
+/// comes first.  Undoable as "Fill Series".
+- (BOOL)fillSeriesInRange:(GnmCellRange)range byRows:(BOOL)byRows kind:(GnmFillSeriesKind)kind dateUnit:(GnmFillSeriesDateUnit)unit
+                    start:(double)start step:(nullable NSNumber *)step stop:(nullable NSNumber *)stop
+                    error:(NSError **)error NS_SWIFT_NAME(fillSeries(in:byRows:kind:dateUnit:start:step:stop:));
 
 // Comments.
 /// The cell's comment, nil without one (`sheet_get_comment`).

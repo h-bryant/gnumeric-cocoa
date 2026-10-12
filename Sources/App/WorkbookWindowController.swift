@@ -454,7 +454,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(showFindPanel(_:)), #selector(showReplacePanel(_:)), #selector(findNext(_:)), #selector(findPrevious(_:)):
             return gridView.sheet != nil
-        case #selector(defineNames(_:)), #selector(insertName(_:)):
+        case #selector(defineNames(_:)), #selector(insertName(_:)), #selector(fillSeries(_:)), #selector(textToColumns(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(removeSheet(_:)):
             return gridView.sheet != nil && workbook.canRemoveSheets
@@ -819,6 +819,103 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
 
     @objc func insertCells(_ sender: Any?) { promptCellShift(insert: true) }
     @objc func deleteCells(_ sender: Any?) { promptCellShift(insert: false) }
+
+    // MARK: Fill Series (Edit → Fill → Series…)
+
+    /// The GTK Fill Series dialog as an alert sheet: the series in rows or
+    /// columns, linear, growth, or date with its unit, and the start, step,
+    /// and stop values (start from the selection's first cell, stop from
+    /// its last, as the GTK dialog fills them).
+    @objc func fillSeries(_ sender: Any?) {
+        guard let window, let sheet = gridView.sheet, window.attachedSheet == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let range = sheet.selectedRange
+        let preferRows = range.end.column - range.start.column >= range.end.row - range.start.row
+        let alert = NSAlert()
+        alert.messageText = "Fill Series"
+        alert.informativeText = "Fill the selection with a series from the start value. Leave the step empty to spread the series to the stop value over the selection."
+        alert.addButton(withTitle: "Fill")
+        alert.addButton(withTitle: "Cancel")
+        let direction = NSPopUpButton(frame: .zero, pullsDown: false)
+        direction.addItems(withTitles: ["In columns (down)", "In rows (across)"])
+        direction.selectItem(at: preferRows ? 1 : 0)
+        let kind = NSPopUpButton(frame: .zero, pullsDown: false)
+        kind.addItems(withTitles: ["Linear", "Growth", "Date"])
+        let unit = NSPopUpButton(frame: .zero, pullsDown: false)
+        unit.addItems(withTitles: ["Day", "Weekday", "Month", "Year"])
+        let start = NSTextField(string: sheet.displayTextOfCell(atColumn: range.start.column, row: range.start.row) ?? "")
+        let lastColumn = preferRows ? range.end.column : range.start.column
+        let lastRow = preferRows ? range.start.row : range.end.row
+        let stop = NSTextField(string: (lastColumn != range.start.column || lastRow != range.start.row)
+                               ? (sheet.displayTextOfCell(atColumn: lastColumn, row: lastRow) ?? "") : "")
+        let step = NSTextField(string: "1")
+        for field in [start, step, stop] { field.widthAnchor.constraint(greaterThanOrEqualToConstant: 140).isActive = true }
+        func label(_ text: String) -> NSTextField {
+            let field = NSTextField(labelWithString: text)
+            field.alignment = .right
+            return field
+        }
+        let grid = NSGridView(views: [
+            [label("Series in:"), direction], [label("Type:"), kind], [label("Date unit:"), unit],
+            [label("Start value:"), start], [label("Step value:"), step], [label("Stop value:"), stop],
+        ])
+        grid.rowSpacing = 6
+        grid.columnSpacing = 8
+        grid.column(at: 0).xPlacement = .trailing
+        for index in 0..<grid.numberOfRows { grid.row(at: index).yPlacement = .center }
+        grid.frame = NSRect(x: 0, y: 0, width: 300, height: 190)
+        alert.accessoryView = grid
+        alert.window.initialFirstResponder = start
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard let self, response == .alertFirstButtonReturn else { return }
+            guard let startValue = sheet.number(from: start.stringValue) else {
+                presentMessage("The start value “\(start.stringValue)” is not a number or a date.")
+                return
+            }
+            let stepValue = step.stringValue.isEmpty ? nil : sheet.number(from: step.stringValue)
+            let stopValue = stop.stringValue.isEmpty ? nil : sheet.number(from: stop.stringValue)
+            if !step.stringValue.isEmpty && stepValue == nil {
+                presentMessage("The step value “\(step.stringValue)” is not a number.")
+                return
+            }
+            if !stop.stringValue.isEmpty && stopValue == nil {
+                presentMessage("The stop value “\(stop.stringValue)” is not a number or a date.")
+                return
+            }
+            runSizeCommand { sheet in
+                try sheet.fillSeries(in: range, byRows: direction.indexOfSelectedItem == 1,
+                                     kind: Sheet.FillSeriesKind(rawValue: kind.indexOfSelectedItem) ?? .linear,
+                                     dateUnit: Sheet.FillSeriesDateUnit(rawValue: unit.indexOfSelectedItem) ?? .day,
+                                     start: startValue.doubleValue, step: stepValue, stop: stopValue)
+            }
+        }
+    }
+
+    private func presentMessage(_ text: String) {
+        guard let window else { return }
+        let alert = NSAlert()
+        alert.messageText = text
+        alert.beginSheetModal(for: window)
+    }
+
+    // MARK: Text to Columns (Data menu)
+
+    /// Data → Text to Columns…: the selection's column through the import
+    /// assistant, parsed into the columns to its right.
+    @objc func textToColumns(_ sender: Any?) {
+        guard let window, let sheet = gridView.sheet, window.attachedSheet == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        do {
+            let session = try sheet.textToColumnsSession()
+            let assistant = TextImportAssistant(session: session, title: "Text to Columns")
+            guard assistant.run() else { return }
+            try sheet.textToColumns(assistant.model.session)
+            workbook.resendDelegateState()
+            gridView.needsDisplay = true
+        } catch {
+            present(error)
+        }
+    }
 
     // MARK: Names (Edit → Define Names…, Insert → Name…)
 

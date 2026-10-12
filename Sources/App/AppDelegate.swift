@@ -472,6 +472,36 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FILL"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // Fill Series down F1:F6 from 1 by 2, then Text to Columns on
+                // "a;b" and "c;d" in G1:G2 through the assistant.
+                do {
+                    try sheet.fillSeries(in: CellRange(start: CellCoordinate(column: 5, row: 0), end: CellCoordinate(column: 5, row: 5)),
+                                         byRows: false, kind: .linear, dateUnit: .day, start: 1, step: 2, stop: nil)
+                    NSLog("fill: F1..F6 = %@ undo=%@", (0..<6).map { sheet.displayTextOfCell(atColumn: 5, row: $0) ?? "-" },
+                          sheet.workbook?.undoLabel ?? "nil")
+                    try sheet.setText("a;b", atColumn: 6, row: 0, autocorrect: false)
+                    try sheet.setText("c;d", atColumn: 6, row: 1, autocorrect: false)
+                    sheet.selectRange(CellRange(start: CellCoordinate(column: 6, row: 0), end: CellCoordinate(column: 6, row: 1)),
+                                      editPosition: CellCoordinate(column: 6, row: 0))
+                    TextImportAssistant.headlessDriver = { assistant in
+                        assistant.model.separators = [";"]
+                        NSLog("fill: text to columns assistant '%@' %ld columns", assistant.window.title, assistant.model.columnChoices.count)
+                        return true
+                    }
+                    controller.textToColumns(nil)
+                    TextImportAssistant.headlessDriver = nil
+                    NSLog("fill: H1='%@' I1='%@' I2='%@' undo=%@", sheet.displayTextOfCell(atColumn: 7, row: 0) ?? "nil",
+                          sheet.displayTextOfCell(atColumn: 8, row: 0) ?? "nil", sheet.displayTextOfCell(atColumn: 8, row: 1) ?? "nil",
+                          sheet.workbook?.undoLabel ?? "nil")
+                } catch {
+                    NSLog("fill: failed: %@", error.localizedDescription)
+                }
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_NAMES"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

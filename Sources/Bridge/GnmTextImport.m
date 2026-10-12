@@ -5,6 +5,7 @@
 #import "GnmPrivate.h"
 #include <stf-parse.h>
 #include <stf.h>
+#include <expr.h>
 
 @implementation GnmTextImportSession {
     GString *_text;                 /* UTF-8, NUL-free */
@@ -426,6 +427,109 @@ decode (NSData *data, NSString *encoding, NSString **encodingOut, NSString **pro
     const char *start, *end;
     [self _rangeStart:&start end:&end];
     return g_strndup (start, end - start);
+}
+
+@end
+
+/* stf.c cb_get_content: a cell's text for Text to Columns. */
+static GnmValue *
+cb_cell_text (GnmCellIter const *iter, GString *buffer)
+{
+    GnmCell *cell = iter->cell;
+    if (cell) {
+        char *tmp;
+        if (gnm_cell_has_expr (cell))
+            tmp = gnm_expr_top_as_string (cell->base.texpr, &iter->pp, iter->pp.sheet->convs);
+        else if (VALUE_FMT (cell->value) != NULL)
+            tmp = format_value (NULL, cell->value, -1, workbook_date_conv (iter->pp.wb));
+        else
+            tmp = value_get_as_string (cell->value);
+        g_string_append (buffer, tmp);
+        g_free (tmp);
+    }
+    g_string_append_c (buffer, '\n');
+    return NULL;
+}
+
+@implementation GnmSheet (TextToColumns)
+
+- (GnmTextImportSession *)textToColumnsSessionWithError:(NSError **)error
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    Sheet *sheet = self.engineSheet;
+    GnmEngine *engine = self.workbook.engine;
+    if (!sheet || !engine)
+        return nil;
+    GnmCellRange selection = self.selectedRange;
+    if (selection.start.column != selection.end.column) {
+        if (error)
+            *error = [engine _errorWithCode:GnmErrorCommandFailed
+                                description:@"Only one column of input data can be parsed at a time" collected:@[]];
+        return nil;
+    }
+    GnmRange src;
+    range_init (&src, (int) selection.start.column, (int) selection.start.row, (int) selection.end.column, (int) selection.end.row);
+    GString *buffer = g_string_new (NULL);
+    sheet_foreach_cell_in_range (sheet, CELL_ITER_ALL, &src, (CellIterFunc) cb_cell_text, buffer);
+    /* As the engine does: no cells at all is no data (a column of empty
+     * lines still counts as lines). */
+    BOOL empty = YES;
+    for (gsize i = 0; i < buffer->len && empty; i++)
+        if (buffer->str[i] != '\n')
+            empty = NO;
+    if (empty) {
+        g_string_free (buffer, TRUE);
+        if (error)
+            *error = [engine _errorWithCode:GnmErrorCommandFailed description:@"There is no data to convert" collected:@[]];
+        return nil;
+    }
+    GnmTextImportSession *session = [[GnmTextImportSession alloc] initWithText:buffer name:@"Text to Columns" encoding:@"UTF-8" url:nil];
+    return session;
+}
+
+- (BOOL)textToColumnsWithSession:(GnmTextImportSession *)session error:(NSError **)error
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    Sheet *sheet = self.engineSheet;
+    GnmWorkbook *workbook = self.workbook;
+    if (!sheet || !workbook)
+        return NO;
+    GnmCellRange selection = self.selectedRange;
+    GnmRange src, target;
+    range_init (&src, (int) selection.start.column, (int) selection.start.row, (int) selection.end.column, (int) selection.end.row);
+    target = src;
+    range_translate (&target, sheet, 1, 0);   /* the columns to the right, as stf_text_to_columns does */
+
+    GnmStfParseOptions *po = [session _parseOptions];
+    char *text = [session _copyOfRange];
+    GnmCellRegion *cr = stf_parse_region (po, text, NULL, sheet->workbook);
+    g_free (text);
+    if (cr == NULL) {
+        if (error)
+            *error = [workbook.engine _errorWithCode:GnmErrorCommandFailed
+                                         description:@"Error while trying to parse data into sheet" collected:@[]];
+        return NO;
+    }
+    /* dialog-stf.c stf_dialog_result_attach_formats_to_cr */
+    unsigned targetcol = 0;
+    for (unsigned col = 0; col < po->formats->len; col++) {
+        if (po->col_import_array == NULL || po->col_import_array_len <= col || po->col_import_array[col]) {
+            GOFormat *sf = g_ptr_array_index (po->formats, col);
+            GnmRange r;
+            range_init (&r, (int) targetcol, 0, (int) targetcol, cr->rows - 1);
+            GnmStyle *style = gnm_style_new_default ();
+            gnm_style_set_format (style, sf);
+            cr->styles = g_slist_prepend (cr->styles, gnm_style_region_new (&r, style));
+            gnm_style_unref (style);
+            targetcol++;
+        }
+    }
+    target.end.col = target.start.col + cr->cols - 1;
+    target.end.row = target.start.row + cr->rows - 1;
+    BOOL ok = [workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_text_to_columns (wbc, &src, sheet, &target, sheet, cr);
+    } description:@"Error while trying to parse data into sheet" error:error];
+    return ok;
 }
 
 @end

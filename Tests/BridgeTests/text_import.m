@@ -166,6 +166,36 @@ int main (void)
         NSLog (@"1,5 read in de_DE: %@", [wb.sheets.firstObject displayTextOfCellAtColumn:0 row:0]);
         wb = nil;
 
+        /* Text to Columns: the selection's column parsed into the
+         * columns to its right, as the GTK action does */
+        wb = [engine newWorkbookWithSheetCount:1];
+        s = wb.sheets.firstObject;
+        GNM_ASSERT ([s setText:@"a;b" atColumn:0 row:0 autocorrect:NO error:&error], @"A1: %@", error);
+        GNM_ASSERT ([s setText:@"c;d;e" atColumn:0 row:1 autocorrect:NO error:&error], @"A2: %@", error);
+        GNM_ASSERT ([s setText:@"=1+1" atColumn:0 row:2 autocorrect:NO error:&error], @"A3: %@", error);
+        [s selectRange:GnmCellRangeMake (0, 0, 1, 2) editPosition:GnmCellCoordinateMake (0, 0)];
+        error = nil;
+        GNM_ASSERT ([s textToColumnsSessionWithError:&error] == nil && error != nil, @"two columns refused");
+        [s selectRange:GnmCellRangeMake (0, 0, 0, 2) editPosition:GnmCellCoordinateMake (0, 0)];
+        GnmTextImportSession *columns = [s textToColumnsSessionWithError:&error];
+        GNM_ASSERT (columns != nil, @"session: %@", error);
+        GNM_ASSERT (columns.lineCount == 3, @"three lines: %ld", (long) columns.lineCount);
+        columns.separatorCharacters = @";";
+        GNM_ASSERT_EQ_STR (joined ([columns previewLines:5]), @"a|b/c|d|e/1+1");   /* the formula as written */
+        GNM_ASSERT ([s textToColumnsWithSession:columns error:&error], @"text to columns: %@", error);
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:1 row:0], @"a");
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:2 row:0], @"b");
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:3 row:1], @"e");
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:1 row:2], @"1+1");
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:0 row:0], @"a;b");   /* the source stays */
+        GNM_ASSERT ([wb.undoLabel ?: @"" length] > 0, @"undoable: %@", wb.undoLabel);
+        [wb undo];
+        GNM_ASSERT ([s isCellEmptyAtColumn:1 row:0], @"undone");
+        [s selectRange:GnmCellRangeMake (4, 0, 4, 1) editPosition:GnmCellCoordinateMake (4, 0)];
+        error = nil;
+        GNM_ASSERT ([s textToColumnsSessionWithError:&error] == nil && error != nil, @"no data refused");
+        wb = nil;
+
         GNM_ASSERT (stray.count == 0, @"stray messages: %@", stray);
       }
         [engine shutdown];

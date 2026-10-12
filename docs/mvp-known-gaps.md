@@ -104,10 +104,12 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | Action | Status | Notes / Phase |
 |---|---|---|
 | DataSort | partial | Data → Sort… (2026-10-12): rows or columns, header, three keys with order and case, keep formats; no locale, no more than three keys, no saved setups |
-| DataShuffle, DataValidate, DataConsolidate, DataTable, DataTextToColumns | no | Phase 3/5 |
+| DataShuffle, DataValidate, DataConsolidate, DataTable | no | Phase 3/5 |
+| DataTextToColumns | ported | Data → Text to Columns… through the import assistant (2026-10-12) |
 | CopyDown, CopyRight | ported | Edit → Fill → Down ⌘D, Right ⌘R |
 | EditFillAutofill | ported | the fill handle on the selection; Option makes a single number count up (the GTK Ctrl) |
-| EditFillSeries, ToolsMerge, ToolsTabulate, RandomGenerator* | no | Phase 3/5 |
+| ToolsMerge, ToolsTabulate, RandomGenerator* | no | Phase 3/5 |
+| EditFillSeries | ported | Edit → Fill → Series… (2026-10-12): linear, growth, date series in rows or columns |
 | DataAutoFilter, DataFilterShowAll | ported | Data → Filter (2026-10-12): buttons in the heading cells with the GTK list, Custom… and Top 10… sheets; Show All also drops every autofilter condition (GTK's only serves the advanced filter) |
 | DataFilterAdvancedfilter | no | Phase 5 |
 | DataOutline* (7) | no | Phase 3 |

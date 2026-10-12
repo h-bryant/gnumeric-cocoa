@@ -10,5 +10,6 @@ deferred, not ruled out (`docs/decisions.md` ADR-011).
 |---|---|
 | `0001-decouple-command-dialogs-from-wbcgtk.patch` | The seven command-layer sites that cast to `WBCGtk` (`docs/architecture.md` §5) go through the control's command context and a new `query_yes_no` vtable slot, so a Cocoa control survives Phase 2 editing. GTK behavior unchanged. |
 | `0002-merge-center-style-ref.patch` | `cmd_merge_cells_redo` unreffed the align-center style once too often (`sheet_apply_style` absorbs a reference), a use after free in Merge and Center that the GTK front end shares. One `gnm_style_ref` per range. |
+| `0003-analysis-tool-undo-colrow-state.patch` | `cmd_analysis_tool_undo` destroyed its saved column and row state lists without clearing the pointers, so a redo after an undo freed them again (an abort on macOS for Fill Series and every range-output analysis tool). Two `= NULL`. |
 
 Re-check each patch at every submodule re-pin (ADR-003).
