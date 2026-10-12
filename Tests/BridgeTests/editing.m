@@ -59,6 +59,77 @@ int main (void)
         GNM_ASSERT ([s setText:@"42" atColumn:5 row:5 autocorrect:YES error:&error] && error == nil, @"unchanged text: %@", error);
         GNM_ASSERT ([wb.undoLabel ?: @"" isEqualToString:undoBeforeRepeat ?: @""], @"no command for an unchanged cell: %@", wb.undoLabel);
         GNM_ASSERT ([s setText:@"" atColumn:30 row:30 autocorrect:YES error:&error] && error == nil, @"blank into a blank cell: %@", error);
+
+        /* a sentinel command: everything below undoes back to it */
+        GNM_ASSERT ([s setText:@"sentinel" atColumn:40 row:40 autocorrect:NO error:&error], @"sentinel");
+        NSString *sentinelLabel = wb.undoLabel;
+
+        /* cells inserted and deleted with a shift (the GTK dialogs' first
+         * two choices): a block at J10:K11, cells inserted at J10 shifting
+         * right push it to L10, shifting down push it to J12 */
+        GNM_ASSERT ([s setText:@"j10" atColumn:9 row:9 autocorrect:NO error:&error], @"j10");
+        GNM_ASSERT ([s setText:@"k11" atColumn:10 row:10 autocorrect:NO error:&error], @"k11");
+        GnmCellRange one = { { 9, 9 }, { 9, 9 } };
+        GNM_ASSERT ([s insertCellsInRange:one shiftingDown:NO error:&error], @"insert shifting right: %@", error);
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:10 row:9] ?: @"", @"j10");
+        GNM_ASSERT ([s displayTextOfCellAtColumn:9 row:9] == nil || [[s displayTextOfCellAtColumn:9 row:9] length] == 0, @"J10 empty now");
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:10 row:10] ?: @"", @"k11");   /* row 11 untouched */
+        GNM_ASSERT ([wb.undoLabel hasPrefix:@"Shift"], @"undo label: %@", wb.undoLabel);
+        [wb undo];
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:9 row:9] ?: @"", @"j10");
+        GNM_ASSERT ([s insertCellsInRange:one shiftingDown:YES error:&error], @"insert shifting down: %@", error);
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:9 row:10] ?: @"", @"j10");
+        [wb undo];
+        GNM_ASSERT ([s deleteCellsInRange:one shiftingUp:YES error:&error], @"delete shifting up: %@", error);
+        GNM_ASSERT ([s displayTextOfCellAtColumn:9 row:9] == nil || [[s displayTextOfCellAtColumn:9 row:9] length] == 0, @"J10 gone");
+        [wb undo];
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:9 row:9] ?: @"", @"j10");
+        GnmCellRange kcell = { { 9, 10 }, { 9, 10 } };   /* J11, empty: K11 shifts left into it */
+        GNM_ASSERT ([s deleteCellsInRange:kcell shiftingUp:NO error:&error], @"delete shifting left: %@", error);
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:9 row:10] ?: @"", @"k11");
+        [wb undo];
+
+        /* today's date and the time of day as the GTK actions type them */
+        [s selectCellAtColumn:12 row:12];
+        NSString *today = [s currentDateTimeTextWithDate:YES time:NO];
+        NSString *now = [s currentDateTimeTextWithDate:NO time:YES];
+        NSString *both = [s currentDateTimeTextWithDate:YES time:YES];
+        NSString *joined = [NSString stringWithFormat:@"%@ %@", today, now];
+        GNM_ASSERT (today.length >= 8 && now.length >= 5 && [both isEqualToString:joined],
+                    @"date '%@' time '%@' both '%@'", today, now, both);
+        GNM_ASSERT ([s setText:today atColumn:12 row:12 autocorrect:YES error:&error], @"type the date: %@", error);
+        GNM_ASSERT ([[s displayTextOfCellAtColumn:12 row:12] length] > 0, @"date shown: %@", [s displayTextOfCellAtColumn:12 row:12]);
+
+        /* the name box and Go To: a cell, a range, another sheet, a bad address */
+        GNM_ASSERT ([wb jumpToReference:@"C10" error:&error], @"jump: %@", error);
+        GNM_ASSERT (s.editPosition.column == 2 && s.editPosition.row == 9, @"at C10: %ld,%ld", (long) s.editPosition.column, (long) s.editPosition.row);
+        GNM_ASSERT ([wb jumpToReference:@"B2:D4" error:&error], @"jump to a range: %@", error);
+        GNM_ASSERT (s.selectedRange.start.column == 1 && s.selectedRange.end.row == 3, @"B2:D4 selected");
+        /* a word defines a name for the selection (the GTK name box), and
+         * the name jumps back to it */
+        GNM_ASSERT ([wb jumpToReference:@"myrange" error:&error], @"define a name: %@", error);
+        [s selectCellAtColumn:0 row:0];
+        GNM_ASSERT ([wb jumpToReference:@"myrange" error:&error], @"jump to the name: %@", error);
+        GNM_ASSERT (s.selectedRange.start.column == 1 && s.selectedRange.start.row == 1 && s.selectedRange.end.row == 3,
+                    @"the name's range selected: %ld,%ld", (long) s.selectedRange.start.column, (long) s.selectedRange.start.row);
+        BOOL badOk = [wb jumpToReference:@"Sheet99!A1" error:&error];
+        NSLog (@"jump to a missing sheet: ok=%d error=%@", badOk, error);
+        GNM_ASSERT (!badOk && error != nil, @"a reference to a missing sheet is an error: %@", error);
+        error = nil;
+        if (wb.sheets.count > 1) {
+            GnmSheet *other = wb.sheets[1];
+            NSString *ref = [NSString stringWithFormat:@"%@!A1", other.name];
+            GNM_ASSERT ([wb jumpToReference:ref error:&error], @"jump to another sheet: %@", error);
+            GNM_ASSERT (wb.currentSheet == other, @"sheet switched to %@", wb.currentSheet.name);
+            [wb selectSheet:s];
+        }
+        /* back to the sentinel, then past it */
+        int guard = 0;
+        while (wb.canUndo && ![wb.undoLabel isEqualToString:sentinelLabel] && guard++ < 20)
+            [wb undo];
+        GNM_ASSERT ([wb.undoLabel isEqualToString:sentinelLabel], @"back at the sentinel: %@", wb.undoLabel);
+        [wb undo];
+        GNM_ASSERT ([s displayTextOfCellAtColumn:40 row:40] == nil, @"sentinel undone");
         GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:5 row:5], @"42");
         GNM_ASSERT ([s setText:@"=F6*2" atColumn:6 row:5 autocorrect:YES error:&error], @"set formula: %@", error);
         GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:6 row:5], @"84");

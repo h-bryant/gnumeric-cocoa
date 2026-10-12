@@ -320,14 +320,18 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    from files or the pasteboard; the chart editor (`GnmChartEditor`,
    `ChartEditorWindow.swift`, `Tests/BridgeTests/chart.m`) edits a copy
    of the graph and commits it as "Reconfigure Graph", changes a plot's
-   type in place, and objects save as image files. Next: image and widget
-   editors (`cmd_so_set_*`) or Phase 5; the smaller Phase 3
+   type in place, and objects save as image files. Phase 5 began the
+   same day with the everyday items (File → New, Go To and the name box,
+   Insert and Delete Cells, the current date and time, Save As CSV).
+   Next: Find and Replace, the Preferences window (the compression level
+   is set at launch until then), the text import and export options;
+   image and widget editors (`cmd_so_set_*`) later; the smaller Phase 3
    gaps (Insert/Delete Cells,
    Goto and the name box, the formula bar, autocomplete, drag and drop,
    outlines) as filler.
 6. Headless checks for all of it: `GNM_SNAPSHOT=out.png scripts/run-app.sh
    file` plus `GNM_SNAPSHOT_TYPE`, `_FORMAT`, `_PHASE3`, `_FREEZE`,
-   `_SHEETS`, `_FILTER`, `_OBJECTS`, `_CHART`, `_EDITOR`, `_ZOOM` (`docs/build.md`); compare `out.png` with
+   `_SHEETS`, `_FILTER`, `_OBJECTS`, `_CHART`, `_EDITOR`, `_EVERYDAY`, `_ZOOM` (`docs/build.md`); compare `out.png` with
    `out-window.png`. Engine fixes go to `patches/` (0001 decouplings, 0002
    Merge and Center); `scripts/build-gnumeric.sh` re-applies them and
    takes a few minutes.

@@ -46,8 +46,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// Phase 1 is a viewer; new documents arrive with editing (Phase 2).
-    func applicationShouldOpenUntitledFile(_ sender: NSApplication) -> Bool { false }
+    /// An untitled workbook at launch when no file was named (File → New
+    /// otherwise), as any document app.
+    func applicationShouldOpenUntitledFile(_ sender: NSApplication) -> Bool {
+        !CommandLine.arguments.dropFirst().contains { !$0.hasPrefix("-") }
+    }
 
     func applicationWillTerminate(_ notification: Notification) {
         // Workbooks must be released before the engine shuts down
@@ -392,6 +395,43 @@ enum Snapshot {
             }
             }
             autoreleasepool {
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_EVERYDAY"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // The everyday items: the name box's jump, the current date
+                // typed into a cell, cells inserted with a shift, a Save As
+                // to CSV, and File → New.
+                let grid = controller.gridView
+                controller.jump(to: "C10")
+                NSLog("everyday: after jump to C10 edit position=%ld,%ld", sheet.editPosition.column, sheet.editPosition.row)
+                controller.jump(to: "Nowhere!A1")   // an error, shown as a sheet and logged
+                grid.insertCurrentDate(nil)
+                NSLog("everyday: date typed into C10 shows '%@' undo=%@", sheet.displayTextOfCell(atColumn: 2, row: 9) ?? "nil",
+                      sheet.workbook?.undoLabel ?? "nil")
+                let before = sheet.displayTextOfCell(atColumn: 0, row: 0) ?? ""
+                do {
+                    try sheet.insertCells(in: CellRange(start: CellCoordinate(column: 0, row: 0), end: CellCoordinate(column: 0, row: 0)), shiftingDown: false)
+                } catch {
+                    NSLog("everyday: insert cells failed: %@", error.localizedDescription)
+                }
+                NSLog("everyday: A1 '%@' moved to B1 '%@' undo=%@", before, sheet.displayTextOfCell(atColumn: 1, row: 0) ?? "nil",
+                      sheet.workbook?.undoLabel ?? "nil")
+                grid.undo(nil)
+                if let document = controller.document as? WorkbookDocument {
+                    let csvURL = URL(fileURLWithPath: (path as NSString).deletingPathExtension + "-saved.csv")
+                    document.save(to: csvURL, ofType: WorkbookDocument.csvType, for: .saveToOperation) { error in
+                        let head = (try? String(contentsOf: csvURL, encoding: .utf8))?.prefix(60) ?? ""
+                        NSLog("everyday: csv error=%@ head='%@'", error?.localizedDescription ?? "none", String(head).replacingOccurrences(of: "\n", with: "|"))
+                    }
+                }
+                NSDocumentController.shared.newDocument(nil)
+                let untitled = NSDocumentController.shared.documents.first { $0.fileURL == nil } as? WorkbookDocument
+                NSLog("everyday: documents=%ld untitled=%@ sheets=%ld windows=%ld", NSDocumentController.shared.documents.count,
+                      untitled?.displayName ?? "none", untitled?.workbook?.sheets.count ?? 0, untitled?.windowControllers.count ?? 0)
+                untitled?.close()
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_EDITOR"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet,

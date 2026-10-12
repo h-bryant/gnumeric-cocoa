@@ -15,7 +15,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 
 | Action | Status | Notes / Phase |
 |---|---|---|
-| FileNew | no | the app opens no untitled document yet (`newWorkbook` exists in the bridge) |
+| FileNew | ported | File → New (⌘N) and an untitled workbook at launch without a file (2026-10-12) |
 | FileOpen | ported | every engine opener; CSV with default options |
 | FileSave, FileSaveAs | ported | `.gnumeric`, uncompressed `.xml`, `.xlsx`; other savers need Save As types |
 | FilePageSetup, FilePrintPreview, FilePrint, FilePrintArea* (6) | no | printing, Phase 3+ (`docs/architecture.md` §7) |
@@ -38,7 +38,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | EditClearAll, EditClearFormats, EditClearComments | ported | Edit → Clear submenu |
 | EditClear*Filtered (4) | ported | Edit → Clear → "… Filtered Rows" (2026-10-12); as in GTK they skip the rows a filter hides |
 | EditDeleteColumns, EditDeleteRows | ported | Edit menu; the selection's columns or rows |
-| EditDeleteCells | no | Phase 3 |
+| EditDeleteCells | ported | Edit → Delete Cells… (2026-10-12): shift left or up, entire rows or columns |
 | EditClearHyperlinks, EditComment, EditHyperlink, EditNames | no | Phase 5 |
 | InsertSheet, InsertSheetAtEnd, EditDuplicateSheet, SheetRemove, SheetChangeName | ported | Edit → Sheet and the tab context menu; rename through a prompt |
 | SheetReorder | partial | Move Left / Move Right; no Manage Sheets dialog or drag |
@@ -46,7 +46,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | EditSelectAll | ported | ⌘A and the header corner |
 | EditSelectColumn, EditSelectRow | ported | header clicks and Edit → Select |
 | EditSelectArray, EditSelectDepends, EditSelectInputs, EditSelectObject | no | Phase 3/4 |
-| EditGotoTop/Bottom/First/Last, EditGoto | partial | Home and ⌘↑ work; no name-box navigation or Goto dialog |
+| EditGotoTop/Bottom/First/Last, EditGoto | partial | Home and ⌘↑ work; Edit → Go To… (⌃G) and the name box take a reference or a name (2026-10-12); no Top/Bottom/First/Last items |
 
 ## View
 
@@ -63,7 +63,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 
 | Action | Status | Notes / Phase |
 |---|---|---|
-| InsertCells | no | Phase 3 |
+| InsertCells | ported | Insert → Cells… (2026-10-12): shift right or down, entire rows or columns |
 | InsertColumns, InsertRows | ported | Insert menu; as many as the selection spans, before it |
 | SheetInsert | ported | Edit → Sheet → Insert |
 | ChartGuru | ported | Insert → Chart… (2026-10-12): every goffice plot type with its sample image, series from the selection, the two guru options; the later pages are the chart editor (double-click, Properties…, Format → Object Properties…): object tree with add, remove, reorder, live preview, every object's data expressions, properties, and style, Change Type… for a plot; not in it: error bars, gradient and image fills, manual positions |
@@ -72,7 +72,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | InsertFormula (function selector), InsertNames | no | Phase 5 |
 | InsertComment, InsertHyperlink | no | Phase 5 |
 | InsertSortDecreasing, InsertSortIncreasing | ported | Data → Sort Ascending / Descending (the GTK quick sort: by the selection's columns, heading kept) |
-| InsertCurrentDate, InsertCurrentTime, InsertCurrentDateTime | no | Phase 3 |
+| InsertCurrentDate, InsertCurrentTime, InsertCurrentDateTime | ported | Insert menu, ⌘; and ⇧⌘; (2026-10-12) |
 
 ## Format
 
@@ -108,7 +108,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | DataFilterAdvancedfilter | no | Phase 5 |
 | DataOutline* (7) | no | Phase 3 |
 | DataSlicer* (3) | no | Phase 5 |
-| DataImportText, DataImportOther, DataExportText, DataExportCSV, DataExport, DataExportRepeat | no | Phase 5; the text import dialog is also needed for CSV options |
+| DataImportText, DataImportOther, DataExportText, DataExportCSV, DataExport, DataExportRepeat | partial | Save As to CSV writes the current sheet with the exporter's defaults and `.csv` opens with the importer's guessed options (2026-10-12); no options dialogs |
 
 ## Help
 
@@ -123,7 +123,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 |---|---|---|
 | Toolbars (standard, format, object) | no | Phase 3 |
 | Status bar, auto-expression (sum/average of selection) | partial | auto-expression pull-down 2026-10-11; no progress or zoom fields |
-| Name box navigation (type a reference) | no | Phase 3 |
+| Name box navigation (type a reference) | ported | 2026-10-12: a reference, a sheet-qualified reference, or a name; a new word names the selection |
 | Formula bar: multi-line editing, function tooltips | no | Phase 3 |
 | In-cell editor: cell's own font and alignment, autocomplete, range selection by mouse or keyboard while typing a formula, array formulas (Ctrl-Shift-Enter) | no | Phase 3 (`cmd_area_set_array_expr` is not wrapped yet) |
 | Cell comments (display, tooltips) | no | Phase 5 |

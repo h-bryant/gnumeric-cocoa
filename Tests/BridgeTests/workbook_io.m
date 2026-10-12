@@ -83,6 +83,25 @@ int main (void)
         GNM_ASSERT_EQ_STR (fresh.displayName, @"Untitled");
         fresh = nil;
 
+        /* delimited text: a CSV opens through the engine's text importer and
+         * the current sheet saves back as CSV (Gnumeric_stf:stf_csv) */
+        {
+            NSURL *csv = [NSURL fileURLWithPath:[outdir stringByAppendingPathComponent:@"bridge-cells.csv"]];
+            [@"name,value\nalpha,1\nbeta,2.5\n" writeToURL:csv atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+            GnmWorkbook *text = [engine openWorkbookAtURL:csv error:&error];
+            GNM_ASSERT (text != nil, @"open csv: %@", error);
+            GnmSheet *ts = text.sheets.firstObject;
+            GNM_ASSERT_EQ_STR ([ts displayTextOfCellAtColumn:0 row:1] ?: @"", @"alpha");
+            GNM_ASSERT_EQ_STR ([ts displayTextOfCellAtColumn:1 row:2] ?: @"", @"2.5");
+            GNM_ASSERT ([ts setText:@"gamma" atColumn:0 row:3 autocorrect:NO error:&error], @"edit csv: %@", error);
+            NSURL *out = [NSURL fileURLWithPath:[outdir stringByAppendingPathComponent:@"bridge-cells-out.csv"]];
+            GNM_ASSERT ([text writeToURL:out saverIdentifier:@"Gnumeric_stf:stf_csv" adoptingURL:NO error:&error], @"save csv: %@", error);
+            NSString *written = [NSString stringWithContentsOfURL:out encoding:NSUTF8StringEncoding error:NULL];
+            GNM_ASSERT ([written containsString:@"beta,2.5"] && [written containsString:@"gamma"], @"csv written: %@", written);
+            GNM_ASSERT_EQ_STR ([engine saverIdentifierForFileName:@"x.csv"] ?: @"", @"Gnumeric_stf:stf_csv");
+            text = nil; ts = nil;
+        }
+
         /* saver lookup */
         GNM_ASSERT_EQ_STR ([engine saverIdentifierForFileName:@"x.gnumeric"], @"Gnumeric_XmlIO:sax");
         GNM_ASSERT ([[engine saverIdentifierForFileName:@"x.xlsx"] hasPrefix:@"Gnumeric_Excel:xlsx"], @"xlsx saver");

@@ -102,7 +102,7 @@ GNM_SNAPSHOT=/tmp/grid.png scripts/run-app.sh upstream/gnumeric/samples/format-t
 `GNM_SNAPSHOT_ZOOM=1.5`, `GNM_SNAPSHOT_TYPE=text`, `GNM_SNAPSHOT_FORMAT=1`,
 `GNM_SNAPSHOT_PHASE3=1`, `GNM_SNAPSHOT_FREEZE=1`, `GNM_SNAPSHOT_SHEETS=1`,
 `GNM_SNAPSHOT_FILTER=1`, `GNM_SNAPSHOT_OBJECTS=1`, `GNM_SNAPSHOT_CHART=1`,
-and `GNM_SNAPSHOT_EDITOR=1`
+`GNM_SNAPSHOT_EDITOR=1`, and `GNM_SNAPSHOT_EVERYDAY=1`
 exercise zoom, editing and saving, the Format Cells model, the Phase 3
 commands, frozen panes, sheet management, the autofilter with the Sort
 command, a sheet resize, and a tab color, the sheet objects (select, move,
@@ -110,7 +110,8 @@ resize, delete, undo, copy and paste, an inserted image), chart
 insertion (which also writes the guru sheet to `-guru.png`), and the chart
 editor on the sheet's first chart (a title, an inverted axis, a red series,
 the plot changed to columns, the editor written to `-editor.png`, then
-applied) before the
+applied), and the everyday items (the name box's jump, the current date,
+a shifted cell, a CSV saved beside the capture, File → New) before the
 capture (`AppDelegate.swift`, `Snapshot`). The typing hook saves as a
 Save As next to the snapshot; with `GNM_SNAPSHOT_SAVE_INPLACE=1` it saves
 the opened file in place instead (give it a copy). Should a quit ever go

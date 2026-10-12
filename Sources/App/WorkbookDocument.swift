@@ -15,10 +15,25 @@ final class WorkbookDocument: NSDocument {
     /// saver, chosen by the `.xml` extension): diffable, Henry's preferred
     /// form for version control.
     nonisolated static let xmlType = "io.github.h-bryant.gnumeric-cocoa.gnumeric-xml"
+    /// Delimited text: opened through the engine's text importer with its
+    /// guessed options, saved as CSV of the current sheet
+    /// (`Gnumeric_stf:stf_csv`), the diffable form of a plain table.
+    nonisolated static let csvType = "public.comma-separated-values-text"
 
     override init() {
         super.init()
         hasUndoManager = false
+    }
+
+    /// File → New: an empty workbook with one sheet, the engine's defaults.
+    convenience init(type typeName: String) throws {
+        self.init()
+        guard let engine = Engine.shared else {
+            throw NSError(domain: GnmErrorDomain, code: GnmError.Code.engineNotRunning.rawValue,
+                          userInfo: [NSLocalizedDescriptionKey: "The Gnumeric engine is not running."])
+        }
+        workbook = engine.makeWorkbook(sheetCount: 1)
+        fileType = typeName
     }
 
     override class var autosavesInPlace: Bool { false }
@@ -46,7 +61,7 @@ final class WorkbookDocument: NSDocument {
     // MARK: Saving
 
     override func writableTypes(for saveOperation: NSDocument.SaveOperationType) -> [String] {
-        [Self.gnumericType, Self.xmlType, Self.xlsxType]
+        [Self.gnumericType, Self.xmlType, Self.xlsxType, Self.csvType]
     }
 
     override func fileNameExtension(forType typeName: String, saveOperation: NSDocument.SaveOperationType) -> String? {
@@ -54,6 +69,7 @@ final class WorkbookDocument: NSDocument {
         case Self.gnumericType: return "gnumeric"
         case Self.xmlType: return "xml"
         case Self.xlsxType: return "xlsx"
+        case Self.csvType: return "csv"
         default: return super.fileNameExtension(forType: typeName, saveOperation: saveOperation)
         }
     }
@@ -81,6 +97,7 @@ final class WorkbookDocument: NSDocument {
         switch typeName {
         case gnumericType: return "Gnumeric_XmlIO:sax"
         case xmlType: return "Gnumeric_XmlIO:sax:0"
+        case csvType: return "Gnumeric_stf:stf_csv"
         default:
             let ext = typeName == xlsxType ? "xlsx" : "gnumeric"
             return MainActor.assumeIsolated { Engine.shared?.saverIdentifier(forFileName: "x." + ext) } ?? "Gnumeric_XmlIO:sax"

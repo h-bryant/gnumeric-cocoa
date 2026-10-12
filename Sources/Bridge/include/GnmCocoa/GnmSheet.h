@@ -164,6 +164,19 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 - (BOOL)insertRows:(NSInteger)count atRow:(NSInteger)row error:(NSError **)error NS_SWIFT_NAME(insertRows(_:at:));
 - (BOOL)deleteColumns:(NSRange)columns error:(NSError **)error NS_SWIFT_NAME(deleteColumns(_:));
 - (BOOL)deleteRows:(NSRange)rows error:(NSError **)error NS_SWIFT_NAME(deleteRows(_:));
+/// Insert empty cells the size of `range`, shifting what is there right
+/// or down (`cmd_shift_rows` / `cmd_shift_cols`, the GTK Insert Cells
+/// dialog's first two choices); undoable.
+- (BOOL)insertCellsInRange:(GnmCellRange)range shiftingDown:(BOOL)down error:(NSError **)error NS_SWIFT_NAME(insertCells(in:shiftingDown:));
+/// Delete the cells of `range`, shifting what follows left or up (the
+/// GTK Delete Cells dialog's first two choices); undoable.
+- (BOOL)deleteCellsInRange:(GnmCellRange)range shiftingUp:(BOOL)up error:(NSError **)error NS_SWIFT_NAME(deleteCells(in:shiftingUp:));
+/// Today's date and/or the time of day as text for the edit position's
+/// cell, the way the GTK Insert → Current Date/Time put it on the edit
+/// line (the cell's date format when it has one, else the default
+/// date and time formats, in the sheet's date conventions); the app
+/// types it into the cell or the editor.
+- (NSString *)currentDateTimeTextWithDate:(BOOL)date time:(BOOL)time NS_SWIFT_NAME(currentDateTimeText(date:time:));
 /// Copy or cut the selection into the engine's clipboard, which also puts a
 /// tab-separated text version on the system pasteboard; a cut becomes a move
 /// when pasted.  Paste takes the engine's clipboard when it is current,

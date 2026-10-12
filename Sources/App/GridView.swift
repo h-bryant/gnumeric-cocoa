@@ -695,6 +695,27 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         }
     }
 
+    /// Insert → Current Date, Time, Date and Time: typed into the editor
+    /// when one is open, else into the current cell (the GTK actions put
+    /// the text on the edit line).
+    private func insertDateTime(date: Bool, time: Bool) {
+        guard let sheet else { return }
+        let text = sheet.currentDateTimeText(date: date, time: time)
+        if isEditing, let fieldEditor = editor.currentEditor() as? NSTextView {
+            fieldEditor.insertText(text, replacementRange: fieldEditor.selectedRange())
+            editingTextDidChange?(editor.stringValue)
+            return
+        }
+        run { sheet in
+            let cell = sheet.editPosition
+            try sheet.setText(text, atColumn: cell.column, row: cell.row, autocorrect: false)
+        }
+    }
+
+    @objc func insertCurrentDate(_ sender: Any?) { insertDateTime(date: true, time: false) }
+    @objc func insertCurrentTime(_ sender: Any?) { insertDateTime(date: false, time: true) }
+    @objc func insertCurrentDateTime(_ sender: Any?) { insertDateTime(date: true, time: true) }
+
     @objc func clearAll(_ sender: Any?) {
         run { try $0.clearSelection([.values, .formats, .comments, .objects]) }
     }

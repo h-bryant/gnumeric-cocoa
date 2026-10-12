@@ -680,6 +680,37 @@
 - `GNM_SNAPSHOT_EDITOR=1` also changes the chart to columns before the
   capture.
 
+## 2026-10-12: Phase 5 opens with the everyday items
+
+- File → New (⌘N) and an untitled workbook at launch when no file is
+  named: `WorkbookDocument.init(type:)` takes a one-sheet workbook from
+  the engine (`makeWorkbook(sheetCount:)`).
+- The name box takes a reference or a name and Return
+  (`GnmWorkbook.jumpToReference:` over `wb_control_parse_and_jump`, the
+  GTK name box and Go To): a cell, a range, a sheet-qualified reference
+  (switching sheets), A1 or R1C1, or a defined name; a plain word
+  defines a name for the selection, as in GTK; a reference to a missing
+  sheet is an error. Edit → Go To… (⌃G) asks the same in a sheet.
+- Insert → Cells… and Edit → Delete Cells…: the GTK dialogs' four
+  choices as radio buttons (shift cells right or down, left or up;
+  entire rows or columns), over `cmd_shift_rows` and `cmd_shift_cols`
+  with the dialogs' exact arguments (`insertCellsInRange:shiftingDown:`,
+  `deleteCellsInRange:shiftingUp:`), undoable as "Shift …".
+- Insert → Current Date (⌘;), Current Time (⇧⌘;), Current Date and
+  Time: the bridge formats today the way `insert_date_time_common` does
+  (the cell's date format when it has one, else the default date and
+  time formats, in the sheet's date conventions); the grid types the
+  text into an open editor at the insertion point or into the cell.
+- Save As to CSV: a fourth writable type (`Gnumeric_stf:stf_csv`, the
+  current sheet with the exporter's defaults; the options dialog is
+  still a gap) and the delimited-text document type promoted to Editor;
+  opening a `.csv` already went through the engine's text importer with
+  its guessed options (`workbook_io.m` now checks both ways).
+- `GNM_SNAPSHOT_EVERYDAY=1` jumps through the name box, types the date,
+  shifts a cell, saves a CSV beside the capture, and makes a new
+  document; `editing.m` covers the shifts with undo, the date and time
+  texts, and the jumps.
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -688,7 +719,10 @@
    not seen on screen, and the rest of Phase 4 (object selection, move,
    resize, delete, stacking, the chart guru, the object clipboard, images,
    the chart editor with its plot type change, and Save as Image… are
-   done; next image and widget editors or Phase 5) from
+   done; Phase 5 has begun with File → New, Go To and the name box,
+   Insert and Delete Cells, the current date and time, and Save As CSV;
+   next Find and Replace, the Preferences window, and the text export
+   options) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -711,8 +745,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-12: `main` at the Save as Image and
-   plot type change commit (after the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-12: `main` at the everyday-items
+   commit (after Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

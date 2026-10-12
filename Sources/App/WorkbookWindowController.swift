@@ -56,6 +56,10 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         nameBox.isBezeled = true
         nameBox.bezelStyle = .roundedBezel
         nameBox.widthAnchor.constraint(equalToConstant: 96).isActive = true
+        nameBox.isSelectable = true
+        nameBox.isEditable = true   // type a reference or a name and press Return
+        nameBox.delegate = self
+        nameBox.cell?.usesSingleLineMode = true
         formulaField.isBezeled = true
         formulaField.bezelStyle = .roundedBezel
         formulaField.lineBreakMode = .byTruncatingTail
@@ -198,6 +202,19 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     // MARK: Formula bar editing
 
     func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+        if control === nameBox {
+            switch commandSelector {
+            case #selector(NSResponder.insertNewline(_:)):
+                jump(to: nameBox.stringValue)
+                return true
+            case #selector(NSResponder.cancelOperation(_:)):
+                workbook.resendDelegateState()
+                window?.makeFirstResponder(gridView)
+                return true
+            default:
+                return false
+            }
+        }
         guard control === formulaField else { return false }
         switch commandSelector {
         case #selector(NSResponder.insertNewline(_:)):
@@ -432,7 +449,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         case #selector(setColumnWidth(_:)), #selector(setRowHeight(_:)),
              #selector(setDefaultColumnWidth(_:)), #selector(setDefaultRowHeight(_:)), #selector(renameSheet(_:)),
              #selector(resizeSheet(_:)), #selector(setTabColor(_:)), #selector(sortCells(_:)), #selector(insertChart(_:)),
-             #selector(insertImage(_:)):
+             #selector(insertImage(_:)), #selector(goTo(_:)), #selector(insertCells(_:)), #selector(deleteCells(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(removeSheet(_:)):
             return gridView.sheet != nil && workbook.canRemoveSheets
@@ -702,6 +719,101 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             }
         }
     }
+
+    // MARK: Go To and the name box
+
+    /// The engine's jump: a cell, a range, a sheet-qualified reference, or
+    /// a name; a new word names the selection instead.
+    func jump(to text: String) {
+        if gridView.isEditing { gridView.cancelEditing() }
+        do {
+            try workbook.jump(to: text.trimmingCharacters(in: .whitespaces))
+        } catch {
+            present(error)
+        }
+        workbook.resendDelegateState()
+        window?.makeFirstResponder(gridView)
+    }
+
+    @objc func goTo(_ sender: Any?) {
+        guard let window, gridView.sheet != nil else { return }
+        let alert = NSAlert()
+        alert.messageText = "Go To"
+        alert.informativeText = "A cell such as C10, a range such as B2:D4, a sheet-qualified reference such as Sheet2!A1, or a defined name."
+        alert.addButton(withTitle: "Go")
+        alert.addButton(withTitle: "Cancel")
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 240, height: 24))
+        field.placeholderString = "Reference or name"
+        alert.accessoryView = field
+        alert.window.initialFirstResponder = field
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard let self, response == .alertFirstButtonReturn else { return }
+            let text = field.stringValue.trimmingCharacters(in: .whitespaces)
+            if !text.isEmpty { jump(to: text) }
+        }
+    }
+
+    // MARK: Insert Cells… and Delete Cells… (shifting)
+
+    /// The GTK dialogs' four choices as radio buttons.
+    private func promptCellShift(insert: Bool) {
+        guard let window, let sheet = gridView.sheet else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let range = sheet.selectedRange
+        let alert = NSAlert()
+        alert.messageText = insert ? "Insert Cells" : "Delete Cells"
+        alert.informativeText = insert ? "Insert empty cells the size of the selection, or whole rows or columns."
+                                       : "Delete the selected cells, or their whole rows or columns."
+        alert.addButton(withTitle: insert ? "Insert" : "Delete")
+        alert.addButton(withTitle: "Cancel")
+        let titles = insert ? ["Shift cells right", "Shift cells down", "Entire rows", "Entire columns"]
+                            : ["Shift cells left", "Shift cells up", "Entire rows", "Entire columns"]
+        let radios = titles.map { NSButton(radioButtonWithTitle: $0, target: nil, action: nil) }
+        let group = RadioGroup(radios)
+        radios[0].state = .on
+        let stack = NSStackView(views: radios)
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 6
+        stack.frame = NSRect(x: 0, y: 0, width: 240, height: 100)
+        alert.accessoryView = stack
+        alert.beginSheetModal(for: window) { [weak self] response in
+            withExtendedLifetime(group) {}
+            guard let self, response == .alertFirstButtonReturn else { return }
+            let choice = radios.firstIndex { $0.state == .on } ?? 0
+            runSizeCommand { sheet in
+                switch (insert, choice) {
+                case (true, 0): try sheet.insertCells(in: range, shiftingDown: false)
+                case (true, 1): try sheet.insertCells(in: range, shiftingDown: true)
+                case (true, 2): try sheet.insertRows(range.end.row - range.start.row + 1, at: range.start.row)
+                case (true, _): try sheet.insertColumns(range.end.column - range.start.column + 1, at: range.start.column)
+                case (false, 0): try sheet.deleteCells(in: range, shiftingUp: false)
+                case (false, 1): try sheet.deleteCells(in: range, shiftingUp: true)
+                case (false, 2): try sheet.deleteRows(NSRange(location: range.start.row, length: range.end.row - range.start.row + 1))
+                case (false, _): try sheet.deleteColumns(NSRange(location: range.start.column, length: range.end.column - range.start.column + 1))
+                }
+            }
+        }
+    }
+
+    /// Keeps a set of radio buttons exclusive (they share this target).
+    private final class RadioGroup: NSObject {
+        private let buttons: [NSButton]
+        init(_ buttons: [NSButton]) {
+            self.buttons = buttons
+            super.init()
+            for button in buttons {
+                button.target = self
+                button.action = #selector(chosen(_:))
+            }
+        }
+        @objc func chosen(_ sender: NSButton) {
+            for button in buttons where button !== sender { button.state = .off }
+        }
+    }
+
+    @objc func insertCells(_ sender: Any?) { promptCellShift(insert: true) }
+    @objc func deleteCells(_ sender: Any?) { promptCellShift(insert: false) }
 
     // MARK: Chart Properties (the chart editor)
 

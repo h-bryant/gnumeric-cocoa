@@ -115,6 +115,14 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Workbook)
 /// system pasteboard.
 @property (nonatomic, readonly) BOOL canPaste;
 
+/// Go to a reference typed by the user (`wb_control_parse_and_jump`, the
+/// GTK name box and Go To dialog): a cell or range, sheet-qualified or
+/// not, A1 or R1C1, or a defined name, which becomes the selection and
+/// scrolls into view (switching sheets as needed).  A word that is
+/// neither defines a name for the current selection, as the GTK name box
+/// does.  An address that cannot be read is an error.
+- (BOOL)jumpToReference:(NSString *)text error:(NSError **)error NS_SWIFT_NAME(jump(to:));
+
 /// Recalculate cells that need it (`workbook_recalc`).
 - (void)recalculate;
 /// Recalculate every cell (`workbook_recalc_all`, the GTK Recalculate).

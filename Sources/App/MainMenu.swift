@@ -20,6 +20,7 @@ enum MainMenu {
         menuBar.addItem(submenu(appMenu, title: "Gnumeric"))
 
         let fileMenu = NSMenu(title: "File")
+        fileMenu.addItem(withTitle: "New", action: #selector(NSDocumentController.newDocument(_:)), keyEquivalent: "n")
         fileMenu.addItem(withTitle: "Open…", action: #selector(NSDocumentController.openDocument(_:)), keyEquivalent: "o")
         let recent = NSMenu(title: "Open Recent")
         recent.addItem(withTitle: "Clear Menu", action: #selector(NSDocumentController.clearRecentDocuments(_:)), keyEquivalent: "")
@@ -56,6 +57,7 @@ enum MainMenu {
         fillMenu.addItem(withTitle: "Down", action: Selector(("fillDown:")), keyEquivalent: "d")
         fillMenu.addItem(withTitle: "Right", action: Selector(("fillRight:")), keyEquivalent: "r")
         editMenu.addItem(submenu(fillMenu, title: "Fill"))
+        editMenu.addItem(withTitle: "Delete Cells…", action: Selector(("deleteCells:")), keyEquivalent: "")
         editMenu.addItem(withTitle: "Delete Columns", action: Selector(("deleteColumns:")), keyEquivalent: "")
         editMenu.addItem(withTitle: "Delete Rows", action: Selector(("deleteRows:")), keyEquivalent: "")
         editMenu.addItem(.separator())
@@ -64,6 +66,8 @@ enum MainMenu {
         selectMenu.addItem(withTitle: "Column", action: Selector(("selectColumn:")), keyEquivalent: "")
         selectMenu.addItem(withTitle: "Row", action: Selector(("selectRow:")), keyEquivalent: "")
         editMenu.addItem(submenu(selectMenu, title: "Select"))
+        let goTo = editMenu.addItem(withTitle: "Go To…", action: Selector(("goTo:")), keyEquivalent: "g")
+        goTo.keyEquivalentModifierMask = [.control]
         editMenu.addItem(.separator())
         editMenu.addItem(submenu(sheetMenu(), title: "Sheet"))
         menuBar.addItem(submenu(editMenu, title: "Edit"))
@@ -78,8 +82,13 @@ enum MainMenu {
         menuBar.addItem(submenu(viewMenu, title: "View"))
 
         let insertMenu = NSMenu(title: "Insert")
+        insertMenu.addItem(withTitle: "Cells…", action: Selector(("insertCells:")), keyEquivalent: "")
         insertMenu.addItem(withTitle: "Columns", action: Selector(("insertColumns:")), keyEquivalent: "")
         insertMenu.addItem(withTitle: "Rows", action: Selector(("insertRows:")), keyEquivalent: "")
+        insertMenu.addItem(.separator())
+        insertMenu.addItem(withTitle: "Current Date", action: Selector(("insertCurrentDate:")), keyEquivalent: ";")
+        insertMenu.addItem(withTitle: "Current Time", action: Selector(("insertCurrentTime:")), keyEquivalent: ":")
+        insertMenu.addItem(withTitle: "Current Date and Time", action: Selector(("insertCurrentDateTime:")), keyEquivalent: "")
         insertMenu.addItem(.separator())
         insertMenu.addItem(withTitle: "Chart…", action: Selector(("insertChart:")), keyEquivalent: "")
         insertMenu.addItem(withTitle: "Image…", action: Selector(("insertImage:")), keyEquivalent: "")

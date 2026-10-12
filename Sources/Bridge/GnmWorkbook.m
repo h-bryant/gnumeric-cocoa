@@ -488,6 +488,24 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
         || [pasteboard dataForType:NSPasteboardTypeTIFF] != nil;
 }
 
+- (BOOL)jumpToReference:(NSString *)text error:(NSError **)error
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    [_engine _beginCollectingMessages];
+    /* TRUE when it jumped; FALSE with a message for a bad address, FALSE
+     * without one when it defined a name instead. */
+    gboolean jumped = wb_control_parse_and_jump ((WorkbookControl *) _wbc, text.UTF8String);
+    NSArray<NSError *> *messages = [_engine _endCollectingMessages];
+    if (!jumped && messages.count) {
+        if (error)
+            *error = [_engine _errorWithCode:GnmErrorCommandFailed
+                                 description:[NSString stringWithFormat:@"“%@” is not a cell, range, or name.", text]
+                                   collected:messages];
+        return NO;
+    }
+    return YES;
+}
+
 - (void)recalculate
 {
     workbook_recalc (_wb);

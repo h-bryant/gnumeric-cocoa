@@ -1009,6 +1009,61 @@ cell_already_has_text (Sheet *sheet, GnmCellPos pos, char const *new_text, gbool
     } description:@"Could not clear the selection." error:error];
 }
 
+- (BOOL)insertCellsInRange:(GnmCellRange)range shiftingDown:(BOOL)down error:(NSError **)error
+{
+    int cols = (int) (range.end.column - range.start.column + 1);
+    int rows = (int) (range.end.row - range.start.row + 1);
+    /* dialog-insert-cells.c cb_insert_cell_ok_clicked */
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        if (down)
+            cmd_shift_cols (wbc, _sheet, (int) range.start.column, (int) range.end.column, (int) range.start.row, rows);
+        else
+            cmd_shift_rows (wbc, _sheet, (int) range.start.column, (int) range.start.row, (int) range.end.row, cols);
+        return FALSE;   /* the shift commands report through the context and return nothing */
+    } description:@"Could not insert cells." error:error];
+}
+
+- (BOOL)deleteCellsInRange:(GnmCellRange)range shiftingUp:(BOOL)up error:(NSError **)error
+{
+    int cols = (int) (range.end.column - range.start.column + 1);
+    int rows = (int) (range.end.row - range.start.row + 1);
+    /* dialog-delete-cells.c cb_delete_cell_ok_clicked */
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        if (up)
+            cmd_shift_cols (wbc, _sheet, (int) range.start.column, (int) range.end.column, (int) range.end.row + 1, -rows);
+        else
+            cmd_shift_rows (wbc, _sheet, (int) range.end.column + 1, (int) range.start.row, (int) range.end.row, -cols);
+        return FALSE;
+    } description:@"Could not delete cells." error:error];
+}
+
+- (NSString *)currentDateTimeTextWithDate:(BOOL)date time:(BOOL)wantsTime
+{
+    /* wbc-gtk-actions.c insert_date_time_common */
+    if (_sv == NULL || (!date && !wantsTime))
+        return @"";
+    GnmCell const *cell = sheet_cell_fetch (_sheet, _sv->edit_pos.col, _sv->edit_pos.row);
+    GODateConventions const *date_conv = sheet_date_conv (_sheet);
+    GnmValue *v = value_new_float (go_date_timet_to_serial_raw (time (NULL), date_conv));
+    char *dtxt = NULL, *ttxt = NULL;
+    if (date) {
+        GOFormat *fmt = gnm_format_for_date_editing (cell);
+        dtxt = format_value (fmt, v, -1, date_conv);
+        go_format_unref (fmt);
+    }
+    if (wantsTime)
+        ttxt = format_value (go_format_default_time (), v, -1, date_conv);
+    value_release (v);
+    NSString *result;
+    if (date && wantsTime)
+        result = [NSString stringWithFormat:@"%@ %@", GnmString (dtxt), GnmString (ttxt)];
+    else
+        result = GnmString (date ? dtxt : ttxt);
+    g_free (dtxt);
+    g_free (ttxt);
+    return result;
+}
+
 - (BOOL)insertColumns:(NSInteger)count atColumn:(NSInteger)column error:(NSError **)error
 {
     return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
