@@ -454,7 +454,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(showFindPanel(_:)), #selector(showReplacePanel(_:)), #selector(findNext(_:)), #selector(findPrevious(_:)):
             return gridView.sheet != nil
-        case #selector(defineNames(_:)), #selector(insertName(_:)), #selector(fillSeries(_:)), #selector(textToColumns(_:)):
+        case #selector(defineNames(_:)), #selector(insertName(_:)), #selector(fillSeries(_:)), #selector(textToColumns(_:)),
+             #selector(goalSeek(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(removeSheet(_:)):
             return gridView.sheet != nil && workbook.canRemoveSheets
@@ -896,6 +897,83 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         let alert = NSAlert()
         alert.messageText = text
         alert.beginSheetModal(for: window)
+    }
+
+    // MARK: Goal Seek (Tools menu)
+
+    /// The GTK Goal Seek dialog as an alert sheet: the cell to set (the
+    /// selection's cell at first), the value to reach, the cell to change,
+    /// and the optional bounds; the result in a second alert.
+    @objc func goalSeek(_ sender: Any?) {
+        guard let window, let sheet = gridView.sheet, window.attachedSheet == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let edit = sheet.editPosition
+        let alert = NSAlert()
+        alert.messageText = "Goal Seek"
+        alert.informativeText = "Change one cell until the formula in another reaches a value."
+        alert.addButton(withTitle: "Seek")
+        alert.addButton(withTitle: "Cancel")
+        let setCell = NSTextField(string: sheet.name(ofColumn: edit.column) + sheet.name(ofRow: edit.row))
+        let toValue = NSTextField(string: "0")
+        let changeCell = NSTextField(string: "")
+        let atLeast = NSTextField(string: "")
+        let atMost = NSTextField(string: "")
+        for field in [setCell, toValue, changeCell, atLeast, atMost] { field.widthAnchor.constraint(greaterThanOrEqualToConstant: 140).isActive = true }
+        func label(_ text: String) -> NSTextField {
+            let field = NSTextField(labelWithString: text)
+            field.alignment = .right
+            return field
+        }
+        let grid = NSGridView(views: [
+            [label("Set cell:"), setCell], [label("To value:"), toValue], [label("By changing cell:"), changeCell],
+            [label("At least:"), atLeast], [label("At most:"), atMost],
+        ])
+        grid.rowSpacing = 6
+        grid.columnSpacing = 8
+        grid.column(at: 0).xPlacement = .trailing
+        for index in 0..<grid.numberOfRows { grid.row(at: index).yPlacement = .center }
+        grid.frame = NSRect(x: 0, y: 0, width: 300, height: 160)
+        alert.accessoryView = grid
+        alert.window.initialFirstResponder = changeCell
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard let self, response == .alertFirstButtonReturn else { return }
+            var setColumn = 0, setRow = 0, changeColumn = 0, changeRow = 0
+            guard sheet.parseCellReference(setCell.stringValue, column: &setColumn, row: &setRow) else {
+                presentMessage("You should introduce a valid cell name in 'Set Cell:'!")
+                return
+            }
+            guard sheet.parseCellReference(changeCell.stringValue, column: &changeColumn, row: &changeRow) else {
+                presentMessage("You should introduce a valid cell name in 'By Changing Cell:'!")
+                return
+            }
+            guard let target = sheet.number(from: toValue.stringValue) else {
+                presentMessage("The value given in 'To Value:' is not valid.")
+                return
+            }
+            let minimum = atLeast.stringValue.isEmpty ? nil : sheet.number(from: atLeast.stringValue)
+            let maximum = atMost.stringValue.isEmpty ? nil : sheet.number(from: atMost.stringValue)
+            do {
+                let result = try sheet.goalSeek(cellAtColumn: setColumn, row: setRow, toValue: target.doubleValue,
+                                                byChangingCellAtColumn: changeColumn, row: changeRow, minimum: minimum, maximum: maximum)
+                workbook.resendDelegateState()
+                gridView.needsDisplay = true
+                let setName = sheet.name(ofColumn: setColumn) + sheet.name(ofRow: setRow)
+                let changeName = sheet.name(ofColumn: changeColumn) + sheet.name(ofRow: changeRow)
+                let report = NSAlert()
+                if result.found {
+                    report.messageText = "Goal seeking with cell \(setName) found a solution."
+                    report.informativeText = "\(changeName) = \(result.solution.formatted(.number.precision(.significantDigits(1...10))))\n"
+                        + "\(setName) = \(result.currentValue.formatted(.number.precision(.significantDigits(1...10)))), "
+                        + "\(abs(result.targetValue - result.currentValue).formatted(.number.precision(.significantDigits(1...3)))) from the target."
+                } else {
+                    report.messageText = "Goal seeking with cell \(setName) did not find a solution."
+                    report.informativeText = "\(changeName) keeps its value. Bounds under At least and At most can help."
+                }
+                report.beginSheetModal(for: window)
+            } catch {
+                present(error)
+            }
+        }
     }
 
     // MARK: Text to Columns (Data menu)

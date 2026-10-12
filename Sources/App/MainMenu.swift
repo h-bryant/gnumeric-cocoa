@@ -154,6 +154,10 @@ enum MainMenu {
         recalc.keyEquivalentModifierMask = []
         menuBar.addItem(submenu(dataMenu, title: "Data"))
 
+        let toolsMenu = NSMenu(title: "Tools")
+        toolsMenu.addItem(withTitle: "Goal Seek…", action: Selector(("goalSeek:")), keyEquivalent: "")
+        menuBar.addItem(submenu(toolsMenu, title: "Tools"))
+
         let windowMenu = NSMenu(title: "Window")
         windowMenu.addItem(withTitle: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
         windowMenu.addItem(withTitle: "Zoom", action: #selector(NSWindow.performZoom(_:)), keyEquivalent: "")

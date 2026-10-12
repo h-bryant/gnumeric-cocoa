@@ -931,6 +931,23 @@
   the formula as written, the parse, undo, no data refused).
   `GNM_SNAPSHOT_FILL=1` fills F1:F6 and splits G1:G2 headlessly.
 
+## 2026-10-12: Goal Seek
+
+- `GnmSheet.goalSeekCellAtColumn:row:toValue:byChangingCellAtColumn:row:
+  minimum:maximum:` runs `gnm_goal_seek_cell` as the GTK dialog's
+  apply does (the set cell must hold a formula, the changing cell must
+  not; the bounds default to ±1e24), recalculates, and on success
+  commits `cmd_goal_seek` with the changing cell's old value, undoable
+  as "Goal Seek (A1)"; without a solution the old value goes back and
+  `GnmGoalSeekResult.found` is NO.  `parseCellReference:column:row:`
+  (`cellpos_parse`) reads the dialog's cell fields.  A new Tools menu
+  holds Goal Seek…, an alert sheet with the five fields and a result
+  alert after.  `Tests/BridgeTests/goal_seek.m`: a root found and
+  undone, the negative root under bounds, a seek with no solution
+  leaving the cell alone, the two refusals, an empty changing cell.
+  The engine renders negative numbers with a true minus (U+2212).
+  `GNM_SNAPSHOT_GOAL=1` seeks A30 headlessly.
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -943,9 +960,9 @@
    Insert and Delete Cells, the current date and time, Save As CSV,
    Find and Replace, the Settings window, and Export as Text with
    options, the text import assistant, cell comments, defined names,
-   Fill Series, and Text to Columns; next the rest of Phase 5 by usage
-   frequency: conditional formatting, the analysis tools, Goal Seek,
-   data validation) from
+   Fill Series, Text to Columns, and Goal Seek; next the rest of Phase 5
+   by usage frequency: conditional formatting, the analysis tools, data
+   validation, Solver) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -968,8 +985,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-12: `main` at the Fill Series and
-   Text to Columns commit (after defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-12: `main` at the Goal Seek commit
+   (after Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

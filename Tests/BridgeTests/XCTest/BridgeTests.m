@@ -85,5 +85,6 @@
 - (void)testComments { [self runProgram:@"comments"]; }
 - (void)testNames { [self runProgram:@"names"]; }
 - (void)testFillSeries { [self runProgram:@"fill_series"]; }
+- (void)testGoalSeek { [self runProgram:@"goal_seek"]; }
 
 @end

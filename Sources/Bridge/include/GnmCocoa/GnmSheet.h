@@ -96,6 +96,19 @@ typedef NS_ENUM(NSInteger, GnmFillSeriesDateUnit) {
     GnmFillSeriesDateUnitYear,
 } NS_SWIFT_NAME(Sheet.FillSeriesDateUnit);
 
+/// What a goal seek ended with.
+NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(GoalSeekResult)
+@interface GnmGoalSeekResult : NSObject
+- (instancetype)init NS_UNAVAILABLE;
++ (instancetype)new NS_UNAVAILABLE;
+@property (nonatomic, readonly) BOOL found;
+/// The changing cell's value at the end.
+@property (nonatomic, readonly) double solution;
+/// The set cell's value at the end.
+@property (nonatomic, readonly) double currentValue;
+@property (nonatomic, readonly) double targetValue;
+@end
+
 /// A cell's comment (`GnmComment`): its position, author, and text.
 NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(CellComment)
 @interface GnmCellComment : NSObject
@@ -206,6 +219,22 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 - (BOOL)fillSeriesInRange:(GnmCellRange)range byRows:(BOOL)byRows kind:(GnmFillSeriesKind)kind dateUnit:(GnmFillSeriesDateUnit)unit
                     start:(double)start step:(nullable NSNumber *)step stop:(nullable NSNumber *)stop
                     error:(NSError **)error NS_SWIFT_NAME(fillSeries(in:byRows:kind:dateUnit:start:step:stop:));
+
+// Goal Seek (`tools/goal-seek.h`, the GTK dialog-goal-seek.c).
+/// A cell reference in the sheet's syntax ("B3", "$B$3") to its position;
+/// NO for anything else.
+- (BOOL)parseCellReference:(NSString *)text column:(NSInteger *)column row:(NSInteger *)row NS_SWIFT_NAME(parseCellReference(_:column:row:));
+/// Change the value of one cell until the formula in another reaches
+/// `target` (`gnm_goal_seek_cell`), within `minimum` and `maximum` when
+/// given.  A solution is committed as "Goal Seek (A1)", undoable; without
+/// one the changing cell keeps its value and `found` is NO.  Nil with an
+/// error when the set cell holds no formula or the changing cell holds
+/// one.
+- (nullable GnmGoalSeekResult *)goalSeekCellAtColumn:(NSInteger)column row:(NSInteger)row toValue:(double)target
+                              byChangingCellAtColumn:(NSInteger)changeColumn row:(NSInteger)changeRow
+                                             minimum:(nullable NSNumber *)minimum maximum:(nullable NSNumber *)maximum
+                                               error:(NSError **)error
+    NS_SWIFT_NAME(goalSeek(cellAtColumn:row:toValue:byChangingCellAtColumn:row:minimum:maximum:));
 
 // Comments.
 /// The cell's comment, nil without one (`sheet_get_comment`).

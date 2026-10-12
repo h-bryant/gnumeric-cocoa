@@ -472,6 +472,24 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_GOAL"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // Goal Seek: B30 = A30^2 - 9 driven to 0 by changing A30.
+                do {
+                    try sheet.setText("2", atColumn: 0, row: 29, autocorrect: false)
+                    try sheet.setText("=A30*A30-9", atColumn: 1, row: 29, autocorrect: false)
+                    let result = try sheet.goalSeek(cellAtColumn: 1, row: 29, toValue: 0, byChangingCellAtColumn: 0, row: 29, minimum: nil, maximum: nil)
+                    NSLog("goal: found=%d solution=%g current=%g A30='%@' undo=%@", result.found ? 1 : 0, result.solution, result.currentValue,
+                          sheet.displayTextOfCell(atColumn: 0, row: 29) ?? "nil", sheet.workbook?.undoLabel ?? "nil")
+                    controller.gridView.undo(nil)
+                    NSLog("goal: after undo A30='%@'", sheet.displayTextOfCell(atColumn: 0, row: 29) ?? "nil")
+                } catch {
+                    NSLog("goal: failed: %@", error.localizedDescription)
+                }
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FILL"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

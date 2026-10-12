@@ -96,7 +96,8 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 
 | Action | Status | Notes / Phase |
 |---|---|---|
-| ToolsAutoCorrect, ToolsAutoSave, ToolsGoalSeek, ToolsSolver, ToolsSimulation, ToolsCompare, ToolsPlugins, ToolsScenarios, ToolsScenarioAdd | no | Phase 5 |
+| ToolsAutoCorrect, ToolsAutoSave, ToolsSolver, ToolsSimulation, ToolsCompare, ToolsPlugins, ToolsScenarios, ToolsScenarioAdd | no | Phase 5 |
+| ToolsGoalSeek | ported | Tools → Goal Seek… (2026-10-12) |
 | All 28 Statistics items (descriptive, frequencies, sampling, time series, one- and two-sample tests, ANOVA, contingency) | no | Phase 5, last; the engine's `src/tools/` is GTK-free |
 
 ## Data

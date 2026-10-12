@@ -753,6 +753,21 @@ gnm_cocoa_cairo_for_context (CGContextRef context, CGRect rect, cairo_surface_t 
 
 /* ------------------------------------------------------------------------ */
 
+@implementation GnmGoalSeekResult
+
+- (instancetype)initWithFound:(BOOL)found solution:(double)solution current:(double)current target:(double)target
+{
+    if (!(self = [super init]))
+        return nil;
+    _found = found;
+    _solution = solution;
+    _currentValue = current;
+    _targetValue = target;
+    return self;
+}
+
+@end
+
 @implementation GnmCellComment
 
 - (instancetype)initWithComment:(GnmComment *)comment
@@ -1820,6 +1835,77 @@ pixels_from_points (Sheet const *sheet, gboolean horizontal, double points)
     } description:@"Could not fill the series." error:error];
     g_object_unref (tool);
     return ok;
+}
+
+#pragma mark - Goal Seek
+
+- (BOOL)parseCellReference:(NSString *)text column:(NSInteger *)column row:(NSInteger *)row
+{
+    if (_sheet == NULL || text.length == 0)
+        return NO;
+    GnmCellPos pos;
+    const char *end = cellpos_parse (text.UTF8String, gnm_sheet_get_size (_sheet), &pos, TRUE);
+    if (!end)
+        return NO;
+    if (column)
+        *column = pos.col;
+    if (row)
+        *row = pos.row;
+    return YES;
+}
+
+- (GnmGoalSeekResult *)goalSeekCellAtColumn:(NSInteger)column row:(NSInteger)row toValue:(double)target
+                     byChangingCellAtColumn:(NSInteger)changeColumn row:(NSInteger)changeRow
+                                    minimum:(NSNumber *)minimum maximum:(NSNumber *)maximum error:(NSError **)error
+{
+    if (_sheet == NULL || _workbook == nil)
+        return nil;
+    GnmEngine *engine = _workbook.engine;
+    /* dialog-goal-seek.c cb_dialog_apply_clicked */
+    GnmCell *setCell = sheet_cell_get (_sheet, (int) column, (int) row);
+    if (setCell == NULL || !gnm_cell_has_expr (setCell)) {
+        if (error)
+            *error = [engine _errorWithCode:GnmErrorCommandFailed
+                                description:@"The cell named in 'Set Cell:' must contain a formula!" collected:@[]];
+        return nil;
+    }
+    GnmCell *changeCell = sheet_cell_fetch (_sheet, (int) changeColumn, (int) changeRow);
+    if (gnm_cell_has_expr (changeCell)) {
+        if (error)
+            *error = [engine _errorWithCode:GnmErrorCommandFailed
+                                description:@"The cell named in 'By changing cell' must not contain a formula." collected:@[]];
+        return nil;
+    }
+    static const double max_range_val = 1e24;
+    GnmGoalSeekData seekdata;
+    GnmGoalSeekCellData celldata;
+    goal_seek_initialize (&seekdata);
+    seekdata.xmin = minimum ? minimum.doubleValue : -max_range_val;
+    seekdata.xmax = maximum ? maximum.doubleValue : +max_range_val;
+    celldata.xcell = changeCell;
+    celldata.ycell = setCell;
+    celldata.ytarget = target;
+
+    GnmValue *oldValue = value_dup (changeCell->value);
+    GnmGoalSeekStatus status = gnm_goal_seek_cell (&seekdata, &celldata);
+    gnm_app_recalc ();
+    if (status != GOAL_SEEK_OK) {
+        /* back as it was */
+        sheet_cell_set_value (changeCell, oldValue);   /* absorbs the value */
+        gnm_app_recalc ();
+        sheet_update (_sheet);
+        return [[GnmGoalSeekResult alloc] initWithFound:NO solution:0 current:0 target:target];
+    }
+    double solution = changeCell->value ? value_get_as_float (changeCell->value) : 0;
+    double current = setCell->value ? value_get_as_float (setCell->value) : 0;
+    /* The command takes the old value and copies the cell's new one. */
+    GnmValue *handed = oldValue;
+    BOOL ok = [_workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_goal_seek (wbc, changeCell, handed, NULL);
+    } description:@"Could not record the goal seek." error:error];
+    if (!ok)
+        return nil;
+    return [[GnmGoalSeekResult alloc] initWithFound:YES solution:solution current:current target:target];
 }
 
 #pragma mark - Comments

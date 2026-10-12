@@ -54,6 +54,7 @@
 #include <tools/dao.h>
 #include <tools/fill-series.h>
 #include <tools/analysis-tools.h>
+#include <tools/goal-seek.h>
 #include <goffice/goffice.h>
 #include <goffice/app/go-cmd-context-impl.h>
 #include <goffice/graph/gog-plot-engine.h>
@@ -172,6 +173,10 @@ GType gnm_cocoa_sheet_control_get_type (void);
 - (GnmStfParseOptions *)_parseOptions;
 /// The chosen lines, NUL-terminated; the caller frees it.
 - (char *)_copyOfRange;
+@end
+
+@interface GnmGoalSeekResult ()
+- (instancetype)initWithFound:(BOOL)found solution:(double)solution current:(double)current target:(double)target NS_DESIGNATED_INITIALIZER;
 @end
 
 @interface GnmCellComment ()

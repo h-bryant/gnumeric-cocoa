@@ -76,6 +76,8 @@ targets:
     templates: [BridgeTestProgram]
   fill_series:
     templates: [BridgeTestProgram]
+  goal_seek:
+    templates: [BridgeTestProgram]
   BridgeTests:
     type: bundle.unit-test
     platform: macOS
@@ -97,6 +99,7 @@ targets:
       - target: comments
       - target: names
       - target: fill_series
+      - target: goal_seek
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.github.h-bryant.gnumeric-cocoa.BridgeTests
