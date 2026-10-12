@@ -113,6 +113,7 @@ enum MainMenu {
         insertMenu.addItem(withTitle: "Name…", action: Selector(("insertName:")), keyEquivalent: "")
         insertMenu.addItem(withTitle: "Comment…", action: Selector(("insertComment:")), keyEquivalent: "")
         insertMenu.addItem(withTitle: "Hyperlink…", action: Selector(("insertHyperlink:")), keyEquivalent: "k")
+        insertMenu.addItem(withTitle: "Function…", action: Selector(("insertFunction:")), keyEquivalent: "")
         insertMenu.addItem(.separator())
         insertMenu.addItem(withTitle: "Chart…", action: Selector(("insertChart:")), keyEquivalent: "")
         insertMenu.addItem(withTitle: "Image…", action: Selector(("insertImage:")), keyEquivalent: "")

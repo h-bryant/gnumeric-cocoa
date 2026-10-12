@@ -133,6 +133,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         editor.onCancel = { [weak self] in self?.cancelEditing() }
         editor.onTextChange = { [weak self] text in
             guard let self else { return }
+            handleAutocomplete(text)
             if formulaRangeAnchor == nil, formulaRange != nil, let shown = formulaRangeText,
                (editor.stringValue as NSString).length < shown.location + shown.length
                 || (editor.stringValue as NSString).substring(with: shown) != sheet?.name(of: formulaRange!) {
@@ -384,6 +385,9 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
                               width: max(frame.width, 80 * zoom), height: max(frame.height, 16 * zoom))
         editor.stringValue = initialText ?? (sheet.editingTextOfCell(atColumn: cell.column, row: cell.row) ?? "")
         editingCell = cell
+        // wbcg_edit_start: completion only when typing starts with a letter
+        autocompleting = initialText == nil || (initialText?.first?.isLetter ?? false)
+        autocompletePrefix = ""
         editor.isHidden = false
         window?.makeFirstResponder(editor)
         if let fieldEditor = editor.currentEditor() {
@@ -395,6 +399,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
 
     private func endEditingSession() {
         editingCell = nil
+        autocompleting = false
         formulaRangeAnchor = nil
         formulaRangeText = nil
         if formulaRange != nil {
@@ -906,6 +911,66 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     /// The drop-down buttons of the sheet's autofilters: a small rounded
     /// square with a triangle in each heading cell, filled with the accent
     /// color while the field has a condition (the GTK arrow's checked state).
+    // MARK: Autocompletion
+
+    /// The GTK autocompletion: while plain text is typed at the end of the
+    /// editor, the column's nearest matching text above fills in with the
+    /// added part selected; deleting, a non-letter, or typing elsewhere
+    /// stops it for the session.
+    private var autocompleting = false
+    private var autocompletePrefix = ""
+
+    /// For the headless checks: the editor's text, and a text change as
+    /// typing would report it.
+    var editorTextForTesting: String { editor.stringValue }
+    func editorTextDidChangeForTesting(_ text: String) {
+        editor.stringValue = text
+        editor.currentEditor()?.selectedRange = NSRange(location: (text as NSString).length, length: 0)
+        editor.onTextChange?(text)
+    }
+
+    /// For the headless checks: the selected tail after a completion.
+    var autocompleteTail: NSRange? {
+        guard autocompleting, let fieldEditor = editor.currentEditor(), fieldEditor.selectedRange.length > 0 else { return nil }
+        return fieldEditor.selectedRange
+    }
+
+    private func handleAutocomplete(_ text: String) {
+        guard autocompleting, let sheet, let cell = editingCell else { return }
+        let length = (text as NSString).length
+        if length < (autocompletePrefix as NSString).length || text.isEmpty {
+            autocompleting = false   // deleting
+            return
+        }
+        guard let fieldEditor = editor.currentEditor(), fieldEditor.selectedRange.location == length,
+              let last = text.last, last.isLetter else {
+            autocompleting = false
+            return
+        }
+        autocompletePrefix = text
+        guard let completion = sheet.completion(for: text, atColumn: cell.column, row: cell.row),
+              completion != text, completion.hasPrefix(text) else { return }
+        editor.stringValue = completion
+        editor.currentEditor()?.selectedRange = NSRange(location: length, length: (completion as NSString).length - length)
+    }
+
+    /// Insert → Function…: the name and its parenthesis into the formula
+    /// being edited at the cursor, or a fresh formula.
+    func insertFunction(_ name: String) {
+        guard let sheet else { return }
+        if isEditing, let fieldEditor = editor.currentEditor() {
+            let text = editor.stringValue as NSString
+            let cursor = min(fieldEditor.selectedRange.location, text.length)
+            let prefix = text.length == 0 ? "=" : ""
+            editor.stringValue = text.replacingCharacters(in: NSRange(location: cursor, length: 0), with: prefix + name + "(")
+            editor.currentEditor()?.selectedRange = NSRange(location: cursor + (prefix + name + "(").utf16.count, length: 0)
+            editingTextDidChange?(editor.stringValue)
+        } else {
+            _ = sheet
+            beginEditing(initialText: "=" + name + "(")
+        }
+    }
+
     // MARK: Formula range selection
 
     /// While a formula is typed, a click or drag on the grid puts the

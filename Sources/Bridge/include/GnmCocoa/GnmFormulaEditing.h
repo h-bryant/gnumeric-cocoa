@@ -16,6 +16,11 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)formulaText:(NSString *)text cursorAt:(NSInteger)cursor canTakeRange:(NSRange *)replace NS_SWIFT_NAME(formulaText(_:cursorAt:canTakeRange:));
 /// A range as a reference in this sheet's syntax ("A1", "A1:C4").
 - (NSString *)nameOfRange:(GnmCellRange)range NS_SWIFT_NAME(name(of:));
+/// The GTK autocompletion (`GnmCompleteSheet`): the nearest text above
+/// in the column, up to the first blank, that starts with what was
+/// typed; nil when there is none, when autocompletion is off in the
+/// preferences, or when fewer characters than their minimum were typed.
+- (nullable NSString *)completionForText:(NSString *)text atColumn:(NSInteger)column row:(NSInteger)row NS_SWIFT_NAME(completion(for:atColumn:row:));
 @end
 
 NS_ASSUME_NONNULL_END

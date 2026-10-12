@@ -4,6 +4,7 @@
 // their first character, since the parser's token numbers are not
 // public.
 #import "GnmPrivate.h"
+#include <complete-sheet.h>
 
 static gboolean
 is_operand (char const *text, GnmLexerItem const *gli)
@@ -153,6 +154,42 @@ find_lexer_token (GnmLexerItem const *gli, gsize token_pos, GnmLexerItem const *
     if (replace)
         *replace = NSMakeRange (head.length, middle.length);
     return YES;
+}
+
+static void
+cb_complete_match (GnmComplete *complete, char const *text, gpointer closure)
+{
+    char **found = closure;
+    g_free (*found);
+    *found = g_strdup (text);
+}
+
+- (NSString *)completionForText:(NSString *)text atColumn:(NSInteger)column row:(NSInteger)row
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    Sheet *sheet = self.engineSheet;
+    WorkbookView *wbv = self.workbook.workbookView;
+    if (!sheet || !wbv || !wbv->do_auto_completion || text.length == 0)
+        return nil;
+    /* wbcg_edit_start: not for formulas */
+    if (gnm_expr_char_start_p (text.UTF8String))
+        return nil;
+    GnmComplete *complete = gnm_complete_sheet_new (sheet, (int) column, (int) row);
+    char *found = NULL;
+    g_signal_connect (complete, "notify-match", G_CALLBACK (cb_complete_match), &found);
+    gnm_complete_start (complete, text.UTF8String);
+    /* the GTK searches in idle steps; here all at once */
+    if (complete->idle_tag) {
+        g_source_remove (complete->idle_tag);
+        complete->idle_tag = 0;
+    }
+    GnmCompleteClass *klass = GNM_COMPLETE_CLASS (G_OBJECT_GET_CLASS (complete));
+    while (klass->search_iteration (complete))
+        ;
+    g_object_unref (complete);
+    NSString *result = found ? GnmString (found) : nil;
+    g_free (found);
+    return result;
 }
 
 - (NSString *)nameOfRange:(GnmCellRange)range

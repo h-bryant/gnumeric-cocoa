@@ -73,7 +73,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | ChartGuru | ported | Insert → Chart… (2026-10-12): every goffice plot type with its sample image, series from the selection, the two guru options; the later pages are the chart editor (double-click, Properties…, Format → Object Properties…): object tree with add, remove, reorder, live preview, every object's data expressions, properties, and style, Change Type… for a plot; not in it: error bars, gradient and image fills, manual positions |
 | InsertImage | ported | Insert → Image… (2026-10-12), and PNG or TIFF pasted from other applications |
 | InsertComponent, InsertShapedComponent, NewGOComponent, GOComponentFromFile | no | Phase 4; goffice components (equations, embedded documents) |
-| InsertFormula (function selector) | no | Phase 5 |
+| InsertFormula (function selector) | ported | Insert → Function… (2026-10-12): groups, search, summaries, arguments; no formula guru |
 | InsertNames | ported | Insert → Name… puts a name into the cell editor (2026-10-12) |
 | InsertComment | ported | Insert → Comment…, an alert sheet with author and text (2026-10-12) |
 | InsertHyperlink | ported | Insert → Hyperlink… (⌘K), 2026-10-12: internal, file, email, and web links with a tip |
@@ -139,7 +139,8 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | Name box navigation (type a reference) | ported | 2026-10-12: a reference, a sheet-qualified reference, or a name; a new word names the selection |
 | Formula bar: multi-line editing, function tooltips | no | Phase 3 |
 | In-cell editor: range selection by mouse while typing a formula | ported | 2026-10-12: a click or drag puts the reference where the GTK entry would (`GnmFormulaEditing`) |
-| In-cell editor: cell's own font and alignment, autocomplete, range selection by keyboard while typing a formula, array formulas (Ctrl-Shift-Enter) | no | Phase 3 |
+| In-cell editor: autocomplete | ported | 2026-10-12: the column's nearest text above fills in with the tail selected |
+| In-cell editor: cell's own font and alignment, range selection by keyboard while typing a formula, array formulas (Ctrl-Shift-Enter) | no | Phase 3 |
 | Cell comments (display, tooltips) | ported | the red corner marker and a tool tip with author and text (2026-10-12) |
 | Hyperlinks (activation) | ported | a click follows the link (2026-10-12): internal ones through the engine's selection, the others through NSWorkspace; the tip is the tool tip |
 | Sheet objects: selection handles, move, resize, context menus, editing, form widgets | partial | 2026-10-12: click to select, handles, drag to move and resize (Option symmetric, Shift snaps), Delete, arrows nudge, Tab cycles, context menu with Properties… (charts), Save as Image… (charts and images, with the format and resolution), Delete, and the stacking order, cut, copy, and paste (a PNG goes to other applications), the chart editor; no editors for images and widgets, no live preview while dragging, widgets draw but do not act |

@@ -93,5 +93,6 @@
 - (void)testSolver { [self runProgram:@"solver"]; }
 - (void)testPrinting { [self runProgram:@"printing"]; }
 - (void)testFormulaRange { [self runProgram:@"formula_range"]; }
+- (void)testFunctions { [self runProgram:@"functions"]; }
 
 @end

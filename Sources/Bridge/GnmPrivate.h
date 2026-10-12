@@ -236,6 +236,14 @@ GType gnm_cocoa_sheet_control_get_type (void);
 - (nullable instancetype)initWithSheet:(GnmSheet *)owner selectionOnly:(BOOL)selectionOnly ignoringPrintArea:(BOOL)ignore NS_DESIGNATED_INITIALIZER;
 @end
 
+@interface GnmFunctionInfo ()
+- (instancetype)initWithFunction:(GnmFunc *)func NS_DESIGNATED_INITIALIZER;
+@end
+
+@interface GnmFunctionGroup ()
+- (instancetype)initWithName:(NSString *)name functions:(NSArray<GnmFunctionInfo *> *)functions NS_DESIGNATED_INITIALIZER;
+@end
+
 @interface GnmCellComment ()
 - (instancetype)initWithComment:(GnmComment *)comment NS_DESIGNATED_INITIALIZER;
 @end

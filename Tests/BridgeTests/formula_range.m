@@ -38,6 +38,21 @@ int main (void)
         GNM_ASSERT_EQ_STR (probe (s, @"=\"été\"&", 7), @"7+0");
         GNM_ASSERT_EQ_STR ([s nameOfRange:GnmCellRangeMake (0, 0, 0, 0)], @"A1");
         GNM_ASSERT_EQ_STR ([s nameOfRange:GnmCellRangeMake (0, 0, 2, 3)], @"A1:C4");
+
+        /* autocompletion from the column above */
+        NSError *error = nil;
+        GNM_ASSERT ([s setText:@"apple" atColumn:0 row:0 autocorrect:NO error:&error], @"apple: %@", error);
+        GNM_ASSERT ([s setText:@"apricot" atColumn:0 row:1 autocorrect:NO error:&error], @"apricot: %@", error);
+        GNM_ASSERT ([s setText:@"banana" atColumn:0 row:2 autocorrect:NO error:&error], @"banana: %@", error);
+        NSString *ap = [s completionForText:@"ap" atColumn:0 row:3];
+        NSLog (@"autocomplete: 'ap' -> '%@', 'app' -> '%@', 'b' -> '%@'", ap, [s completionForText:@"app" atColumn:0 row:3], [s completionForText:@"b" atColumn:0 row:3]);
+        GNM_ASSERT ([[s completionForText:@"app" atColumn:0 row:3] isEqualToString:@"apple"], @"the nearest above that matches");
+        GNM_ASSERT ([ap isEqualToString:@"apricot"] || ap == nil, @"'ap' is the nearest, or too short for the preference: %@", ap);
+        GNM_ASSERT ([s completionForText:@"zzz" atColumn:0 row:3] == nil, @"nothing matches");
+        GNM_ASSERT ([s completionForText:@"=ap" atColumn:0 row:3] == nil, @"formulas are not completed");
+        GNM_ASSERT ([s completionForText:@"app" atColumn:1 row:3] == nil, @"another column");
+        GNM_ASSERT ([s setText:@"" atColumn:0 row:2 autocorrect:NO error:&error], @"blank: %@", error);
+        GNM_ASSERT ([s completionForText:@"app" atColumn:0 row:4] == nil, @"the search stops at a blank");
         GNM_ASSERT (stray.count == 0, @"stray messages: %@", stray);
         wb = nil;
       }

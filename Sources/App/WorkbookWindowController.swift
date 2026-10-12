@@ -460,7 +460,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
              #selector(meanTest(_:)), #selector(varianceTest(_:)), #selector(anovaSingleFactor(_:)), #selector(ranking(_:)),
              #selector(sampling(_:)), #selector(movingAverage(_:)), #selector(exponentialSmoothing(_:)), #selector(insertHyperlink(_:)),
              #selector(solver(_:)), #selector(pageSetup(_:)), #selector(printSheet(_:)), #selector(setPrintArea(_:)), #selector(clearPrintArea(_:)),
-             #selector(toggleBold(_:)), #selector(toggleItalic(_:)), #selector(toggleUnderline(_:)):
+             #selector(toggleBold(_:)), #selector(toggleItalic(_:)), #selector(toggleUnderline(_:)), #selector(insertFunction(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(removeSheet(_:)):
             return gridView.sheet != nil && workbook.canRemoveSheets
@@ -995,6 +995,18 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             } catch {
                 present(error)
             }
+        }
+    }
+
+    // MARK: Functions
+
+    /// Insert → Function…: the selector; the chosen name goes into the
+    /// formula being edited, or starts one.
+    @objc func insertFunction(_ sender: Any?) {
+        guard let window, gridView.sheet != nil, window.attachedSheet == nil, let engine = Engine.shared else { return }
+        let dialog = FunctionSelectorDialog(engine: engine)
+        dialog.present(in: window) { [weak self] function in
+            self?.gridView.insertFunction(function.name)
         }
     }
 

@@ -1222,6 +1222,30 @@
   `GNM_SNAPSHOT_FORMULA=1` ("=SUM(" in A5 takes B1:B3, committed as
   "=SUM(B1:B3)", then Bold).
 
+## 2026-10-12: Autocompletion and the function selector
+
+- `GnmSheet.completionForText:atColumn:row:`: the GTK autocompletion
+  (`GnmCompleteSheet`: the nearest text above in the column, up to the
+  first blank, that starts with what was typed) run to the end at once
+  rather than in idle steps; nil for formulas, when the preference is
+  off, or under its minimum of characters (3 by default).  `GridView`
+  completes while plain text is typed at the end of the in-cell editor,
+  with the added part selected so typing replaces it and Return takes
+  it; deleting, a non-letter, or typing elsewhere stops it for the
+  session (the GTK's `cb_entry_insert_text`).
+- `GnmFunctions.h`: the catalog (`GnmFunctionGroup`, `GnmFunctionInfo`
+  with the summary, description, arguments, examples, and argument
+  counts from each function's help entries; a plugin's function is
+  loaded from its stub first, or `gnm_func_get_help` asserts).
+  `FunctionSelectorDialog.swift` (Insert → Function…): group pop-up,
+  search over names and summaries, the functions with their summaries,
+  the chosen one's signature and description; Insert puts "NAME(" into
+  the formula being edited at the cursor, or starts "=NAME(".
+- `Tests/BridgeTests/functions.m` and the autocompletion cases in
+  `formula_range.m` (24 XCTest programs now); `GNM_SNAPSHOT_FUNC=1`
+  ("app" under "apple" completes with the tail selected, then SUM
+  inserted through the dialog, captured to `-func.png`).
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -1236,9 +1260,10 @@
    options, the text import assistant, cell comments, defined names,
    Fill Series, Text to Columns, Goal Seek, conditional formatting, and
    twelve analysis tools, data validation, hyperlinks, the Solver,
-   printing, formula range selection by mouse, and the font shortcuts;
-   next the rest of Phase 5 by usage frequency: the remaining
-   statistics, autocomplete, the function selector
+   printing, formula range selection by mouse, the font shortcuts,
+   autocompletion, and the function selector; next the rest of Phase 5
+   by usage frequency: the remaining statistics, keyboard range
+   selection, array formulas
    (frequencies, histograms, the non-parametric tests, two-factor
    ANOVA, Fourier, Kaplan-Meier, principal components)) from
    `docs/mvp-known-gaps.md`, which also
@@ -1263,8 +1288,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-12: `main` at the formula range
-   selection commit (after printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-12: `main` at the autocompletion and
+   function selector commit (after formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

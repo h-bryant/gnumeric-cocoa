@@ -472,6 +472,50 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FUNC"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // Autocompletion: "app" typed under "apple" fills in with the
+                // tail selected; then Insert → Function… puts SUM( into a
+                // fresh formula (captured to `-func.png`).
+                do {
+                    try sheet.setText("apple", atColumn: 3, row: 0, autocorrect: false)
+                    try sheet.setText("apricot", atColumn: 3, row: 1, autocorrect: false)
+                } catch {
+                    NSLog("func: data failed: %@", error.localizedDescription)
+                }
+                sheet.selectCell(atColumn: 3, row: 2)
+                controller.gridView.beginEditing(initialText: "a")
+                controller.gridView.editorTextDidChangeForTesting("ap")
+                controller.gridView.editorTextDidChangeForTesting("app")
+                NSLog("func: editor '%@' tail %@", controller.gridView.editorTextForTesting,
+                      controller.gridView.autocompleteTail.map(NSStringFromRange) ?? "nil")
+                controller.gridView.commitEditing(text: controller.gridView.editorTextForTesting, movement: .none)
+                NSLog("func: D3='%@'", sheet.displayTextOfCell(atColumn: 3, row: 2) ?? "nil")
+                sheet.selectCell(atColumn: 5, row: 0)
+                FunctionSelectorDialog.headlessDriver = { dialog in
+                    dialog.search.stringValue = "sum"
+                    dialog.filterChanged(nil)
+                    dialog.select(named: "SUM")
+                    if let content = dialog.alert.accessoryView {
+                        content.layoutSubtreeIfNeeded()
+                        if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                            content.cacheDisplay(in: content.bounds, to: rep)
+                            let funcPath = (path as NSString).deletingPathExtension + "-func.png"
+                            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: funcPath))
+                            NSLog("func: captured %@ (%@)", funcPath, NSStringFromRect(content.bounds))
+                        }
+                    }
+                    NSLog("func: %ld shown, selected %@ (%@)", dialog.shown.count, dialog.selectedFunction?.name ?? "nil", dialog.selectedFunction?.summary ?? "")
+                    return true
+                }
+                controller.insertFunction(nil)
+                FunctionSelectorDialog.headlessDriver = nil
+                NSLog("func: editor now '%@'", controller.gridView.editorTextForTesting)
+                controller.gridView.cancelEditing()
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FORMULA"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {
