@@ -1058,6 +1058,42 @@
   captured to `-valid.png`; "7" refused with the engine's words, "3"
   taken; the grid capture shows the arrow and the message).
 
+## 2026-10-12: More analysis tools
+
+- `GnmAnalysis.h` grew `GnmTwoSampleAnalysis` (variable 1 and 2 ranges,
+  labels, alpha) with `GnmMeanTestAnalysis` (paired, known variances as
+  the z-test, equal and unequal variances; the hypothesized mean
+  difference and the population variances) and `GnmVarianceTestAnalysis`
+  (the F-test), and the grouped `GnmAnovaSingleFactorAnalysis`,
+  `GnmRankingAnalysis`, `GnmSamplingAnalysis` (random or periodic),
+  `GnmMovingAverageAnalysis` (simple, cumulative, weighted, Spencer;
+  prior, central, or an offset; standard errors; a chart), and
+  `GnmExponentialSmoothingAnalysis` (the five kinds with their factors
+  and the seasonal period; standard errors; a chart), each with the GTK
+  dialog's validations and words and the OK handler's mapping
+  (`average_tool_ok_clicked_cb`'s interval and offset rewriting).
+- Engine fact that cost an hour: the dialogs' range entries carry
+  `GNM_EE_FORCE_ABS_REF`, so `gnm_expr_entry_parse_as_value` forces
+  absolute references; a relative range embedded as a constant in the
+  tool's expressions is shifted when the output evaluates it elsewhere
+  (the z-test showed the mean of the wrong column).  `single_range` now
+  parses with `value_new_cellrange_parsepos_str` and
+  `GNM_EXPR_PARSE_FORCE_ABSOLUTE_REFERENCES`; range lists keep
+  `global_range_list_parse` as the GTK list entries do.  Other facts:
+  periodic sampling takes `size` values a period apart (an offset of 0
+  means the period); with labels the moving average does not write the
+  last value; the new sheets are "t-Test (1)", "z-Test (1)", "F-Test
+  (1)", "Single Factor ANOVA (1)", "Ranks (1)", "Sampling (1)", "Moving
+  Average (1)", "Exponential Smoothing (1)"; a chart lands on the output
+  sheet as a sheet object the command owns (undo removes it).
+- `AnalysisDialog.swift` has a tool case for each, under Tools →
+  Statistics (grouped as the GTK menu groups them: descriptive,
+  dependent, tests, time series); `GNM_SNAPSHOT_STATS=1` also runs a
+  paired t-test into D6 through the dialog.
+- `analysis.m` covers them all (the paired, z, and Welch statistics,
+  the F, the ANOVA sum of squares, ranks, every second value, averages
+  of pairs, the smoothing chart) and their refusals.
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -1071,9 +1107,10 @@
    Find and Replace, the Settings window, and Export as Text with
    options, the text import assistant, cell comments, defined names,
    Fill Series, Text to Columns, Goal Seek, conditional formatting, and
-   the first analysis tools, and data validation; next the rest of Phase
-   5 by usage frequency: more analysis tools (t-tests, ANOVA, sampling,
-   moving averages), Solver, hyperlinks) from
+   twelve analysis tools, and data validation; next the rest of Phase 5
+   by usage frequency: Solver, hyperlinks, the remaining statistics
+   (frequencies, histograms, the non-parametric tests, two-factor
+   ANOVA, Fourier, Kaplan-Meier, principal components)) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -1096,8 +1133,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-12: `main` at the data validation
-   commit (after the analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-12: `main` at the second analysis
+   tools commit (after data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

@@ -123,6 +123,132 @@ NS_SWIFT_NAME(RegressionAnalysis)
 @property (nonatomic) BOOL hasMultipleY;
 @end
 
+/// Tools over two ranges (variable 1 and variable 2) with a
+/// significance level.
+NS_SWIFT_NAME(TwoSampleAnalysis)
+@interface GnmTwoSampleAnalysis : GnmAnalysis
+- (instancetype)init NS_UNAVAILABLE;
+@property (nonatomic, copy) NSString *firstRange;
+@property (nonatomic, copy) NSString *secondRange;
+/// The first cell of each variable is its label.
+@property (nonatomic) BOOL hasLabels;
+/// 0.05 at first.
+@property (nonatomic) double alpha;
+@end
+
+/// mean-tests.ui: paired, unpaired with known population variances (a
+/// z-test), unpaired with equal or with unequal unknown variances.
+typedef NS_ENUM(NSInteger, GnmMeanTestKind) {
+    GnmMeanTestPaired = 0,
+    GnmMeanTestKnownVariances,
+    GnmMeanTestEqualVariances,
+    GnmMeanTestUnequalVariances,
+} NS_SWIFT_NAME(MeanTestAnalysis.Kind);
+
+/// Claims About Two Means: the t-tests and the z-test.
+NS_SWIFT_NAME(MeanTestAnalysis)
+@interface GnmMeanTestAnalysis : GnmTwoSampleAnalysis
+- (instancetype)init;
+/// Unequal variances at first.
+@property (nonatomic) GnmMeanTestKind kind;
+/// 0 at first.
+@property (nonatomic) double hypothesizedMeanDifference;
+/// The population variances for the known-variances kind; both positive.
+@property (nonatomic) double firstVariance;
+@property (nonatomic) double secondVariance;
+@end
+
+/// Claims About Two Variances: the F-test.
+NS_SWIFT_NAME(VarianceTestAnalysis)
+@interface GnmVarianceTestAnalysis : GnmTwoSampleAnalysis
+- (instancetype)init;
+@end
+
+/// ANOVA: Single Factor.
+NS_SWIFT_NAME(AnovaSingleFactorAnalysis)
+@interface GnmAnovaSingleFactorAnalysis : GnmGroupedAnalysis
+- (instancetype)init;
+/// 0.05 at first.
+@property (nonatomic) double alpha;
+@end
+
+/// Rank and Percentile.
+NS_SWIFT_NAME(RankingAnalysis)
+@interface GnmRankingAnalysis : GnmGroupedAnalysis
+- (instancetype)init;
+/// Tied values share the average rank rather than the top one (off).
+@property (nonatomic) BOOL averagesTies;
+@end
+
+/// Sampling: random samples, or every period-th value from an offset.
+NS_SWIFT_NAME(SamplingAnalysis)
+@interface GnmSamplingAnalysis : GnmGroupedAnalysis
+- (instancetype)init;
+@property (nonatomic) BOOL isPeriodic;
+/// Periodic: the period (1) and the offset (0), taken row-major or column-major.
+@property (nonatomic) NSInteger period;
+@property (nonatomic) NSInteger offset;
+@property (nonatomic) BOOL isRowMajor;
+/// The size of each sample (1): random draws, or values a period apart.
+@property (nonatomic) NSInteger sampleSize;
+/// How many samples (1).
+@property (nonatomic) NSInteger sampleCount;
+@end
+
+typedef NS_ENUM(NSInteger, GnmMovingAverageKind) {
+    GnmMovingAverageSimple = 0,
+    GnmMovingAverageCumulative,
+    GnmMovingAverageWeighted,
+    /// Spencer's 15-point moving average.
+    GnmMovingAverageSpencer,
+} NS_SWIFT_NAME(MovingAverageAnalysis.Kind);
+
+/// Moving Average.
+NS_SWIFT_NAME(MovingAverageAnalysis)
+@interface GnmMovingAverageAnalysis : GnmGroupedAnalysis
+- (instancetype)init;
+@property (nonatomic) GnmMovingAverageKind kind;
+/// Simple and weighted: the interval (3).
+@property (nonatomic) NSInteger interval;
+/// Simple: a central average (the offset half the interval) rather than
+/// the prior one or the offset given.
+@property (nonatomic) BOOL isCentral;
+@property (nonatomic) NSInteger offset;
+/// Standard errors with the denominator n (0), n−1 (1), or n−2 (2).
+@property (nonatomic) BOOL includesStandardErrors;
+@property (nonatomic) NSInteger denominatorOffset;
+/// A chart of the data and the averages on the output sheet.
+@property (nonatomic) BOOL includesChart;
+@end
+
+typedef NS_ENUM(NSInteger, GnmExponentialSmoothingKind) {
+    /// Simple exponential smoothing (Hunter, 1986).
+    GnmExponentialSmoothingSimpleHunter = 0,
+    /// Simple exponential smoothing (Roberts, 1959).
+    GnmExponentialSmoothingSimpleRoberts,
+    /// Holt's trend corrected exponential smoothing.
+    GnmExponentialSmoothingHoltTrend,
+    GnmExponentialSmoothingAdditiveHoltWinters,
+    GnmExponentialSmoothingMultiplicativeHoltWinters,
+} NS_SWIFT_NAME(ExponentialSmoothingAnalysis.Kind);
+
+/// Exponential Smoothing.
+NS_SWIFT_NAME(ExponentialSmoothingAnalysis)
+@interface GnmExponentialSmoothingAnalysis : GnmGroupedAnalysis
+- (instancetype)init;
+@property (nonatomic) GnmExponentialSmoothingKind kind;
+/// α (0.2), γ for the trend kinds (0.2), δ and the period for the
+/// seasonal kinds (0.2, 12); the factors between 0 and 1.
+@property (nonatomic) double dampingFactor;
+@property (nonatomic) double growthDampingFactor;
+@property (nonatomic) double seasonalDampingFactor;
+@property (nonatomic) NSInteger seasonalPeriod;
+/// Standard errors with the denominator n (0), n−1 (1), n−2 (2), or n−3 (3).
+@property (nonatomic) BOOL includesStandardErrors;
+@property (nonatomic) NSInteger denominatorOffset;
+@property (nonatomic) BOOL includesChart;
+@end
+
 @interface GnmSheet (Analysis)
 /// Run a tool with its ranges read relative to this sheet, writing as the
 /// output says, as one undoable command named for the tool.  The sheet

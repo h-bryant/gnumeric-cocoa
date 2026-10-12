@@ -561,6 +561,21 @@ enum Snapshot {
                 NSLog("stats: D1='%@' E3='%@' undo=%@", sheet.displayTextOfCell(atColumn: 3, row: 0) ?? "nil",
                       sheet.displayTextOfCell(atColumn: 4, row: 2) ?? "nil", sheet.workbook?.undoLabel ?? "nil")
                 AnalysisDialog.headlessDriver = { dialog in
+                    dialog.xField.stringValue = "A1:A6"
+                    dialog.yField.stringValue = "B1:B6"
+                    dialog.labels.state = .on
+                    dialog.meanTestKind.selectItem(at: 0)
+                    dialog.destination.selectItem(at: 1)
+                    dialog.outputField.stringValue = "D6"
+                    return true
+                }
+                controller.meanTest(nil)
+                var tStat = "none"
+                for r in 5..<30 where sheet.displayTextOfCell(atColumn: 3, row: r) == "t Stat" {
+                    tStat = sheet.displayTextOfCell(atColumn: 4, row: r) ?? "nil"
+                }
+                NSLog("stats: paired t-test into D6: t Stat=%@ undo=%@", tStat, sheet.workbook?.undoLabel ?? "nil")
+                AnalysisDialog.headlessDriver = { dialog in
                     dialog.labels.state = .on
                     dialog.confidenceInterval.state = .on
                     return true

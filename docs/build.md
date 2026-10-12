@@ -132,7 +132,8 @@ through the assistant), and Goal Seek (B30 driven to 0 by changing A30,
 undone), and conditional formatting ("value > 100 → yellow, bold" put on
 B5:B12 through the dialog, captured to `-cond.png`), and the analysis
 tools (a correlation into D1 through its dialog, captured to
-`-stats.png`, then descriptive statistics to a new sheet), and data
+`-stats.png`, a paired t-test into D6, then descriptive statistics to a
+new sheet), and data
 validation (C1 takes a value from B1:B5 through the dialog, captured to
 `-valid.png`; an entry outside the list refused, one from it taken)
 before the

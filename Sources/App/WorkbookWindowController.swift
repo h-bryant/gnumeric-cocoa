@@ -456,7 +456,9 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             return gridView.sheet != nil
         case #selector(defineNames(_:)), #selector(insertName(_:)), #selector(fillSeries(_:)), #selector(textToColumns(_:)),
              #selector(goalSeek(_:)), #selector(conditionalFormatting(_:)), #selector(descriptiveStatistics(_:)),
-             #selector(correlation(_:)), #selector(covariance(_:)), #selector(regression(_:)), #selector(dataValidation(_:)):
+             #selector(correlation(_:)), #selector(covariance(_:)), #selector(regression(_:)), #selector(dataValidation(_:)),
+             #selector(meanTest(_:)), #selector(varianceTest(_:)), #selector(anovaSingleFactor(_:)), #selector(ranking(_:)),
+             #selector(sampling(_:)), #selector(movingAverage(_:)), #selector(exponentialSmoothing(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(removeSheet(_:)):
             return gridView.sheet != nil && workbook.canRemoveSheets
@@ -1025,6 +1027,13 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     @objc func correlation(_ sender: Any?) { runAnalysisDialog(.correlation) }
     @objc func covariance(_ sender: Any?) { runAnalysisDialog(.covariance) }
     @objc func regression(_ sender: Any?) { runAnalysisDialog(.regression) }
+    @objc func meanTest(_ sender: Any?) { runAnalysisDialog(.meanTest) }
+    @objc func varianceTest(_ sender: Any?) { runAnalysisDialog(.varianceTest) }
+    @objc func anovaSingleFactor(_ sender: Any?) { runAnalysisDialog(.anovaSingleFactor) }
+    @objc func ranking(_ sender: Any?) { runAnalysisDialog(.ranking) }
+    @objc func sampling(_ sender: Any?) { runAnalysisDialog(.sampling) }
+    @objc func movingAverage(_ sender: Any?) { runAnalysisDialog(.movingAverage) }
+    @objc func exponentialSmoothing(_ sender: Any?) { runAnalysisDialog(.exponentialSmoothing) }
 
     /// One of the GTK analysis tool dialogs as an alert sheet; the tool
     /// runs as one undoable command and the sheet written to is shown.  A

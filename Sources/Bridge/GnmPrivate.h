@@ -205,6 +205,12 @@ GType gnm_cocoa_sheet_control_get_type (void);
 - (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool engine:(GnmEngine *)engine error:(NSError **)error;
 @end
 
+@interface GnmTwoSampleAnalysis ()
+- (instancetype)initWithTitle:(NSString *)title;
+- (GnmAnalysisTool *)_newEngineTool;
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool engine:(GnmEngine *)engine error:(NSError **)error;
+@end
+
 @interface GnmCellComment ()
 - (instancetype)initWithComment:(GnmComment *)comment NS_DESIGNATED_INITIALIZER;
 @end

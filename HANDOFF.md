@@ -337,13 +337,14 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    free), and Text to Columns (the import assistant over the selection).
    Goal Seek (Tools menu) and conditional formatting (Format menu;
    `GnmConditionalFormat`, `ConditionalFormatDialog.swift`,
-   `conditional.m`) and the first analysis tools (Tools → Statistics:
-   descriptive statistics, correlation, covariance, regression;
-   `GnmAnalysis`, `AnalysisDialog.swift`, `analysis.m`) and data
-   validation (Data → Validation…; `GnmValidation.h`,
-   `ValidationDialog.swift`, the grid's entry check, `validation.m`)
-   followed. Next, by usage: more analysis tools on the same pattern,
-   Solver, hyperlinks;
+   `conditional.m`), twelve analysis tools (Tools → Statistics:
+   descriptive statistics, correlation, covariance, ranks, regression,
+   two means, two variances, single-factor ANOVA, sampling, moving
+   average, exponential smoothing; `GnmAnalysis`, `AnalysisDialog.swift`,
+   `analysis.m`) and data validation (Data → Validation…;
+   `GnmValidation.h`, `ValidationDialog.swift`, the grid's entry check,
+   `validation.m`) followed. Next, by usage: Solver, hyperlinks, the
+   remaining statistics on the same pattern;
    image and widget editors (`cmd_so_set_*`) later; the smaller Phase 3
    gaps (Insert/Delete Cells,
    Goto and the name box, the formula bar, autocomplete, drag and drop,

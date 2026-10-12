@@ -119,6 +119,133 @@ int main (void)
         [wb undo];
         GNM_ASSERT (wb.sheets.count == 1, @"regression sheet undone");
 
+        /* two means: paired, then known variances (z), then unequal variances */
+        GnmMeanTestAnalysis *mean = [[GnmMeanTestAnalysis alloc] init];
+        mean.kind = GnmMeanTestPaired;
+        mean.firstRange = @"A1:A6";
+        mean.secondRange = @"B1:B6";
+        mean.hasLabels = YES;
+        out = [s runAnalysis:mean output:[GnmAnalysisOutput onNewSheet] error:&error];
+        GNM_ASSERT (out != nil, @"paired: %@", error);
+        GNM_ASSERT_EQ_STR (out.name, @"t-Test (1)");
+        double t = beside (out, @"t Stat", 4, 30);
+        NSLog (@"paired t: %g; rows: %@ / %@ / %@", t, cell (out, 0, 0), cell (out, 0, 1), cell (out, 0, 2));
+        GNM_ASSERT (fabs (fabs (t) - 4.8826) < 0.001, @"paired t = %g", t);
+        [wb undo];
+        mean.kind = GnmMeanTestKnownVariances;
+        mean.firstVariance = 2.5;
+        mean.secondVariance = 12.2;
+        out = [s runAnalysis:mean output:[GnmAnalysisOutput onNewSheet] error:&error];
+        GNM_ASSERT (out != nil, @"z: %@", error);
+        GNM_ASSERT_EQ_STR (out.name, @"z-Test (1)");
+        double z = beside (out, @"z", 4, 30);
+        NSLog (@"z: %g; rows: %@|%@|%@ / %@|%@|%@ / %@|%@|%@ / %@|%@|%@", z, cell (out, 0, 5), cell (out, 1, 5), cell (out, 2, 5),
+               cell (out, 0, 6), cell (out, 1, 6), cell (out, 2, 6), cell (out, 0, 7), cell (out, 1, 7), cell (out, 2, 7),
+               cell (out, 0, 1), cell (out, 1, 1), cell (out, 2, 1));
+        GNM_ASSERT (fabs (fabs (z) - 2.4495) < 0.001, @"z = %g", z);
+        GNM_ASSERT (number (out, 1, 1) == 3 && number (out, 2, 1) == 7.2, @"the ranges stay put: %@ %@", cell (out, 1, 1), cell (out, 2, 1));
+        [wb undo];
+        mean.kind = GnmMeanTestUnequalVariances;
+        out = [s runAnalysis:mean output:[GnmAnalysisOutput onNewSheet] error:&error];
+        GNM_ASSERT (out != nil, @"unequal: %@", error);
+        double welch = beside (out, @"t Stat", 4, 30);
+        NSLog (@"welch t: %g", welch);
+        GNM_ASSERT (fabs (fabs (welch) - 2.4495) < 0.001, @"welch t = %g", welch);
+        [wb undo];
+
+        /* two variances */
+        GnmVarianceTestAnalysis *ftest = [[GnmVarianceTestAnalysis alloc] init];
+        ftest.firstRange = @"A1:A6";
+        ftest.secondRange = @"B1:B6";
+        ftest.hasLabels = YES;
+        out = [s runAnalysis:ftest output:[GnmAnalysisOutput onNewSheet] error:&error];
+        GNM_ASSERT (out != nil, @"F: %@", error);
+        GNM_ASSERT_EQ_STR (out.name, @"F-Test (1)");
+        double f = beside (out, @"F", 4, 30);
+        NSLog (@"F: %g", f);
+        GNM_ASSERT (fabs (f - 2.5 / 12.2) < 0.001, @"F = %g", f);
+        [wb undo];
+
+        /* single factor ANOVA */
+        GnmAnovaSingleFactorAnalysis *anova = [[GnmAnovaSingleFactorAnalysis alloc] init];
+        anova.inputRanges = @"A1:B6";
+        anova.hasLabels = YES;
+        out = [s runAnalysis:anova output:[GnmAnalysisOutput onNewSheet] error:&error];
+        GNM_ASSERT (out != nil, @"anova: %@", error);
+        GNM_ASSERT_EQ_STR (out.name, @"Single Factor ANOVA (1)");
+        double ssb = beside (out, @"Between Groups", 8, 30);
+        NSLog (@"anova SS between: %g", ssb);
+        GNM_ASSERT (fabs (ssb - 44.1) < 1e-9, @"SS between = %g", ssb);
+        [wb undo];
+
+        /* ranks into a range */
+        GnmRankingAnalysis *rank = [[GnmRankingAnalysis alloc] init];
+        rank.inputRanges = @"A1:A6";
+        rank.hasLabels = YES;
+        GNM_ASSERT ([s runAnalysis:rank output:[GnmAnalysisOutput inRangeNamed:@"H1"] error:&error] == s, @"rank: %@", error);
+        NSLog (@"ranks: %@ %@ %@ %@ / %@ %@ %@ %@", cell (s, 7, 0), cell (s, 8, 0), cell (s, 9, 0), cell (s, 10, 0),
+               cell (s, 7, 1), cell (s, 8, 1), cell (s, 9, 1), cell (s, 10, 1));
+        GNM_ASSERT_EQ_STR (cell (s, 9, 1), @"Rank");
+        GNM_ASSERT (number (s, 9, 2) == 1 && number (s, 8, 2) == 5, @"the top value ranks first: %@ %@", cell (s, 8, 2), cell (s, 9, 2));
+
+        /* periodic sampling into a range */
+        GnmSamplingAnalysis *sampling = [[GnmSamplingAnalysis alloc] init];
+        sampling.inputRanges = @"A2:A6";
+        sampling.isPeriodic = YES;
+        sampling.period = 2;
+        sampling.sampleSize = 2;
+        GNM_ASSERT ([s runAnalysis:sampling output:[GnmAnalysisOutput inRangeNamed:@"H10"] error:&error] == s, @"sampling: %@", error);
+        NSLog (@"sampling: %@ %@ %@ %@ %@", cell (s, 7, 9), cell (s, 7, 10), cell (s, 7, 11), cell (s, 7, 12), cell (s, 7, 13));
+        GNM_ASSERT (number (s, 7, 10) == 2 && number (s, 7, 11) == 4 && [s isCellEmptyAtColumn:7 row:12], @"every second value");
+
+        /* a prior moving average of two */
+        GnmMovingAverageAnalysis *average = [[GnmMovingAverageAnalysis alloc] init];
+        average.inputRanges = @"A1:A6";
+        average.hasLabels = YES;
+        average.interval = 2;
+        GNM_ASSERT ([s runAnalysis:average output:[GnmAnalysisOutput inRangeNamed:@"J10"] error:&error] == s, @"average: %@", error);
+        NSLog (@"moving average: %@ %@ %@ %@ %@ %@", cell (s, 9, 9), cell (s, 9, 10), cell (s, 9, 11), cell (s, 9, 12), cell (s, 9, 13), cell (s, 9, 14));
+        /* the engine's own quirk: with labels the last average is not written */
+        GNM_ASSERT (number (s, 9, 11) == 1.5 && number (s, 9, 13) == 3.5, @"averages of pairs");
+
+        /* exponential smoothing with its chart on a new sheet */
+        GnmExponentialSmoothingAnalysis *smoothing = [[GnmExponentialSmoothingAnalysis alloc] init];
+        smoothing.inputRanges = @"B1:B6";
+        smoothing.hasLabels = YES;
+        smoothing.includesChart = YES;
+        out = [s runAnalysis:smoothing output:[GnmAnalysisOutput onNewSheet] error:&error];
+        GNM_ASSERT (out != nil, @"smoothing: %@", error);
+        GNM_ASSERT_EQ_STR (out.name, @"Exponential Smoothing (1)");
+        NSLog (@"smoothing: %@ %@ %@ %@; objects %lu", cell (out, 0, 0), cell (out, 0, 1), cell (out, 0, 2), cell (out, 0, 3), (unsigned long) out.sheetObjects.count);
+        GNM_ASSERT (out.sheetObjects.count == 1, @"a chart was added: %lu", (unsigned long) out.sheetObjects.count);
+        [wb undo];
+        GNM_ASSERT (wb.sheets.count == 1, @"smoothing sheet undone");
+
+        /* their refusals */
+        error = nil;
+        mean.firstRange = @"nothing";
+        GNM_ASSERT ([s runAnalysis:mean output:[GnmAnalysisOutput onNewSheet] error:&error] == nil
+                    && [error.localizedDescription containsString:@"variable 1 range"], @"bad first: %@", error);
+        error = nil;
+        mean.firstRange = @"A1:A6";
+        mean.kind = GnmMeanTestKnownVariances;
+        mean.firstVariance = 0;
+        GNM_ASSERT ([s runAnalysis:mean output:[GnmAnalysisOutput onNewSheet] error:&error] == nil
+                    && [error.localizedDescription containsString:@"variance for variable 1"], @"bad variance: %@", error);
+        error = nil;
+        sampling.sampleCount = 0;
+        GNM_ASSERT ([s runAnalysis:sampling output:[GnmAnalysisOutput onNewSheet] error:&error] == nil
+                    && [error.localizedDescription containsString:@"number of samples"], @"bad count: %@", error);
+        error = nil;
+        average.interval = 0;
+        GNM_ASSERT ([s runAnalysis:average output:[GnmAnalysisOutput onNewSheet] error:&error] == nil
+                    && [error.localizedDescription containsString:@"interval is invalid"], @"bad interval: %@", error);
+        error = nil;
+        smoothing.dampingFactor = 1.5;
+        GNM_ASSERT ([s runAnalysis:smoothing output:[GnmAnalysisOutput onNewSheet] error:&error] == nil
+                    && [error.localizedDescription containsString:@"damping factor is invalid"], @"bad damping: %@", error);
+        GNM_ASSERT (wb.sheets.count == 1, @"nothing added by refusals: %lu", (unsigned long) wb.sheets.count);
+
         /* refusals, with the dialogs' words */
         error = nil;
         desc.inputRanges = @"nonsense";

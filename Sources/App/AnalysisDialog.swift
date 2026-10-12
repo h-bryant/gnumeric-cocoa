@@ -10,6 +10,7 @@ import GnmCocoa
 final class AnalysisDialog {
     enum Tool {
         case descriptiveStatistics, correlation, covariance, regression
+        case meanTest, varianceTest, anovaSingleFactor, ranking, sampling, movingAverage, exponentialSmoothing
 
         var title: String {
             switch self {
@@ -17,6 +18,23 @@ final class AnalysisDialog {
             case .correlation: return "Correlation"
             case .covariance: return "Covariance"
             case .regression: return "Regression"
+            case .meanTest: return "Claims About Two Means"
+            case .varianceTest: return "Claims About Two Variances"
+            case .anovaSingleFactor: return "ANOVA: Single Factor"
+            case .ranking: return "Rank and Percentile"
+            case .sampling: return "Sampling"
+            case .movingAverage: return "Moving Average"
+            case .exponentialSmoothing: return "Exponential Smoothing"
+            }
+        }
+
+        /// Tools over a list of ranges split into variables.
+        var isGrouped: Bool {
+            switch self {
+            case .descriptiveStatistics, .correlation, .covariance, .anovaSingleFactor, .ranking, .sampling, .movingAverage, .exponentialSmoothing:
+                return true
+            default:
+                return false
             }
         }
     }
@@ -39,6 +57,34 @@ final class AnalysisDialog {
     let confidenceField = NSTextField(string: "0.95")
     let zeroIntercept = NSButton(checkboxWithTitle: "Force intercept to be zero", target: nil, action: nil)
     let residuals = NSButton(checkboxWithTitle: "Calculate residuals", target: nil, action: nil)
+    // Two samples
+    let alphaField = NSTextField(string: "0.05")
+    let meanTestKind = NSPopUpButton(frame: .zero, pullsDown: false)
+    let meanDifferenceField = NSTextField(string: "0")
+    let firstVarianceField = NSTextField(string: "")
+    let secondVarianceField = NSTextField(string: "")
+    // Ranking
+    let averageTies = NSButton(checkboxWithTitle: "Average rank for ties", target: nil, action: nil)
+    // Sampling
+    let samplingMethod = NSPopUpButton(frame: .zero, pullsDown: false)
+    let sampleSizeField = NSTextField(string: "1")
+    let sampleCountField = NSTextField(string: "1")
+    let periodField = NSTextField(string: "1")
+    let offsetField = NSTextField(string: "0")
+    let samplingDirection = NSPopUpButton(frame: .zero, pullsDown: false)
+    // Moving average and exponential smoothing
+    let movingAverageKind = NSPopUpButton(frame: .zero, pullsDown: false)
+    let maIntervalField = NSTextField(string: "3")
+    let placement = NSPopUpButton(frame: .zero, pullsDown: false)
+    let averageOffsetField = NSTextField(string: "0")
+    let smoothingKind = NSPopUpButton(frame: .zero, pullsDown: false)
+    let dampingField = NSTextField(string: "0.2")
+    let growthField = NSTextField(string: "0.2")
+    let seasonalField = NSTextField(string: "0.2")
+    let seasonalPeriodField = NSTextField(string: "12")
+    let standardErrors = NSButton(checkboxWithTitle: "Standard errors", target: nil, action: nil)
+    let denominator = NSPopUpButton(frame: .zero, pullsDown: false)
+    let chart = NSButton(checkboxWithTitle: "Include chart", target: nil, action: nil)
     // Descriptive statistics
     let summary = NSButton(checkboxWithTitle: "Summary statistics", target: nil, action: nil)
     let ssmedian = NSButton(checkboxWithTitle: "Use SSMEDIAN for the median", target: nil, action: nil)
@@ -72,14 +118,26 @@ final class AnalysisDialog {
         autofit.state = .on
         clear.state = .on
         entered.addItems(withTitles: ["Values", "Formulas"])
+        meanTestKind.addItems(withTitles: ["Paired", "Unpaired, known population variances", "Unpaired, equal variances", "Unpaired, unequal variances"])
+        meanTestKind.selectItem(at: 3)
+        samplingMethod.addItems(withTitles: ["Random", "Periodic"])
+        samplingDirection.addItems(withTitles: ["Column major", "Row major"])
+        movingAverageKind.addItems(withTitles: ["Simple moving average", "Cumulative moving average", "Weighted moving average", "Spencer's 15-point moving average"])
+        placement.addItems(withTitles: ["Prior moving average", "Central moving average", "Other offset"])
+        smoothingKind.addItems(withTitles: ["Simple exponential smoothing (Hunter, 1986)", "Simple exponential smoothing (Roberts, 1959)",
+                                            "Holt's trend corrected exponential smoothing", "Additive Holt-Winters exponential smoothing",
+                                            "Multiplicative Holt-Winters exponential smoothing"])
+        denominator.addItems(withTitles: ["n", "n − 1", "n − 2", "n − 3"])
         for field in [inputField, xField, yField, outputField] {
             field.widthAnchor.constraint(greaterThanOrEqualToConstant: 220).isActive = true
         }
-        for field in [confidenceField, intervalField, largestField, smallestField] {
+        for field in [confidenceField, intervalField, largestField, smallestField, alphaField, meanDifferenceField, firstVarianceField,
+                      secondVarianceField, sampleSizeField, sampleCountField, periodField, offsetField, maIntervalField, averageOffsetField,
+                      dampingField, growthField, seasonalField, seasonalPeriodField] {
             field.widthAnchor.constraint(equalToConstant: 70).isActive = true
         }
         alert.accessoryView = makeGrid()
-        alert.window.initialFirstResponder = tool == .regression ? xField : inputField
+        alert.window.initialFirstResponder = tool.isGrouped ? inputField : xField
     }
 
     private func makeGrid() -> NSGridView {
@@ -107,14 +165,48 @@ final class AnalysisDialog {
                      [heading("Options"), NSGridCell.emptyContentView],
                      [label("Model:"), regressionKind], [label("Confidence level:"), confidenceField],
                      [NSGridCell.emptyContentView, zeroIntercept], [NSGridCell.emptyContentView, residuals]]
-        case .descriptiveStatistics, .correlation, .covariance:
+        case .meanTest:
+            rows += [[label("Variable 1 range:"), xField], [label("Variable 2 range:"), yField], [NSGridCell.emptyContentView, labels],
+                     [heading("Test"), NSGridCell.emptyContentView],
+                     [label("Variables are:"), meanTestKind],
+                     [label("Variable 1 population variance:"), firstVarianceField], [label("Variable 2 population variance:"), secondVarianceField],
+                     [label("Hypothesized mean difference:"), meanDifferenceField], [label("Alpha:"), alphaField]]
+        case .varianceTest:
+            rows += [[label("Variable 1 range:"), xField], [label("Variable 2 range:"), yField], [NSGridCell.emptyContentView, labels],
+                     [heading("Test"), NSGridCell.emptyContentView], [label("Alpha:"), alphaField]]
+        default:
             rows += [[label("Input range:"), inputField], [label("Grouped by:"), grouping], [NSGridCell.emptyContentView, labels]]
-            if tool == .descriptiveStatistics {
+            switch tool {
+            case .descriptiveStatistics:
                 rows += [[heading("Statistics"), NSGridCell.emptyContentView],
                          [NSGridCell.emptyContentView, summary], [NSGridCell.emptyContentView, ssmedian],
                          [NSGridCell.emptyContentView, pair(confidenceInterval, intervalField)],
                          [NSGridCell.emptyContentView, pair(kthLargest, largestField)],
                          [NSGridCell.emptyContentView, pair(kthSmallest, smallestField)]]
+            case .anovaSingleFactor:
+                rows += [[heading("Options"), NSGridCell.emptyContentView], [label("Alpha:"), alphaField]]
+            case .ranking:
+                rows += [[heading("Options"), NSGridCell.emptyContentView], [NSGridCell.emptyContentView, averageTies]]
+            case .sampling:
+                rows += [[heading("Options"), NSGridCell.emptyContentView],
+                         [label("Sampling method:"), samplingMethod], [label("Size of sample:"), sampleSizeField],
+                         [label("Number of samples:"), sampleCountField], [label("Period:"), periodField],
+                         [label("Offset:"), offsetField], [label("Primary direction:"), samplingDirection]]
+            case .movingAverage:
+                rows += [[heading("Options"), NSGridCell.emptyContentView],
+                         [label("Average:"), movingAverageKind], [label("Interval:"), maIntervalField],
+                         [label("Placement:"), placement], [label("Offset:"), averageOffsetField],
+                         [NSGridCell.emptyContentView, standardErrors], [label("Denominator:"), denominator],
+                         [NSGridCell.emptyContentView, chart]]
+            case .exponentialSmoothing:
+                rows += [[heading("Options"), NSGridCell.emptyContentView],
+                         [label("Smoothing:"), smoothingKind], [label("Damping factor (α):"), dampingField],
+                         [label("Growth damping factor (γ):"), growthField], [label("Seasonal damping factor (δ):"), seasonalField],
+                         [label("Seasonal period:"), seasonalPeriodField],
+                         [NSGridCell.emptyContentView, standardErrors], [label("Denominator:"), denominator],
+                         [NSGridCell.emptyContentView, chart]]
+            default:
+                break
             }
         }
         rows += [[heading("Output"), NSGridCell.emptyContentView],
@@ -167,7 +259,69 @@ final class AnalysisDialog {
             let covariance = CovarianceAnalysis()
             fill(covariance)
             return covariance
+        case .meanTest:
+            let test = MeanTestAnalysis()
+            fillTwoSample(test)
+            test.kind = MeanTestAnalysis.Kind(rawValue: meanTestKind.indexOfSelectedItem) ?? .unequalVariances
+            test.hypothesizedMeanDifference = Double(meanDifferenceField.stringValue) ?? 0
+            test.firstVariance = Double(firstVarianceField.stringValue) ?? 0
+            test.secondVariance = Double(secondVarianceField.stringValue) ?? 0
+            return test
+        case .varianceTest:
+            let test = VarianceTestAnalysis()
+            fillTwoSample(test)
+            return test
+        case .anovaSingleFactor:
+            let anova = AnovaSingleFactorAnalysis()
+            fill(anova)
+            anova.alpha = Double(alphaField.stringValue) ?? -1
+            return anova
+        case .ranking:
+            let ranking = RankingAnalysis()
+            fill(ranking)
+            ranking.averagesTies = averageTies.state == .on
+            return ranking
+        case .sampling:
+            let sampling = SamplingAnalysis()
+            fill(sampling)
+            sampling.isPeriodic = samplingMethod.indexOfSelectedItem == 1
+            sampling.sampleSize = Int(sampleSizeField.stringValue) ?? 0
+            sampling.sampleCount = Int(sampleCountField.stringValue) ?? 0
+            sampling.period = Int(periodField.stringValue) ?? 0
+            sampling.offset = Int(offsetField.stringValue) ?? -1
+            sampling.isRowMajor = samplingDirection.indexOfSelectedItem == 1
+            return sampling
+        case .movingAverage:
+            let average = MovingAverageAnalysis()
+            fill(average)
+            average.kind = MovingAverageAnalysis.Kind(rawValue: movingAverageKind.indexOfSelectedItem) ?? .simple
+            average.interval = Int(maIntervalField.stringValue) ?? 0
+            average.isCentral = placement.indexOfSelectedItem == 1
+            average.offset = placement.indexOfSelectedItem == 2 ? (Int(averageOffsetField.stringValue) ?? -1) : 0
+            average.includesStandardErrors = standardErrors.state == .on
+            average.denominatorOffset = min(denominator.indexOfSelectedItem, 2)
+            average.includesChart = chart.state == .on
+            return average
+        case .exponentialSmoothing:
+            let smoothing = ExponentialSmoothingAnalysis()
+            fill(smoothing)
+            smoothing.kind = ExponentialSmoothingAnalysis.Kind(rawValue: smoothingKind.indexOfSelectedItem) ?? .simpleHunter
+            smoothing.dampingFactor = Double(dampingField.stringValue) ?? -1
+            smoothing.growthDampingFactor = Double(growthField.stringValue) ?? -1
+            smoothing.seasonalDampingFactor = Double(seasonalField.stringValue) ?? -1
+            smoothing.seasonalPeriod = Int(seasonalPeriodField.stringValue) ?? 0
+            smoothing.includesStandardErrors = standardErrors.state == .on
+            smoothing.denominatorOffset = denominator.indexOfSelectedItem
+            smoothing.includesChart = chart.state == .on
+            return smoothing
         }
+    }
+
+    private func fillTwoSample(_ analysis: TwoSampleAnalysis) {
+        analysis.firstRange = xField.stringValue
+        analysis.secondRange = yField.stringValue
+        analysis.hasLabels = labels.state == .on
+        analysis.alpha = Double(alphaField.stringValue) ?? -1
     }
 
     private func fill(_ analysis: GroupedAnalysis) {

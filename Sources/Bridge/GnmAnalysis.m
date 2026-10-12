@@ -2,6 +2,10 @@
 // with the dialog's settings, the input parsed as a range list, the
 // output description from the Output page, and cmd_analysis_tool.
 #import "GnmPrivate.h"
+#include <tools/analysis-ttest.h>
+#include <tools/analysis-ztest.h>
+#include <tools/analysis-ftest.h>
+#include <tools/analysis-exp-smoothing.h>
 
 static NSError *
 analysis_error (GnmEngine *engine, NSString *message)
@@ -9,20 +13,24 @@ analysis_error (GnmEngine *engine, NSString *message)
     return [engine _errorWithCode:GnmErrorCommandFailed description:message collected:@[]];
 }
 
-/* One range from text, as gnm_expr_entry_parse_as_value gives it, or NULL. */
+/* One range from text, as gnm_expr_entry_parse_as_value gives it for the
+ * dialogs' entries (GNM_EE_FORCE_ABS_REF: the references absolute, so the
+ * output's evaluation elsewhere does not shift them), or NULL. */
 static GnmValue *
 single_range (Sheet *sheet, NSString *text)
 {
     if (text.length == 0)
         return NULL;
-    GSList *ranges = global_range_list_parse (sheet, text.UTF8String);
-    GnmValue *result = NULL;
-    if (ranges && !ranges->next && VALUE_IS_CELLRANGE ((GnmValue *) ranges->data)) {
-        result = ranges->data;
-        g_slist_free (ranges);
-    } else
-        range_list_destroy (ranges);
-    return result;
+    GnmParsePos pp;
+    parse_pos_init_sheet (&pp, sheet);
+    GnmValue *v = value_new_cellrange_parsepos_str (&pp, text.UTF8String,
+                                                    GNM_EXPR_PARSE_UNKNOWN_NAMES_ARE_STRINGS | GNM_EXPR_PARSE_FORCE_ABSOLUTE_REFERENCES
+                                                    | GNM_EXPR_PARSE_FORCE_EXPLICIT_SHEET_REFERENCES);
+    if (v && !VALUE_IS_CELLRANGE (v)) {
+        value_release (v);
+        return NULL;
+    }
+    return v;
 }
 
 #pragma mark - Output
@@ -298,6 +306,312 @@ single_range (Sheet *sheet, NSString *text)
 {
     GnmGenericBAnalysisTool *btool = GNM_GENERIC_B_ANALYSIS_TOOL (tool);
     return btool->base.err ? [NSString stringWithFormat:@"An unexpected error has occurred: %d.", btool->base.err] : nil;
+}
+
+@end
+
+#pragma mark - Two samples
+
+@implementation GnmTwoSampleAnalysis
+
+- (instancetype)initWithTitle:(NSString *)title
+{
+    if (!(self = [super initWithTitle:title]))
+        return nil;
+    _firstRange = @"";
+    _secondRange = @"";
+    _alpha = 0.05;
+    return self;
+}
+
+- (GnmAnalysisTool *)_newEngineTool { return NULL; }
+
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool engine:(GnmEngine *)engine error:(NSError **)error { return YES; }
+
+- (GnmAnalysisTool *)_engineToolForSheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error
+{
+    /* ttest_update_sensitivity_cb and ttest_tool_ok_clicked_cb */
+    GnmValue *first = single_range (sheet, _firstRange);
+    if (!first) {
+        if (error)
+            *error = analysis_error (engine, @"The variable 1 range is invalid.");
+        return NULL;
+    }
+    GnmValue *second = single_range (sheet, _secondRange);
+    if (!second) {
+        if (error)
+            *error = analysis_error (engine, @"The variable 2 range is invalid.");
+        value_release (first);
+        return NULL;
+    }
+    if (!(_alpha > 0 && _alpha < 1)) {
+        if (error)
+            *error = analysis_error (engine, @"The alpha value should be between 0 and 1.");
+        value_release (first);
+        value_release (second);
+        return NULL;
+    }
+    GnmAnalysisTool *tool = [self _newEngineTool];
+    GnmGenericBAnalysisTool *btool = GNM_GENERIC_B_ANALYSIS_TOOL (tool);
+    btool->base.range_1 = first;
+    btool->base.range_2 = second;
+    btool->base.labels = _hasLabels;
+    btool->base.alpha = _alpha;
+    if (![self _configureEngineTool:tool engine:engine error:error]) {
+        g_object_unref (tool);
+        return NULL;
+    }
+    return tool;
+}
+
+- (NSString *)_failureDescriptionForEngineTool:(GnmAnalysisTool *)tool
+{
+    GnmGenericBAnalysisTool *btool = GNM_GENERIC_B_ANALYSIS_TOOL (tool);
+    return btool->base.err ? [NSString stringWithFormat:@"An unexpected error has occurred: %d.", btool->base.err] : nil;
+}
+
+@end
+
+@implementation GnmMeanTestAnalysis
+
+- (instancetype)init
+{
+    if (!(self = [super initWithTitle:@"Claims About Two Means"]))
+        return nil;
+    _kind = GnmMeanTestUnequalVariances;
+    return self;
+}
+
+- (GnmAnalysisTool *)_newEngineTool
+{
+    switch (_kind) {
+    case GnmMeanTestPaired: return gnm_ttest_paired_tool_new ();
+    case GnmMeanTestKnownVariances: return gnm_ztest_tool_new ();
+    case GnmMeanTestEqualVariances: return gnm_ttest_eqvar_tool_new ();
+    case GnmMeanTestUnequalVariances: return gnm_ttest_neqvar_tool_new ();
+    }
+    return gnm_ttest_neqvar_tool_new ();
+}
+
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool engine:(GnmEngine *)engine error:(NSError **)error
+{
+    switch (_kind) {
+    case GnmMeanTestPaired: GNM_TTEST_PAIRED_TOOL (tool)->mean_diff = _hypothesizedMeanDifference; break;
+    case GnmMeanTestEqualVariances: GNM_TTEST_EQVAR_TOOL (tool)->mean_diff = _hypothesizedMeanDifference; break;
+    case GnmMeanTestUnequalVariances: GNM_TTEST_NEQVAR_TOOL (tool)->mean_diff = _hypothesizedMeanDifference; break;
+    case GnmMeanTestKnownVariances: {
+        GnmZTestTool *ztool = GNM_ZTEST_TOOL (tool);
+        if (!(_firstVariance > 0)) {
+            if (error)
+                *error = analysis_error (engine, @"Please enter a valid population variance for variable 1.");
+            return NO;
+        }
+        if (!(_secondVariance > 0)) {
+            if (error)
+                *error = analysis_error (engine, @"Please enter a valid population variance for variable 2.");
+            return NO;
+        }
+        ztool->mean_diff = _hypothesizedMeanDifference;
+        ztool->var1 = _firstVariance;
+        ztool->var2 = _secondVariance;
+        break;
+    }
+    }
+    return YES;
+}
+
+@end
+
+@implementation GnmVarianceTestAnalysis
+- (instancetype)init { return [super initWithTitle:@"Claims About Two Variances"]; }
+- (GnmAnalysisTool *)_newEngineTool { return gnm_ftest_tool_new (); }
+@end
+
+#pragma mark - More grouped tools
+
+@implementation GnmAnovaSingleFactorAnalysis
+
+- (instancetype)init
+{
+    if (!(self = [super initWithTitle:@"ANOVA: Single Factor"]))
+        return nil;
+    _alpha = 0.05;
+    return self;
+}
+
+- (GnmAnalysisTool *)_newEngineTool { return gnm_anova_single_tool_new (); }
+
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool engine:(GnmEngine *)engine error:(NSError **)error
+{
+    if (!(_alpha > 0 && _alpha < 1)) {
+        if (error)
+            *error = analysis_error (engine, @"The alpha value should be between 0 and 1.");
+        return NO;
+    }
+    GNM_ANOVA_SINGLE_TOOL (tool)->alpha = _alpha;
+    return YES;
+}
+
+@end
+
+@implementation GnmRankingAnalysis
+- (instancetype)init { return [super initWithTitle:@"Rank and Percentile"]; }
+- (GnmAnalysisTool *)_newEngineTool { return gnm_ranking_tool_new (); }
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool engine:(GnmEngine *)engine error:(NSError **)error
+{
+    GNM_RANKING_TOOL (tool)->av_ties = _averagesTies;
+    return YES;
+}
+@end
+
+@implementation GnmSamplingAnalysis
+
+- (instancetype)init
+{
+    if (!(self = [super initWithTitle:@"Sampling"]))
+        return nil;
+    _period = 1;
+    _sampleSize = 1;
+    _sampleCount = 1;
+    return self;
+}
+
+- (GnmAnalysisTool *)_newEngineTool { return gnm_sampling_tool_new (); }
+
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool engine:(GnmEngine *)engine error:(NSError **)error
+{
+    /* sampling_tool_update_sensitivity_cb */
+    NSString *why = nil;
+    if (_sampleCount < 1)
+        why = @"The requested number of samples is invalid.";
+    else if (_isPeriodic && _period < 1)
+        why = @"The requested period is invalid.";
+    else if (_isPeriodic && _offset < 0)
+        why = @"The requested offset is invalid.";
+    else if (!_isPeriodic && _sampleSize < 1)
+        why = @"The requested sample size is invalid.";
+    if (why) {
+        if (error)
+            *error = analysis_error (engine, why);
+        return NO;
+    }
+    GnmSamplingTool *stool = GNM_SAMPLING_TOOL (tool);
+    stool->periodic = _isPeriodic;
+    if (_isPeriodic) {
+        stool->period = (guint) _period;
+        stool->offset = (guint) _offset;
+        stool->row_major = _isRowMajor;
+    }
+    stool->size = (guint) _sampleSize;
+    stool->number = (guint) _sampleCount;
+    return YES;
+}
+
+@end
+
+@implementation GnmMovingAverageAnalysis
+
+- (instancetype)init
+{
+    if (!(self = [super initWithTitle:@"Moving Average"]))
+        return nil;
+    _interval = 3;
+    return self;
+}
+
+- (GnmAnalysisTool *)_newEngineTool { return gnm_moving_average_tool_new (); }
+
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool engine:(GnmEngine *)engine error:(NSError **)error
+{
+    /* average_tool_update_sensitivity_cb, then average_tool_ok_clicked_cb */
+    GnmMovingAverageTool *mtool = GNM_MOVING_AVERAGE_TOOL (tool);
+    NSInteger interval = _interval;
+    NSInteger offset = _isCentral ? interval / 2 : _offset;
+    moving_average_type_t type = (moving_average_type_t) _kind;
+    if ((type == moving_average_type_sma || type == moving_average_type_wma) && interval <= 0) {
+        if (error)
+            *error = analysis_error (engine, @"The given interval is invalid.");
+        return NO;
+    }
+    if (type == moving_average_type_sma && (offset < 0 || offset > interval)) {
+        if (error)
+            *error = analysis_error (engine, @"The given offset is invalid.");
+        return NO;
+    }
+    switch (type) {
+    case moving_average_type_sma:
+        if (_isCentral && interval % 2 == 0)
+            type = moving_average_type_central_sma;
+        break;
+    case moving_average_type_cma:
+        interval = 0;
+        offset = 0;
+        break;
+    case moving_average_type_spencer_ma:
+        interval = 15;
+        offset = 7;
+        break;
+    case moving_average_type_wma:
+        offset = 0;
+        break;
+    default:
+        break;
+    }
+    mtool->interval = (int) interval;
+    mtool->offset = (int) offset;
+    mtool->std_error_flag = _includesStandardErrors;
+    mtool->show_graph = _includesChart;
+    mtool->df = (int) _denominatorOffset;
+    mtool->ma_type = type;
+    return YES;
+}
+
+@end
+
+@implementation GnmExponentialSmoothingAnalysis
+
+- (instancetype)init
+{
+    if (!(self = [super initWithTitle:@"Exponential Smoothing"]))
+        return nil;
+    _dampingFactor = 0.2;
+    _growthDampingFactor = 0.2;
+    _seasonalDampingFactor = 0.2;
+    _seasonalPeriod = 12;
+    return self;
+}
+
+- (GnmAnalysisTool *)_newEngineTool { return gnm_exp_smoothing_tool_new (); }
+
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool engine:(GnmEngine *)engine error:(NSError **)error
+{
+    /* exp_smoothing_tool_update_sensitivity_cb */
+    NSString *why = nil;
+    BOOL seasonal = _kind == GnmExponentialSmoothingAdditiveHoltWinters || _kind == GnmExponentialSmoothingMultiplicativeHoltWinters;
+    BOOL trend = seasonal || _kind == GnmExponentialSmoothingHoltTrend;
+    if (seasonal && !(_seasonalDampingFactor >= 0 && _seasonalDampingFactor <= 1))
+        why = @"The given seasonal damping factor is invalid.";
+    else if (seasonal && _seasonalPeriod < 2)
+        why = @"The given seasonal period is invalid.";
+    else if (trend && !(_growthDampingFactor >= 0 && _growthDampingFactor <= 1))
+        why = @"The given growth damping factor is invalid.";
+    else if (!(_dampingFactor >= 0 && _dampingFactor <= 1))
+        why = @"The given damping factor is invalid.";
+    if (why) {
+        if (error)
+            *error = analysis_error (engine, why);
+        return NO;
+    }
+    GnmExpSmoothingTool *etool = GNM_EXP_SMOOTHING_TOOL (tool);
+    etool->damp_fact = _dampingFactor;
+    etool->g_damp_fact = _growthDampingFactor;
+    etool->s_damp_fact = _seasonalDampingFactor;
+    etool->s_period = (int) _seasonalPeriod;
+    etool->std_error_flag = _includesStandardErrors;
+    etool->show_graph = _includesChart;
+    etool->df = (int) _denominatorOffset;
+    etool->es_type = (exponential_smoothing_type_t) _kind;
+    return YES;
 }
 
 @end
