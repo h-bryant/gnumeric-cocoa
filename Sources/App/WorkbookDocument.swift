@@ -53,7 +53,19 @@ final class WorkbookDocument: NSDocument {
                 throw NSError(domain: GnmErrorDomain, code: GnmError.Code.engineNotRunning.rawValue,
                               userInfo: [NSLocalizedDescriptionKey: "The Gnumeric engine is not running."])
             }
-            workbook = try engine.openWorkbook(at: url)
+            if typeName == Self.textType {
+                // Plain text goes through the import assistant (the GTK
+                // opener's dialog), modal because the read is synchronous;
+                // delimited text takes the engine's guessed options.
+                let session = try TextImportSession(contentsOf: url, encoding: nil)
+                let assistant = TextImportAssistant(session: session)
+                guard assistant.run() else {
+                    throw NSError(domain: NSCocoaErrorDomain, code: NSUserCancelledError)
+                }
+                workbook = try engine.importText(assistant.model.session)
+            } else {
+                workbook = try engine.openWorkbook(at: url)
+            }
         }
     }
 

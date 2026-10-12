@@ -7,6 +7,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var engine: Engine?
     private(set) var settings: PreferencesWindowController?
 
+    /// File → Import Text… (⇧⌘O): any text file through the import
+    /// assistant, whatever its extension (Open… takes `.csv` and `.tsv`
+    /// with the engine's guessed options).
+    @objc func importText(_ sender: Any?) {
+        let panel = NSOpenPanel()
+        panel.title = "Import Text"
+        panel.allowedContentTypes = [.plainText, .commaSeparatedText, .tabSeparatedText, .delimitedText, .text, .data]
+        panel.allowsMultipleSelection = false
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+            Self.importText(at: url)
+        }
+    }
+
+    /// Open `url` as the plain-text document type: the assistant, then a
+    /// new document window.
+    static func importText(at url: URL) {
+        let controller = NSDocumentController.shared
+        do {
+            let document = try controller.makeDocument(withContentsOf: url, ofType: WorkbookDocument.textType)
+            controller.addDocument(document)
+            document.makeWindowControllers()
+            document.showWindows()
+            controller.noteNewRecentDocumentURL(url)
+        } catch {
+            let nsError = error as NSError
+            if nsError.domain == NSCocoaErrorDomain && nsError.code == NSUserCancelledError { return }
+            NSLog("import %@ failed: %@", url.path, error.localizedDescription)
+            NSApp.presentError(error)
+        }
+    }
+
     /// Gnumeric → Settings… (⌘,): the engine's preferences the app honors.
     @objc func showSettings(_ sender: Any?) {
         guard let engine else { return }
@@ -439,6 +471,45 @@ enum Snapshot {
                 untitled?.close()
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
+            }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_IMPORT"] != nil {
+                // Import Text: a semicolon file beside the capture goes
+                // through the assistant, driven headlessly (captured to
+                // `-import.png`, the semicolon chosen, the first column as
+                // text), into a new document.
+                let importURL = URL(fileURLWithPath: (path as NSString).deletingPathExtension + "-import.txt")
+                try? "id;name;amount\n007;Smith, J.;1.5\n008;\"Jones; A.\";2\n".write(to: importURL, atomically: true, encoding: .utf8)
+                TextImportAssistant.headlessDriver = { assistant in
+                    let model = assistant.model
+                    NSLog("import: assistant for %@: %ld lines, kind %ld, separators '%@', %ld columns",
+                          model.name, model.lineCount, model.kind.rawValue, model.session.separatorCharacters, model.columnChoices.count)
+                    model.separators = [";"]
+                    model.page = 2
+                    if !model.columnFormats.isEmpty { model.columnFormats[0] = "@" }
+                    NSLog("import: with semicolons %ld columns, formats %@", model.columnChoices.count, model.columnFormats)
+                    if let content = assistant.window.contentView {
+                        content.layoutSubtreeIfNeeded()
+                        if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                            content.cacheDisplay(in: content.bounds, to: rep)
+                            let importPath = (path as NSString).deletingPathExtension + "-import.png"
+                            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: importPath))
+                            NSLog("import: captured %@ (%@)", importPath, NSStringFromRect(content.bounds))
+                        }
+                    }
+                    return true
+                }
+                AppDelegate.importText(at: importURL)
+                TextImportAssistant.headlessDriver = nil
+                if let imported = NSDocumentController.shared.documents.first(where: { $0.fileURL == importURL }) as? WorkbookDocument,
+                   let sheet = imported.workbook?.sheets.first {
+                    NSLog("import: document '%@' sheet '%@' A1='%@' B1='%@' C1='%@' A2='%@' windows=%ld", imported.displayName, sheet.name,
+                          sheet.displayTextOfCell(atColumn: 0, row: 0) ?? "nil", sheet.displayTextOfCell(atColumn: 1, row: 0) ?? "nil",
+                          sheet.displayTextOfCell(atColumn: 2, row: 0) ?? "nil", sheet.displayTextOfCell(atColumn: 0, row: 1) ?? "nil",
+                          imported.windowControllers.count)
+                    imported.close()
+                } else {
+                    NSLog("import: no document appeared")
+                }
             }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_TEXT"] != nil,
                let controller = window.windowController as? WorkbookWindowController,

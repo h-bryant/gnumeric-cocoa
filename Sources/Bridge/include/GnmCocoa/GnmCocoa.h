@@ -21,4 +21,5 @@
 #import <GnmCocoa/GnmSheet.h>
 #import <GnmCocoa/GnmSearch.h>
 #import <GnmCocoa/GnmTextExport.h>
+#import <GnmCocoa/GnmTextImport.h>
 #import <GnmCocoa/GnmRunLoopBridge.h>

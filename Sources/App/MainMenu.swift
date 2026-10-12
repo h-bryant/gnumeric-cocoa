@@ -24,6 +24,7 @@ enum MainMenu {
         let fileMenu = NSMenu(title: "File")
         fileMenu.addItem(withTitle: "New", action: #selector(NSDocumentController.newDocument(_:)), keyEquivalent: "n")
         fileMenu.addItem(withTitle: "Open…", action: #selector(NSDocumentController.openDocument(_:)), keyEquivalent: "o")
+        fileMenu.addItem(withTitle: "Import Text…", action: Selector(("importText:")), keyEquivalent: "O")
         let recent = NSMenu(title: "Open Recent")
         recent.addItem(withTitle: "Clear Menu", action: #selector(NSDocumentController.clearRecentDocuments(_:)), keyEquivalent: "")
         let recentItem = fileMenu.addItem(withTitle: "Open Recent", action: nil, keyEquivalent: "")

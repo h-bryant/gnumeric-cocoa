@@ -812,6 +812,37 @@
   sample as text headlessly (the sheet captured to `-export.png`, then
   semicolons and quotes always).
 
+## 2026-10-12: The text import assistant
+
+- `GnmTextImportSession` (`GnmTextImport.h`): a session over the
+  engine's `GnmStfParseOptions` holding the decoded text
+  (`go_guess_encoding`, NULs blanked as `stf.c` does), the options the
+  GTK assistant's pages set (kind, line breaks, the lines to import,
+  separators and quotes, split positions with the engine's discovery,
+  trimming, locale, per-column formats and choices), previews
+  (`stf_parse_general` over the chosen range, untrimmed as the GTK
+  preview is), and `GnmEngine.importTextSession:`: the parse into a new
+  one-sheet workbook as `stf_read_workbook` does after its dialog
+  (`stf_parse_sheet`, columns fitted, the text saver recorded at the
+  write-only level, the file as the location).
+- `TextImportAssistant.swift`: the three pages (main; separators or
+  fixed width; format with a per-column format and import toggle) over
+  a shared preview `Table`, as a modal window, since the GTK dialog runs
+  inside the opener and NSDocument reads synchronously.  Plain text
+  (`public.plain-text`, now an Editor type) reads through it; `.csv` and
+  `.tsv` keep the engine's guessed options; File → Import Text… (⇧⌘O)
+  sends any text file through it.  A headless run drives it through
+  `TextImportAssistant.headlessDriver`.
+- Engine facts settled by `Tests/BridgeTests/text_import.m`:
+  `go_guess_encoding` says "ASCII" for pure ASCII and falls back from an
+  encoding the bytes are not in rather than failing; the `.txt` guesser
+  can pick a comma where a semicolon file has commas in its fields (the
+  CSV rules apply to `.csv` names only); the parse options' format
+  arrays free their elements themselves (a manual unref crashed);
+  formats are guessed once, so new columns after a separator change are
+  general until guessed again.  `GNM_SNAPSHOT_IMPORT=1` imports a
+  semicolon file headlessly (the assistant captured to `-import.png`).
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -823,8 +854,9 @@
    done; Phase 5 has begun with File → New, Go To and the name box,
    Insert and Delete Cells, the current date and time, Save As CSV,
    Find and Replace, the Settings window, and Export as Text with
-   options; next the text import assistant, then the rest of Phase 5 by
-   usage frequency) from
+   options, and the text import assistant; next the rest of Phase 5 by
+   usage frequency: cell comments, names, Text to Columns, Fill Series,
+   conditional formatting, the analysis tools) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -847,8 +879,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-12: `main` at the Export as Text
-   commit (after the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-12: `main` at the text import
+   assistant commit (after Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in
