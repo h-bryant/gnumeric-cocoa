@@ -291,6 +291,40 @@ enum Snapshot {
                 view.displayIfNeeded()
             }
             }
+            autoreleasepool {
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_OBJECTS"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // Sheet objects: select the front chart, move and resize it
+                // through the same command the drag commits, delete the
+                // second one and undo; the capture shows the handles.
+                let grid = controller.gridView
+                let objects = sheet.sheetObjects
+                NSLog("objects: count=%ld first=%@", objects.count, objects.first.map { "\($0.typeName) \(NSStringFromRect($0.frame))" } ?? "nil")
+                if let first = objects.first {
+                    grid.select(objects: [first])
+                    do {
+                        try sheet.setFrames([NSValue(rect: first.frame.offsetBy(dx: 60, dy: 40))], of: [first], resizing: false)
+                        var grown = first.frame
+                        grown.size.width += 80
+                        try sheet.setFrames([NSValue(rect: grown)], of: [first], resizing: true)
+                    } catch {
+                        NSLog("objects: move or resize failed: %@", error.localizedDescription)
+                    }
+                    NSLog("objects: now %@ undo=%@ hit=%d", NSStringFromRect(first.frame), sheet.workbook?.undoLabel ?? "nil",
+                          sheet.sheetObject(at: NSPoint(x: first.frame.midX, y: first.frame.midY)) == first ? 1 : 0)
+                    if objects.count > 1 {
+                        try? sheet.deleteSheetObjects([objects[1]])
+                        NSLog("objects: deleted second count=%ld undo=%@", sheet.sheetObjects.count, sheet.workbook?.undoLabel ?? "nil")
+                        grid.undo(nil)
+                        NSLog("objects: after undo count=%ld attached=%d selected=%ld", sheet.sheetObjects.count,
+                              objects[1].isAttached ? 1 : 0, grid.selectedObjects.count)
+                    }
+                }
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_SHEETS"] != nil,
                let controller = window.windowController as? WorkbookWindowController {
                 // Sheet management through the controller's actions.

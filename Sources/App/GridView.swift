@@ -8,7 +8,10 @@ import GnmCocoa
 final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     var sheet: Sheet? {
         didSet {
+            guard oldValue !== sheet else { return }
             if isEditing { cancelEditing() }
+            selectedObjects = []
+            objectDrag = nil
             if let old = oldValue, old.delegate === self {
                 old.delegate = nil
             }
@@ -248,12 +251,14 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         drawFilterButtons(of: sheet, dirtyRect: dirtyRect)
         drawMarchingAnts(of: sheet, dirtyRect: dirtyRect)
         drawSelection(of: sheet, dirtyRect: dirtyRect)
+        drawObjectSelection(dirtyRect: dirtyRect)
     }
 
     private func drawSelection(of sheet: Sheet, dirtyRect: NSRect) {
         let selection = rect(of: sheet.selectedRange, in: sheet)
         lastSelectionRect = selection
-        guard selection.intersects(dirtyRect) else { return }
+        // The cell cursor hides while objects are selected (the GTK object mode).
+        guard selectedObjects.isEmpty, selection.intersects(dirtyRect) else { return }
         NSColor.selectedContentBackgroundColor.withAlphaComponent(0.12).setFill()
         selection.fill(using: .sourceOver)
         let edit = sheet.editPosition
@@ -300,8 +305,19 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
 
     override func resetCursorRects() {
         guard let sheet, !isEditing else { return }
-        addCursorRect(viewRect(forSheetRect: fillHandleRect(for: rect(of: sheet.selectedRange, in: sheet))).insetBy(dx: -2, dy: -2),
-                      cursor: .crosshair)
+        if selectedObjects.isEmpty {
+            addCursorRect(viewRect(forSheetRect: fillHandleRect(for: rect(of: sheet.selectedRange, in: sheet))).insetBy(dx: -2, dy: -2),
+                          cursor: .crosshair)
+            return
+        }
+        for object in selectedObjects {
+            addCursorRect(viewRect(forSheetRect: object.frame), cursor: .openHand)
+            guard object.canResize else { continue }
+            for (index, handle) in handleRects(for: object.frame).enumerated() {
+                let cursor: NSCursor = [1, 6].contains(index) ? .resizeUpDown : [3, 4].contains(index) ? .resizeLeftRight : .crosshair
+                addCursorRect(viewRect(forSheetRect: handle).insetBy(dx: -2, dy: -2), cursor: cursor)
+            }
+        }
     }
 
     /// The source of the last copy or cut, outlined with dashes (static for
@@ -401,11 +417,200 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
 
     private func clearSelectionValues() {
         guard let sheet else { return }
+        if !selectedObjects.isEmpty {
+            deleteSelectedObjects()
+            return
+        }
         do {
             try sheet.clearSelection(.values)
         } catch {
             presentError?(error)
         }
+    }
+
+    // MARK: Sheet objects (Phase 4)
+
+    /// The selected objects; the cell cursor hides while any is selected.
+    private(set) var selectedObjects: [SheetObject] = []
+    /// A drag of the selected objects.  `handle` 0 to 7 resizes by the
+    /// GTK control point indexes (top-left, top, top-right, left, right,
+    /// bottom-left, bottom, bottom-right); 8 moves.
+    private struct ObjectDrag {
+        let handle: Int
+        let start: NSPoint
+        let originalFrames: [NSRect]
+        var frames: [NSRect]
+        var moved: Bool { frames != originalFrames }
+    }
+    private var objectDrag: ObjectDrag?
+    static let objectHandleSize: CGFloat = 7
+    /// Which edges a handle drags (sheet-control-gui.c drag_object):
+    /// coordinate 0 or 2 for x, 1 or 3 for y, -1 for neither.
+    private static let handleEdges: [(x: Int, y: Int)] = [(0, 1), (-1, 1), (2, 1), (0, -1), (2, -1), (0, 3), (-1, 3), (2, 3)]
+
+    func select(objects: [SheetObject]) {
+        let attached = objects.filter { $0.isAttached }
+        guard attached != selectedObjects else { return }
+        selectedObjects = attached
+        needsDisplay = true
+        window?.invalidateCursorRects(for: self)
+    }
+
+    func deselectObjects() {
+        select(objects: [])
+    }
+
+    func handleRects(for frame: NSRect) -> [NSRect] {
+        let s = Self.objectHandleSize
+        let xs = [frame.minX, frame.midX, frame.maxX], ys = [frame.minY, frame.midY, frame.maxY]
+        let corners = [(0, 0), (1, 0), (2, 0), (0, 1), (2, 1), (0, 2), (1, 2), (2, 2)]
+        return corners.map { NSRect(x: xs[$0.0] - s / 2, y: ys[$0.1] - s / 2, width: s, height: s) }
+    }
+
+    /// The handle of a selected, resizable object under a sheet point.
+    private func handleHit(at point: NSPoint) -> Int? {
+        for object in selectedObjects where object.canResize {
+            if let index = handleRects(for: object.frame).firstIndex(where: { $0.insetBy(dx: -2, dy: -2).contains(point) }) {
+                return index
+            }
+        }
+        return nil
+    }
+
+    private func drawObjectSelection(dirtyRect: NSRect) {
+        for (i, object) in selectedObjects.enumerated() {
+            let frame = objectDrag.map { $0.frames[i] } ?? object.frame
+            guard frame.insetBy(dx: -8, dy: -8).intersects(dirtyRect) else { continue }
+            let outline = NSBezierPath(rect: frame.insetBy(dx: -0.5, dy: -0.5))
+            outline.lineWidth = 1
+            if objectDrag?.moved == true {
+                outline.setLineDash([4, 3], count: 2, phase: 0)
+            }
+            NSColor.controlAccentColor.setStroke()
+            outline.stroke()
+            guard object.canResize else { continue }
+            for handle in handleRects(for: frame) {
+                NSColor.white.setFill()
+                handle.fill()
+                let border = NSBezierPath(rect: handle.insetBy(dx: 0.5, dy: 0.5))
+                NSColor.controlAccentColor.setStroke()
+                border.stroke()
+            }
+        }
+    }
+
+    /// The frames after a drag by (dx, dy): a move shifts every frame;
+    /// a handle drags its edges, both opposite edges with Option
+    /// (symmetric), and Shift snaps the dragged edges to the grid.
+    private func draggedFrames(_ drag: ObjectDrag, dx: CGFloat, dy: CGFloat, symmetric: Bool, snap: Bool) -> [NSRect] {
+        guard let sheet else { return drag.originalFrames }
+        func snapped(_ value: CGFloat, column: Bool) -> CGFloat {
+            let index = column ? sheet.column(atX: value) : sheet.row(atY: value)
+            let low = column ? sheet.leftEdge(ofColumn: index) : sheet.topEdge(ofRow: index)
+            let high = column ? sheet.leftEdge(ofColumn: index + 1) : sheet.topEdge(ofRow: index + 1)
+            return abs(value - low) < abs(value - high) ? low : high
+        }
+        return drag.originalFrames.map { original in
+            var c = [original.minX, original.minY, original.maxX, original.maxY]
+            if drag.handle == 8 {
+                var x = c[0] + dx, y = c[1] + dy
+                if snap { x = snapped(x, column: true); y = snapped(y, column: false) }
+                c[2] += x - c[0]; c[3] += y - c[1]
+                c[0] = x; c[1] = y
+            } else {
+                let edges = Self.handleEdges[drag.handle]
+                if edges.x >= 0 {
+                    var x = c[edges.x] + dx
+                    if snap { x = snapped(x, column: true) }
+                    if symmetric { c[edges.x == 0 ? 2 : 0] -= x - c[edges.x] }
+                    c[edges.x] = x
+                }
+                if edges.y >= 0 {
+                    var y = c[edges.y] + dy
+                    if snap { y = snapped(y, column: false) }
+                    if symmetric { c[edges.y == 1 ? 3 : 1] -= y - c[edges.y] }
+                    c[edges.y] = y
+                }
+            }
+            return NSRect(x: min(c[0], c[2]), y: min(c[1], c[3]), width: abs(c[2] - c[0]), height: abs(c[3] - c[1]))
+        }
+    }
+
+    private func commitObjectDrag(_ drag: ObjectDrag) {
+        guard let sheet, drag.moved else { return }
+        do {
+            try sheet.setFrames(drag.frames.map { NSValue(rect: $0) }, of: selectedObjects, resizing: drag.handle != 8)
+        } catch {
+            presentError?(error)
+        }
+    }
+
+    /// Nudge the selected objects (arrow keys), one pixel, ten with Shift.
+    private func nudgeObjects(dx: CGFloat, dy: CGFloat) {
+        guard let sheet, !selectedObjects.isEmpty else { return }
+        let frames = selectedObjects.map { $0.frame.offsetBy(dx: dx, dy: dy) }
+        do {
+            try sheet.setFrames(frames.map { NSValue(rect: $0) }, of: selectedObjects, resizing: false)
+        } catch {
+            presentError?(error)
+        }
+    }
+
+    func deleteSelectedObjects() {
+        guard let sheet, !selectedObjects.isEmpty else { return }
+        let doomed = selectedObjects
+        deselectObjects()
+        do {
+            try sheet.deleteSheetObjects(doomed)
+        } catch {
+            presentError?(error)
+        }
+    }
+
+    /// Tab cycles through the sheet's selectable objects (scg_object_select_next).
+    private func selectNextObject(reverse: Bool) {
+        guard let sheet else { return }
+        let candidates = sheet.sheetObjects.filter { $0.isSelectable && $0.isVisible }
+        guard !candidates.isEmpty else { return }
+        guard let current = selectedObjects.first, let index = candidates.firstIndex(of: current) else {
+            select(objects: [candidates[0]])
+            return
+        }
+        let next = reverse ? (index + 1) % candidates.count : (index + candidates.count - 1) % candidates.count
+        select(objects: [candidates[next]])
+    }
+
+    @objc func deleteObjects(_ sender: Any?) { deleteSelectedObjects() }
+    @objc func pullObjectToFront(_ sender: Any?) { restackSelectedObject(.pullToFront) }
+    @objc func pullObjectForward(_ sender: Any?) { restackSelectedObject(.pullForward) }
+    @objc func pushObjectBackward(_ sender: Any?) { restackSelectedObject(.pushBackward) }
+    @objc func pushObjectToBack(_ sender: Any?) { restackSelectedObject(.pushToBack) }
+
+    private func restackSelectedObject(_ direction: SheetObject.Stacking) {
+        guard let sheet, let object = selectedObjects.first else { return }
+        do {
+            try sheet.restack(object, direction)
+        } catch {
+            presentError?(error)
+        }
+    }
+
+    /// Right-click on an object: the GTK object menu's delete and order items.
+    override func menu(for event: NSEvent) -> NSMenu? {
+        guard let sheet else { return nil }
+        let point = sheetPoint(forViewPoint: convert(event.locationInWindow, from: nil))
+        guard let object = sheet.sheetObject(at: point) else { return nil }
+        if !selectedObjects.contains(object) {
+            select(objects: [object])
+        }
+        let menu = NSMenu(title: "Object")
+        menu.addItem(withTitle: "Delete", action: #selector(deleteObjects(_:)), keyEquivalent: "")
+        menu.addItem(.separator())
+        menu.addItem(withTitle: "Pull to Front", action: #selector(pullObjectToFront(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: "Pull Forward", action: #selector(pullObjectForward(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: "Push Backward", action: #selector(pushObjectBackward(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: "Push to Back", action: #selector(pushObjectToBack(_:)), keyEquivalent: "")
+        return menu
     }
 
     // MARK: Undo, redo, clipboard (Edit menu, through the responder chain)
@@ -685,6 +890,32 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
             showFilterMenu(for: button, event: event)
             return
         }
+        if !isEditing, event.clickCount == 1, let handle = handleHit(at: point) {
+            let frames = selectedObjects.map(\.frame)
+            objectDrag = ObjectDrag(handle: handle, start: point, originalFrames: frames, frames: frames)
+            return
+        }
+        if let object = sheet.sheetObject(at: point) {
+            if isEditing { commitEditing(text: editor.stringValue, movement: .none) }
+            window?.makeFirstResponder(self)
+            let additive = event.modifierFlags.contains(.shift) || event.modifierFlags.contains(.command)
+            if selectedObjects.contains(object) {
+                if additive {
+                    select(objects: selectedObjects.filter { $0 != object })
+                    return
+                }
+            } else {
+                select(objects: additive ? selectedObjects + [object] : [object])
+            }
+            if event.clickCount == 1 {
+                let frames = selectedObjects.map(\.frame)
+                objectDrag = ObjectDrag(handle: 8, start: point, originalFrames: frames, frames: frames)
+            }
+            return
+        }
+        if !selectedObjects.isEmpty {
+            deselectObjects()   // a click on the cells leaves the object mode
+        }
         if !isEditing, event.clickCount == 1,
            fillHandleRect(for: rect(of: sheet.selectedRange, in: sheet)).insetBy(dx: -2, dy: -2).contains(point) {
             fillSource = sheet.selectedRange
@@ -709,6 +940,15 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
 
     override func mouseDragged(with event: NSEvent) {
         guard let sheet else { return }
+        if var drag = objectDrag {
+            autoscroll(with: event)
+            let point = sheetPoint(forViewPoint: convert(event.locationInWindow, from: nil))
+            drag.frames = draggedFrames(drag, dx: point.x - drag.start.x, dy: point.y - drag.start.y,
+                                        symmetric: event.modifierFlags.contains(.option), snap: event.modifierFlags.contains(.shift))
+            objectDrag = drag
+            needsDisplay = true
+            return
+        }
         if let fillSource {
             autoscroll(with: event)
             let point = sheetPoint(forViewPoint: convert(event.locationInWindow, from: nil))
@@ -733,6 +973,13 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     }
 
     override func mouseUp(with event: NSEvent) {
+        if let drag = objectDrag {
+            objectDrag = nil
+            commitObjectDrag(drag)
+            needsDisplay = true
+            window?.invalidateCursorRects(for: self)
+            return
+        }
         guard let sheet, let source = fillSource else { return }
         let target = fillTarget
         fillSource = nil
@@ -881,10 +1128,26 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         if let chars = event.characters, !chars.isEmpty,
            !event.modifierFlags.contains(.command), !event.modifierFlags.contains(.control),
            chars.unicodeScalars.allSatisfy({ $0.value >= 0x20 && $0.value != 0x7f && !($0.value >= 0xF700 && $0.value <= 0xF8FF) }) {
+            deselectObjects()
             beginEditing(initialText: chars)
             return
         }
+        if !selectedObjects.isEmpty, event.modifierFlags.isDisjoint(with: [.command, .control, .option]),
+           let key = event.charactersIgnoringModifiers?.unicodeScalars.first?.value {
+            let step: CGFloat = event.modifierFlags.contains(.shift) ? 10 : 1
+            switch Int(key) {
+            case NSLeftArrowFunctionKey: nudgeObjects(dx: -step, dy: 0); return
+            case NSRightArrowFunctionKey: nudgeObjects(dx: step, dy: 0); return
+            case NSUpArrowFunctionKey: nudgeObjects(dx: 0, dy: -step); return
+            case NSDownArrowFunctionKey: nudgeObjects(dx: 0, dy: step); return
+            default: break
+            }
+        }
         interpretKeyEvents([event])
+    }
+
+    override func cancelOperation(_ sender: Any?) {
+        deselectObjects()
     }
 
     override func deleteBackward(_ sender: Any?) { clearSelectionValues() }
@@ -952,8 +1215,12 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         sheet?.selectCell(atColumn: 0, row: 0)
         scroll(.zero)
     }
-    override func insertTab(_ sender: Any?) { move(columns: 1, rows: 0, extend: false) }
-    override func insertBacktab(_ sender: Any?) { move(columns: -1, rows: 0, extend: false) }
+    override func insertTab(_ sender: Any?) {
+        if selectedObjects.isEmpty { move(columns: 1, rows: 0, extend: false) } else { selectNextObject(reverse: false) }
+    }
+    override func insertBacktab(_ sender: Any?) {
+        if selectedObjects.isEmpty { move(columns: -1, rows: 0, extend: false) } else { selectNextObject(reverse: true) }
+    }
     override func insertNewline(_ sender: Any?) { move(columns: 0, rows: 1, extend: false) }
 
     // MARK: SheetDelegate
@@ -985,6 +1252,15 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     }
 
     func sheetMarchingAntsDidChange(_ sheet: Sheet) {
+        needsDisplay = true
+    }
+
+    func sheetObjectsDidChange(_ sheet: Sheet) {
+        let survivors = selectedObjects.filter { $0.isAttached }
+        if survivors.count != selectedObjects.count {
+            selectedObjects = survivors
+            window?.invalidateCursorRects(for: self)
+        }
         needsDisplay = true
     }
 

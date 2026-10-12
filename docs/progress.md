@@ -410,13 +410,52 @@
   not render the tab labels (a capture limitation seen before the
   swatches too).
 
+## 2026-10-12: Phase 4, first step: sheet objects selected, moved, resized, deleted
+
+- `GnmSheetObject` (Swift `SheetObject`): one wrapper per engine object
+  for the life of the sheet (cached by pointer, holding a reference and
+  listening to the object's `bounds-changed` and `unrealized` signals,
+  which reach the delegate as `sheetObjectsDidChange:`). It reports the
+  type name, frame in sheet pixels, attached and visible flags, and
+  whether the user may select it (not cell comments, not filter combos,
+  not objects without a cairo renderer). The sheet lists them front to
+  back (`sheet->sheet_objects` is prepended on insertion), finds the one
+  under a point, and runs the commands: `setFrames:ofSheetObjects:resizing:`
+  over `cmd_objects_move` with anchors recomputed from the frames (a port
+  of `scg_object_coords_to_anchor`, keeping each anchor's mode), `deleteSheetObjects:`
+  over `cmd_objects_delete`, `restackSheetObject:direction:` over
+  `cmd_object_raise`. Objects are now drawn back to front, as print.c
+  does; they were drawn front first before, so overlaps came out wrong.
+- Grid: a click on an object selects it (Shift or Command adds), the
+  cell cursor hides meanwhile (the GTK object mode), eight handles on
+  resizable objects, dragging the body moves and a handle resizes (Option
+  for a symmetric resize, Shift to snap to the grid, both as GTK's
+  `drag_object` does), with a dashed preview until the mouse goes up and
+  the engine command runs. Delete and Backspace delete the selection,
+  arrows nudge by a pixel (ten with Shift), Tab cycles through the
+  objects, Escape leaves the object mode, a right-click offers Delete and
+  the four stacking items. No live preview of the object itself while
+  dragging, no cut, copy, or paste of objects, no double-click editor yet.
+- Found on the way: the engine focuses the command's sheet on every
+  control after each command (`update_after_action`), and the window
+  controller passed that to the grid as a sheet change, which reset the
+  scroll position, the editor, and now the object selection after every
+  command. Both the controller and the grid now ignore a refocus of the
+  current sheet.
+- `Tests/BridgeTests/objects.m` (also an XCTest target) covers the
+  wrappers, hit testing, move and resize with undo, two objects in one
+  command, delete with undo, restacking, and drawing with a filter combo
+  present. `GNM_SNAPSHOT_OBJECTS=1` moves and widens the front object
+  and shows the handles in the capture.
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
    continue with Phase 4". `HANDOFF.md` §9 is the checklist: smoke tests,
    the Xcode build, the ADR-011 rule on upstream, what Henry has and has
-   not seen on screen, and Phase 4 (sheet objects: selection, move,
-   resize, the chart guru) from `docs/mvp-known-gaps.md`, which also
+   not seen on screen, and the rest of Phase 4 (object selection, move,
+   resize, delete, and stacking are done; next the chart guru, object
+   cut/copy/paste, and the object editors) from `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
 2. Working pattern that held up: wrap the engine call in the bridge with a
@@ -425,7 +464,7 @@
    on `MainMenu`, action on `GridView` or the window controller), drive it
    from a `GNM_SNAPSHOT_*` hook in `AppDelegate.swift`, look at the
    `-window.png` capture, update `docs/mvp-known-gaps.md`, commit.
-3. The state at the end of 2026-10-12: `main` at the autofilter, sheet
-   resize, tab colors, and Sort dialog commit, clean tree, nothing pushed,
+3. The state at the end of 2026-10-12: `main` at the sheet objects
+   commit (after the autofilter one), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in
    `build/prefix` has both patches applied.

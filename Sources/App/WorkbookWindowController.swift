@@ -270,7 +270,11 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     }
 
     private func show(sheet: Sheet?) {
-        gridView.sheet = sheet
+        // The engine focuses the command's sheet after every command
+        // (commands.c update_after_action); only a real change resets the grid.
+        if gridView.sheet !== sheet {
+            gridView.sheet = sheet
+        }
         if let sheet, let index = tabSheets.firstIndex(of: sheet) {
             tabs.selectedSegment = index
             revealSelectedTab()

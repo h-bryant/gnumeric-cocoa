@@ -58,6 +58,8 @@ targets:
     templates: [BridgeTestProgram]
   format:
     templates: [BridgeTestProgram]
+  objects:
+    templates: [BridgeTestProgram]
   BridgeTests:
     type: bundle.unit-test
     platform: macOS
@@ -70,6 +72,7 @@ targets:
       - target: runloop
       - target: editing
       - target: format
+      - target: objects
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.github.h-bryant.gnumeric-cocoa.BridgeTests

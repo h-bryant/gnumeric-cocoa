@@ -75,9 +75,11 @@ static void csc_set_panes (SheetControl *sc)
 {
     [sc_owner (sc) _controlFrozenPanesDidChange];
 }
-static void csc_object_create_view (G_GNUC_UNUSED SheetControl *sc, G_GNUC_UNUSED SheetObject *so)
+static void csc_object_create_view (SheetControl *sc, G_GNUC_UNUSED SheetObject *so)
 {
-    /* Objects are drawn directly from the model (drawSheetObjectsInRect:). */
+    /* Objects are drawn directly from the model (drawSheetObjectsInRect:);
+     * the engine calls this from an idle after an object joins a sheet. */
+    [sc_owner (sc) _objectsDidChange];
     [sc_owner (sc) _controlNeedsDisplayIncludingHeaders:NO];
 }
 static void csc_scale_changed (SheetControl *sc)
@@ -669,6 +671,18 @@ object_pixel_frame (Sheet const *sheet, SheetObject const *so, double *coords)
     coords[3] = pixels[direction & GOD_ANCHOR_DIR_V_MASK ? 3 : 1];
 }
 
+void
+gnm_cocoa_object_pixel_frame (Sheet const *sheet, SheetObject const *so, double *coords)
+{
+    object_pixel_frame (sheet, so, coords);
+}
+
+int
+gnm_cocoa_colrow_at (Sheet const *sheet, gboolean is_cols, gint64 pos, gint64 *origin)
+{
+    return colrow_at (sheet, is_cols, pos, origin);
+}
+
 /* RGB and gray colors pass through untouched; anything else is matched to
  * sRGB.  (Matching an RGB color to another RGB space would shift its
  * components, which a caller passing a background color does not expect.) */
@@ -743,6 +757,7 @@ cairo_for_context (CGContextRef context, CGRect rect, cairo_surface_t **surface_
     Sheet *_sheet;
     SheetView *_sv;
     GnmCocoaSheetControl *_sc;
+    NSMutableDictionary<NSValue *, GnmSheetObject *> *_objectWrappers;   /* keyed by engine pointer */
 }
 
 - (instancetype)initWithSheetView:(SheetView *)sheetView workbook:(GnmWorkbook *)workbook
@@ -768,6 +783,9 @@ cairo_for_context (CGContextRef context, CGRect rect, cairo_surface_t **surface_
 
 - (void)_detachFromEngine
 {
+    for (GnmSheetObject *wrapper in _objectWrappers.allValues)
+        [wrapper _detachFromEngine];
+    _objectWrappers = nil;
     if (_sc) {
         _sc->owner = NULL;
         if (_sv)
@@ -1654,7 +1672,9 @@ pixels_from_points (Sheet const *sheet, gboolean horizontal, double points)
     CGContextClipToRect (context, rect);
     cairo_surface_t *surface;
     cairo_t *cr = cairo_for_context (context, rect, &surface);
-    for (GSList *l = _sheet->sheet_objects; l; l = l->next) {
+    /* The list is front to back; draw back to front (print.c does the same). */
+    GSList *back_to_front = g_slist_reverse (g_slist_copy (_sheet->sheet_objects));
+    for (GSList *l = back_to_front; l; l = l->next) {
         SheetObject *so = l->data;
         double c[4];
         /* Autofilter combos and other widget-like objects have no cairo
@@ -1671,6 +1691,7 @@ pixels_from_points (Sheet const *sheet, gboolean horizontal, double points)
         sheet_object_draw_cairo_sized (so, cr, frame.size.width, frame.size.height);
         cairo_restore (cr);
     }
+    g_slist_free (back_to_front);
     cairo_destroy (cr);
     cairo_surface_flush (surface);
     cairo_surface_destroy (surface);
@@ -1687,6 +1708,152 @@ pixels_from_points (Sheet const *sheet, gboolean horizontal, double points)
         [frames addObject:[NSValue valueWithRect:NSMakeRect (c[0], c[1], c[2] - c[0], c[3] - c[1])]];
     }
     return frames;
+}
+
+#pragma mark - Sheet objects
+
+- (GnmSheetObject *)_wrapperForObject:(SheetObject *)object
+{
+    if (_objectWrappers == nil)
+        _objectWrappers = [NSMutableDictionary dictionary];
+    NSValue *key = [NSValue valueWithPointer:object];
+    GnmSheetObject *wrapper = _objectWrappers[key];
+    if (wrapper == nil) {
+        wrapper = [[GnmSheetObject alloc] initWithObject:object sheet:self];
+        _objectWrappers[key] = wrapper;
+    }
+    return wrapper;
+}
+
+- (void)_objectsDidChange
+{
+    if ([self.delegate respondsToSelector:@selector(sheetObjectsDidChange:)])
+        [self.delegate sheetObjectsDidChange:self];
+}
+
+- (NSArray<GnmSheetObject *> *)sheetObjects
+{
+    NSMutableArray *objects = [NSMutableArray array];
+    for (GSList *l = _sheet->sheet_objects; l; l = l->next)
+        [objects addObject:[self _wrapperForObject:l->data]];
+    return objects;
+}
+
+- (GnmSheetObject *)sheetObjectAtPoint:(CGPoint)point
+{
+    for (GSList *l = _sheet->sheet_objects; l; l = l->next) {
+        GnmSheetObject *wrapper = [self _wrapperForObject:l->data];
+        if (!wrapper.isSelectable || !wrapper.isVisible)
+            continue;
+        CGRect frame = wrapper.frame;
+        if (frame.size.width < 6 || frame.size.height < 6)
+            frame = CGRectInset (frame, -3, -3);   /* thin lines */
+        if (CGRectContainsPoint (frame, point))
+            return wrapper;
+    }
+    return nil;
+}
+
+/* calc_obj_place (sheet-control-gui.c): the column or row under a sheet
+ * pixel and the fraction of it before the pixel. */
+static int
+obj_place (Sheet const *sheet, gboolean is_col, double pos, double *offset)
+{
+    int i = colrow_at (sheet, is_col, (gint64) floor (pos), NULL);
+    int last = is_col ? gnm_sheet_get_last_col (sheet) : gnm_sheet_get_last_row (sheet);
+    ColRowInfo const *cri = sheet_colrow_get_info (sheet, i, is_col);
+    while (i < last && !cri->visible)
+        cri = sheet_colrow_get_info (sheet, ++i, is_col);
+    gint64 origin = colrow_distance (sheet, is_col, 0, i);
+    *offset = cri->visible && cri->size_pixels > 0 ? (pos - origin) / (double) cri->size_pixels : 0;
+    if (*offset < 0)
+        *offset = 0;
+    return i;
+}
+
+/* scg_object_coords_to_anchor for a normalized frame: the anchor keeps
+ * its mode and gets the cells and offsets under the frame. */
+static void
+anchor_from_frame (Sheet const *sheet, CGRect frame, SheetObjectAnchor *in_out)
+{
+    double tmp[4] = { CGRectGetMinX (frame), CGRectGetMinY (frame), CGRectGetMaxX (frame), CGRectGetMaxY (frame) };
+    in_out->base.direction = GOD_ANCHOR_DIR_DOWN_RIGHT;
+    switch (in_out->mode) {
+    case GNM_SO_ANCHOR_TWO_CELLS:
+        in_out->cell_bound.start.col = obj_place (sheet, TRUE, tmp[0], in_out->offset + 0);
+        in_out->cell_bound.start.row = obj_place (sheet, FALSE, tmp[1], in_out->offset + 1);
+        in_out->cell_bound.end.col = obj_place (sheet, TRUE, tmp[2], in_out->offset + 2);
+        in_out->cell_bound.end.row = obj_place (sheet, FALSE, tmp[3], in_out->offset + 3);
+        break;
+    case GNM_SO_ANCHOR_ONE_CELL:
+        in_out->cell_bound.start.col = obj_place (sheet, TRUE, tmp[0], in_out->offset + 0);
+        in_out->cell_bound.start.row = obj_place (sheet, FALSE, tmp[1], in_out->offset + 1);
+        in_out->cell_bound.end = in_out->cell_bound.start;
+        in_out->offset[2] = (tmp[2] - tmp[0]) / colrow_compute_pixel_scale (sheet, TRUE);
+        in_out->offset[3] = (tmp[3] - tmp[1]) / colrow_compute_pixel_scale (sheet, FALSE);
+        break;
+    case GNM_SO_ANCHOR_ABSOLUTE: {
+        double h = colrow_compute_pixel_scale (sheet, TRUE);
+        double v = colrow_compute_pixel_scale (sheet, FALSE);
+        range_init (&in_out->cell_bound, 0, 0, 0, 0);
+        in_out->offset[0] = tmp[0] / h;
+        in_out->offset[1] = tmp[1] / v;
+        in_out->offset[2] = (tmp[2] - tmp[0]) / h;
+        in_out->offset[3] = (tmp[3] - tmp[1]) / v;
+        break;
+    }
+    }
+}
+
+- (BOOL)setFrames:(NSArray<NSValue *> *)frames ofSheetObjects:(NSArray<GnmSheetObject *> *)objects resizing:(BOOL)resizing error:(NSError **)error
+{
+    if (frames.count != objects.count) {
+        if (error)
+            *error = [self.workbook.engine _errorWithCode:GnmErrorCommandFailed
+                                             description:@"One frame per object is needed." collected:@[]];
+        return NO;
+    }
+    GSList *list = NULL, *anchors = NULL;
+    for (NSUInteger i = objects.count; i-- > 0;) {
+        GnmSheetObject *wrapper = objects[i];
+        if (!wrapper.isAttached)
+            continue;
+        SheetObjectAnchor *anchor = sheet_object_anchor_dup (sheet_object_get_anchor (wrapper.engineObject));
+        anchor_from_frame (_sheet, frames[i].rectValue, anchor);
+        list = g_slist_prepend (list, wrapper.engineObject);
+        anchors = g_slist_prepend (anchors, anchor);
+    }
+    if (list == NULL)
+        return YES;
+    unsigned n = g_slist_length (list);
+    NSString *label = [NSString stringWithFormat:resizing ? (n == 1 ? @"Resize %u Object" : @"Resize %u Objects")
+                                                          : (n == 1 ? @"Move %u Object" : @"Move %u Objects"), n];
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_objects_move (wbc, list, anchors, FALSE, label.UTF8String);   /* takes both lists */
+    } description:resizing ? @"Could not resize the objects." : @"Could not move the objects." error:error];
+}
+
+- (BOOL)deleteSheetObjects:(NSArray<GnmSheetObject *> *)objects error:(NSError **)error
+{
+    GSList *list = NULL;
+    for (GnmSheetObject *wrapper in objects.reverseObjectEnumerator)
+        if (wrapper.isAttached)
+            list = g_slist_prepend (list, wrapper.engineObject);
+    if (list == NULL)
+        return YES;
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_objects_delete (wbc, list, NULL);   /* takes the list */
+    } description:@"Could not delete the objects." error:error];
+}
+
+- (BOOL)restackSheetObject:(GnmSheetObject *)object direction:(GnmSheetObjectStacking)direction error:(NSError **)error
+{
+    if (!object.isAttached)
+        return NO;
+    SheetObject *so = object.engineObject;
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_object_raise (wbc, so, (CmdObjectRaiseSelector) direction);
+    } description:@"Could not restack the object." error:error];
 }
 
 #pragma mark - Control callbacks

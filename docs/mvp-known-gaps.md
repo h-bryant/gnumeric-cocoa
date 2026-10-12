@@ -66,7 +66,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | InsertCells | no | Phase 3 |
 | InsertColumns, InsertRows | ported | Insert menu; as many as the selection spans, before it |
 | SheetInsert | ported | Edit → Sheet → Insert |
-| ChartGuru, InsertComponent, InsertShapedComponent, NewGOComponent, GOComponentFromFile, InsertImage | no | Phase 4; existing charts and images draw read-only |
+| ChartGuru, InsertComponent, InsertShapedComponent, NewGOComponent, GOComponentFromFile, InsertImage | no | Phase 4; existing charts and images draw, move, resize, and delete |
 | InsertFormula (function selector), InsertNames | no | Phase 5 |
 | InsertComment, InsertHyperlink | no | Phase 5 |
 | InsertSortDecreasing, InsertSortIncreasing | ported | Data → Sort Ascending / Descending (the GTK quick sort: by the selection's columns, heading kept) |
@@ -126,7 +126,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | In-cell editor: cell's own font and alignment, autocomplete, range selection by mouse or keyboard while typing a formula, array formulas (Ctrl-Shift-Enter) | no | Phase 3 (`cmd_area_set_array_expr` is not wrapped yet) |
 | Cell comments (display, tooltips) | no | Phase 5 |
 | Hyperlinks (activation) | no | Phase 5 (`gnm_hlink_activate` takes `WBCGtk`) |
-| Sheet objects: selection handles, move, resize, context menus, editing, form widgets | no | Phase 4; objects draw read-only |
+| Sheet objects: selection handles, move, resize, context menus, editing, form widgets | partial | 2026-10-12: click to select, handles, drag to move and resize (Option symmetric, Shift snaps), Delete, arrows nudge, Tab cycles, context menu with Delete and the stacking order; no cut/copy/paste of objects, no editors, no live preview while dragging, widgets draw but do not act |
 | Frozen panes | ported | 2026-10-11: frozen strips painted as overlays on one document view, scrolling clamped to the first unfrozen cell |
 | Right-to-left sheets | no | Phase 7; drawn left-to-right |
 | Marching ants animation | partial | static dashed outline |

@@ -6,6 +6,7 @@
 #import <GnmCocoa/GnmGeometry.h>
 #import <GnmCocoa/GnmCellFormat.h>
 #import <GnmCocoa/GnmFilter.h>
+#import <GnmCocoa/GnmSheetObject.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -77,6 +78,8 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(SheetDelegate)
 - (void)sheet:(GnmSheet *)sheet makeVisibleColumn:(NSInteger)column row:(NSInteger)row NS_SWIFT_NAME(sheet(_:makeVisibleColumn:row:));
 - (void)sheetMarchingAntsDidChange:(GnmSheet *)sheet NS_SWIFT_NAME(sheetMarchingAntsDidChange(_:));
 - (void)sheetFrozenPanesDidChange:(GnmSheet *)sheet NS_SWIFT_NAME(sheetFrozenPanesDidChange(_:));
+/// A sheet object moved, was resized, left the sheet, or joined it.
+- (void)sheetObjectsDidChange:(GnmSheet *)sheet NS_SWIFT_NAME(sheetObjectsDidChange(_:));
 @end
 
 NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
@@ -302,6 +305,23 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 - (void)drawSheetObjectsInRect:(CGRect)rect context:(CGContextRef)context NS_SWIFT_NAME(drawSheetObjects(in:context:));
 /// Frames of the sheet objects, for hit testing and invalidation.
 @property (nonatomic, readonly) NSArray<NSValue *> *sheetObjectFrames;
+
+// Sheet objects (Phase 4).  Wrappers are stable for the life of the sheet.
+/// Every object on the sheet, front to back (the engine's stacking order).
+@property (nonatomic, readonly) NSArray<GnmSheetObject *> *sheetObjects;
+/// The frontmost selectable, visible object under a sheet pixel.
+- (nullable GnmSheetObject *)sheetObjectAtPoint:(CGPoint)point NS_SWIFT_NAME(sheetObject(at:));
+/// Move or resize objects to new frames (sheet pixels, one per object),
+/// as one undoable command (`cmd_objects_move`, the GTK drag commit);
+/// `resizing` only picks the undo label.  Anchors keep their mode: an
+/// object tied to cells stays tied to the cells now under it.
+- (BOOL)setFrames:(NSArray<NSValue *> *)frames ofSheetObjects:(NSArray<GnmSheetObject *> *)objects resizing:(BOOL)resizing
+            error:(NSError **)error NS_SWIFT_NAME(setFrames(_:of:resizing:));
+/// Delete objects (`cmd_objects_delete`); undo brings them back.
+- (BOOL)deleteSheetObjects:(NSArray<GnmSheetObject *> *)objects error:(NSError **)error NS_SWIFT_NAME(deleteSheetObjects(_:));
+/// Change an object's place in the stacking order (`cmd_object_raise`).
+- (BOOL)restackSheetObject:(GnmSheetObject *)object direction:(GnmSheetObjectStacking)direction
+                     error:(NSError **)error NS_SWIFT_NAME(restack(_:_:));
 
 @end
 

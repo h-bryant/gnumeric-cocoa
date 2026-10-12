@@ -44,6 +44,7 @@
 #include <sheet-filter.h>
 #include <sheet-filter-combo.h>
 #include <sheet-object-impl.h>
+#include <sheet-object-cell-comment.h>
 #include <sheet-utils.h>
 #include <tools/filter.h>
 #include <goffice/goffice.h>
@@ -120,6 +121,10 @@ GType gnm_cocoa_sheet_control_get_type (void);
 
 @interface GnmSheet ()
 - (instancetype)initWithSheetView:(SheetView *)sheetView workbook:(GnmWorkbook *)workbook NS_DESIGNATED_INITIALIZER;
+/// The wrapper of an engine object, created on first sight and kept.
+- (GnmSheetObject *)_wrapperForObject:(SheetObject *)object;
+/// An object's bounds changed, or it left or joined the sheet.
+- (void)_objectsDidChange;
 @property (nonatomic, readonly) Sheet *engineSheet;
 @property (nonatomic, readonly, nullable) SheetView *sheetView;
 /// Detach and release the SheetControl; safe to call more than once.
@@ -135,6 +140,13 @@ GType gnm_cocoa_sheet_control_get_type (void);
 - (void)_controlMakeVisibleColumn:(int)column row:(int)row;
 - (void)_controlMarchingAntsDidChange;
 - (void)_controlFrozenPanesDidChange;
+@end
+
+@interface GnmSheetObject ()
+- (instancetype)initWithObject:(SheetObject *)object sheet:(GnmSheet *)sheet NS_DESIGNATED_INITIALIZER;
+@property (nonatomic, readonly, nullable) SheetObject *engineObject;
+- (void)_detachFromEngine;
+- (void)_engineObjectDidChange;
 @end
 
 @interface GnmFilterButton ()
@@ -161,6 +173,11 @@ GType gnm_cocoa_sheet_control_get_type (void);
 - (instancetype)initWithValues:(GPtrArray *)values labels:(NSArray<NSString *> *)labels
                      hasBlanks:(BOOL)hasBlanks current:(GnmFilterCriterion *)current NS_DESIGNATED_INITIALIZER;
 @end
+
+/// The pixel rectangle of a sheet object (x0, y0, x1, y1), and the
+/// column or row at a sheet pixel position with its edge (GnmSheet.m).
+void gnm_cocoa_object_pixel_frame (Sheet const *sheet, SheetObject const *so, double *coords);
+int gnm_cocoa_colrow_at (Sheet const *sheet, gboolean is_cols, gint64 pos, gint64 *_Nullable origin);
 
 /// Color conversions shared by the drawing and style code.
 GdkRGBA gnm_cocoa_rgba_from_cgcolor (CGColorRef color);
