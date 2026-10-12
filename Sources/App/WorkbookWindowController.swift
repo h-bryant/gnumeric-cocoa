@@ -459,7 +459,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
              #selector(correlation(_:)), #selector(covariance(_:)), #selector(regression(_:)), #selector(dataValidation(_:)),
              #selector(meanTest(_:)), #selector(varianceTest(_:)), #selector(anovaSingleFactor(_:)), #selector(ranking(_:)),
              #selector(sampling(_:)), #selector(movingAverage(_:)), #selector(exponentialSmoothing(_:)), #selector(insertHyperlink(_:)),
-             #selector(solver(_:)):
+             #selector(solver(_:)), #selector(pageSetup(_:)), #selector(printSheet(_:)), #selector(setPrintArea(_:)), #selector(clearPrintArea(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(removeSheet(_:)):
             return gridView.sheet != nil && workbook.canRemoveSheets
@@ -995,6 +995,64 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
                 present(error)
             }
         }
+    }
+
+    // MARK: Printing
+
+    /// For the headless checks: the last job built for printing.
+    nonisolated(unsafe) static var lastPrintJob: PrintJob?
+
+    /// File → Page Setup…: the GTK dialog as an alert sheet, recorded as
+    /// one command for the sheet or every sheet.
+    @objc func pageSetup(_ sender: Any?) {
+        guard let window, let sheet = gridView.sheet, window.attachedSheet == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let base = sheet.printSettings
+        let dialog = PageSetupDialog(settings: base)
+        dialog.present(in: window, base: base) { [weak self] settings, all in
+            guard let self else { return true }
+            do {
+                try sheet.setPrintSettings(settings, forAllSheets: all)
+                return true
+            } catch {
+                presentMessage(error.localizedDescription)
+                return false
+            }
+        }
+    }
+
+    /// File → Print…: the sheet's print area (or the whole used range)
+    /// paginated by the engine, through the system print panel.
+    @objc func printSheet(_ sender: Any?) {
+        guard let window, let sheet = gridView.sheet, window.attachedSheet == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        guard let job = sheet.printJob(selectionOnly: false, ignoringPrintArea: false) else {
+            presentMessage("There is nothing to print.")
+            return
+        }
+        Self.lastPrintJob = job
+        let view = PrintView(job: job)
+        let info = PrintView.printInfo(for: job, settings: sheet.printSettings)
+        let operation = NSPrintOperation(view: view, printInfo: info)
+        operation.jobTitle = "\(document?.displayName ?? "Workbook") – \(sheet.name)"
+        operation.showsPrintPanel = ProcessInfo.processInfo.environment["GNM_SNAPSHOT"] == nil
+        operation.showsProgressPanel = operation.showsPrintPanel
+        if operation.showsPrintPanel {
+            operation.runModal(for: window, delegate: nil, didRun: nil, contextInfo: nil)
+        }
+    }
+
+    /// File → Print Area → Set Print Area: the selection.
+    @objc func setPrintArea(_ sender: Any?) {
+        guard let sheet = gridView.sheet else { return }
+        runSizeCommand { sheet in
+            try sheet.setPrintArea(sheet.rangeNames(inList: sheet.selectionText)?.first ?? "")
+        }
+        _ = sheet
+    }
+
+    @objc func clearPrintArea(_ sender: Any?) {
+        runSizeCommand { try $0.setPrintArea(nil) }
     }
 
     // MARK: Solver

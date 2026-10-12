@@ -472,6 +472,56 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_PRINT"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // Printing: landscape with grid lines and a header through the
+                // Page Setup dialog (captured to `-print.png`), then the first
+                // printed page drawn to `-page1.png`.
+                PageSetupDialog.headlessDriver = { dialog in
+                    dialog.orientation.selectItem(at: 1)
+                    dialog.gridLines.state = .on
+                    dialog.titles.state = .on
+                    dialog.headerMiddle.stringValue = "&[TAB] — page &[PAGE] of &[PAGES]"
+                    if let content = dialog.alert.accessoryView {
+                        content.layoutSubtreeIfNeeded()
+                        if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                            content.cacheDisplay(in: content.bounds, to: rep)
+                            let printPath = (path as NSString).deletingPathExtension + "-print.png"
+                            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: printPath))
+                            NSLog("print: captured %@ (%@)", printPath, NSStringFromRect(content.bounds))
+                        }
+                    }
+                    return true
+                }
+                controller.pageSetup(nil)
+                PageSetupDialog.headlessDriver = nil
+                let settings = sheet.printSettings
+                NSLog("print: paper %@ orientation %ld grid %d titles %d header '%@' undo=%@", settings.paperDisplayName, settings.orientation.rawValue,
+                      settings.printsGridLines ? 1 : 0, settings.printsTitles ? 1 : 0, settings.headerMiddle, sheet.workbook?.undoLabel ?? "nil")
+                controller.printSheet(nil)
+                if let job = WorkbookWindowController.lastPrintJob {
+                    let size = job.pageSize
+                    if let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(size.width), pixelsHigh: Int(size.height), bitsPerSample: 8,
+                                                  samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0),
+                       let graphics = NSGraphicsContext(bitmapImageRep: rep) {
+                        NSGraphicsContext.saveGraphicsState()
+                        NSGraphicsContext.current = graphics
+                        let cg = graphics.cgContext
+                        cg.setFillColor(CGColor.white)
+                        cg.fill(CGRect(origin: .zero, size: size))
+                        cg.translateBy(x: 0, y: size.height)
+                        cg.scaleBy(x: 1, y: -1)
+                        job.drawPage(0, in: cg)
+                        NSGraphicsContext.restoreGraphicsState()
+                        let pagePath = (path as NSString).deletingPathExtension + "-page1.png"
+                        try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: pagePath))
+                        NSLog("print: %ld pages of %gx%g, first %@, drawn to %@", job.pageCount, size.width, size.height, job.rangeName(ofPage: 0), pagePath)
+                    }
+                }
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_SOLVE"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

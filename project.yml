@@ -88,6 +88,8 @@ targets:
     templates: [BridgeTestProgram]
   solver:
     templates: [BridgeTestProgram]
+  printing:
+    templates: [BridgeTestProgram]
   BridgeTests:
     type: bundle.unit-test
     platform: macOS
@@ -115,6 +117,7 @@ targets:
       - target: validation
       - target: hyperlink
       - target: solver
+      - target: printing
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.github.h-bryant.gnumeric-cocoa.BridgeTests

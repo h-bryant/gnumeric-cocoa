@@ -1160,6 +1160,42 @@
   `GNM_SNAPSHOT_SOLVE=1` (the LP through the dialog, captured to
   `-solve.png`; the grid capture shows the solution).
 
+## 2026-10-12: Printing and page setup
+
+- `GnmPrinting.h`: `GnmPrintSettings` (a sheet's `GnmPrintInformation`:
+  the paper by GTK name and its oriented size, the six margins in
+  points, percentage or fit-to-pages scaling, centering, grid lines,
+  row and column titles, black and white, page order, repeated rows and
+  columns, the header and footer formats; `paperDisplayNames` lists the
+  papers GTK knows) and `GnmPrintJob` (a sheet paginated as print.c's
+  `compute_sheet_pages` does, with `paginate`, `compute_group`,
+  `compute_scale_fit_to`, and the page breaks stored as the GTK stores
+  them; `drawPage:inContext:` is `print_page` with the GtkPrintContext
+  replaced by the paper's printable area, pango-cairo layouts, and the
+  bridge's cairo-quartz surface: header and footer, titles, repeated
+  rows and columns, the cells through `gnm_gtk_print_cell_range`, the
+  sheet objects).  `GnmSheet` reads and sets the page setup
+  (`cmd_print_setup`, "Page Setup For Sheet1" or "For All Sheets"),
+  builds a job for the print area or the selection, and sets or clears
+  the print area through the `Print_Area` name as the GTK actions do.
+- `PrintSupport.swift`: `PrintView` (one page rect per page, flipped,
+  the job drawing each) for `NSPrintOperation` with a print info sized
+  to the paper and no margins of its own, so the system print panel
+  (preview, PDF, printers) does the rest; `PageSetupDialog` (File → Page
+  Setup…, ⇧⌘P) with the paper, orientation, margins in inches, scaling,
+  header and footer with the codes listed, the sheet options, repeats,
+  and Apply to all sheets.  File → Print… (⌘P) and File → Print Area →
+  Set and Clear.
+- `Tests/BridgeTests/printing.m` (22 XCTest programs now): the defaults
+  (US Letter from the preferences, 1-inch margins, the content 120 pt
+  from the edges), four portrait pages of an 80 × 12 sheet, landscape at
+  half size, fit to one page (53%), a page drawn into a bitmap (the
+  header band and the cells dark; `build/bridge-tests/printing-page1.png`
+  to look at), the selection, the print area and its labels, repeated
+  rows.  `GNM_SNAPSHOT_PRINT=1` sets landscape with grid lines and a
+  header through the dialog (captured to `-print.png`) and draws the
+  first page to `-page1.png`.
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -1173,8 +1209,10 @@
    Find and Replace, the Settings window, and Export as Text with
    options, the text import assistant, cell comments, defined names,
    Fill Series, Text to Columns, Goal Seek, conditional formatting, and
-   twelve analysis tools, data validation, hyperlinks, and the Solver;
-   next the rest of Phase 5 by usage frequency: the remaining statistics
+   twelve analysis tools, data validation, hyperlinks, the Solver, and
+   printing; next the rest of Phase 5 by usage frequency: the remaining
+   statistics, range selection by mouse while typing a formula, the
+   font shortcuts
    (frequencies, histograms, the non-parametric tests, two-factor
    ANOVA, Fourier, Kaplan-Meier, principal components)) from
    `docs/mvp-known-gaps.md`, which also
@@ -1199,8 +1237,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-12: `main` at the Solver commit
-   (after hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-12: `main` at the printing commit
+   (after the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

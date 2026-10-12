@@ -18,7 +18,8 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | FileNew | ported | File → New (⌘N) and an untitled workbook at launch without a file (2026-10-12) |
 | FileOpen | ported | every engine opener; CSV with default options |
 | FileSave, FileSaveAs | ported | `.gnumeric`, uncompressed `.xml`, `.xlsx`; other savers need Save As types |
-| FilePageSetup, FilePrintPreview, FilePrint, FilePrintArea* (6) | no | printing, Phase 3+ (`docs/architecture.md` §7) |
+| FilePageSetup, FilePrint, FilePrintArea set and clear | ported | File → Page Setup… (⇧⌘P), Print… (⌘P) through the system print panel, Print Area → Set and Clear (2026-10-12); the engine's pagination and page drawing in the bridge |
+| FilePrintPreview, FilePrintArea show, page break actions | no | the system print panel previews; no page-break editing |
 | FileSend | no | Phase 5 |
 | FileMetaData (Properties) | no | Phase 5 |
 | FileHistoryFull | ported | `NSDocumentController` recents |
@@ -146,7 +147,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | Drag and drop (cells, files, sheet tabs) | no | Phase 3; sheets move through the menu for now |
 | Column and row header drag resizing, double-click autosize | ported | 2026-10-11; resizes every selected column (row) when the dragged one is selected |
 | Sheet tab context menu, tab colors | partial | context menu 2026-10-11; Tab Color… 2026-10-12 shows the background as a swatch before the name (the text color is kept in the file, not shown) |
-| Printing and page setup | no | Phase 3+ (`NSPrintOperation` with the engine's `print-cell.c`) |
+| Printing and page setup | ported | 2026-10-12: `NSPrintOperation` over `PrintView`, the engine's `print-cell.c` and a port of print.c's pagination and page drawing in `GnmPrinting.m` |
 | Preferences window | partial | see EditPreferences (2026-10-12) |
 | Plugin manager | no | Phase 5 |
 | Localization of the UI (the engine's messages follow the process locale) | no | Phase 7 |

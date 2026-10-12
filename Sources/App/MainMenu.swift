@@ -33,6 +33,13 @@ enum MainMenu {
         fileMenu.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
         fileMenu.addItem(withTitle: "Save…", action: #selector(NSDocument.save(_:)), keyEquivalent: "s")
         fileMenu.addItem(withTitle: "Save As…", action: #selector(NSDocument.saveAs(_:)), keyEquivalent: "S")
+        fileMenu.addItem(.separator())
+        fileMenu.addItem(withTitle: "Page Setup…", action: Selector(("pageSetup:")), keyEquivalent: "P")
+        let printAreaMenu = NSMenu(title: "Print Area")
+        printAreaMenu.addItem(withTitle: "Set Print Area", action: Selector(("setPrintArea:")), keyEquivalent: "")
+        printAreaMenu.addItem(withTitle: "Clear Print Area", action: Selector(("clearPrintArea:")), keyEquivalent: "")
+        fileMenu.addItem(submenu(printAreaMenu, title: "Print Area"))
+        fileMenu.addItem(withTitle: "Print…", action: Selector(("printSheet:")), keyEquivalent: "p")
         menuBar.addItem(submenu(fileMenu, title: "File"))
 
         let editMenu = NSMenu(title: "Edit")

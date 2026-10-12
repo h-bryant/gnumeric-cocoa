@@ -59,6 +59,7 @@
 #include <tools/analysis-regression.h>
 #include <tools/goal-seek.h>
 #include <tools/gnm-solver.h>
+#include <print-info.h>
 #include <goffice/goffice.h>
 #include <goffice/app/go-cmd-context-impl.h>
 #include <goffice/graph/gog-plot-engine.h>
@@ -224,6 +225,15 @@ GType gnm_cocoa_sheet_control_get_type (void);
 
 @interface GnmSolverOutcome ()
 - (instancetype)initWithSolver:(GnmSolver *)solver NS_DESIGNATED_INITIALIZER;
+@end
+
+@interface GnmPrintSettings ()
+- (instancetype)initWithPrintInformation:(GnmPrintInformation *)pi NS_DESIGNATED_INITIALIZER;
+- (void)_applyToPrintInformation:(GnmPrintInformation *)pi;
+@end
+
+@interface GnmPrintJob ()
+- (nullable instancetype)initWithSheet:(GnmSheet *)owner selectionOnly:(BOOL)selectionOnly ignoringPrintArea:(BOOL)ignore NS_DESIGNATED_INITIALIZER;
 @end
 
 @interface GnmCellComment ()
