@@ -149,6 +149,7 @@ enum MainMenu {
         dataMenu.addItem(submenu(filterMenu, title: "Filter"))
         dataMenu.addItem(.separator())
         dataMenu.addItem(withTitle: "Text to Columns…", action: Selector(("textToColumns:")), keyEquivalent: "")
+        dataMenu.addItem(withTitle: "Validation…", action: Selector(("dataValidation:")), keyEquivalent: "")
         dataMenu.addItem(.separator())
         let recalc = dataMenu.addItem(withTitle: "Recalculate", action: Selector(("recalculate:")),
                                       keyEquivalent: String(Character(UnicodeScalar(NSF9FunctionKey)!)))

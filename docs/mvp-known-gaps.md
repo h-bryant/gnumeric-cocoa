@@ -82,7 +82,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 
 | Action | Status | Notes / Phase |
 |---|---|---|
-| FormatCells | partial | number, alignment, font, border, fill; no protection, validation, input message, or conditional pages; no format preview |
+| FormatCells | partial | number, alignment, font, border, fill; the validation and input message pages are Data → Validation… and the conditional page Format → Conditional Formatting… (2026-10-12); no protection page; no format preview |
 | FormatCellsCond | ported | Format → Conditional Formatting… (2026-10-12): the GTK operators, x and y, an overlay of fill, text color, bold, italic, number format |
 | FormatMergeCells, FormatUnmergeCells | ported | Format menu, with Merge and Center (`patches/0002` fixes an engine double-unref there) |
 | FormatCellsFitHeight, FormatCellsFitWidth | bridge | `autofitSelectedCells(width:)`; the menu has the whole-column/row Autofit |
@@ -106,7 +106,8 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | Action | Status | Notes / Phase |
 |---|---|---|
 | DataSort | partial | Data → Sort… (2026-10-12): rows or columns, header, three keys with order and case, keep formats; no locale, no more than three keys, no saved setups |
-| DataShuffle, DataValidate, DataConsolidate, DataTable | no | Phase 3/5 |
+| DataValidate | ported | Data → Validation… (2026-10-12): the criteria, the action's alerts on entry, the in-cell list, the input message |
+| DataShuffle, DataConsolidate, DataTable | no | Phase 5 |
 | DataTextToColumns | ported | Data → Text to Columns… through the import assistant (2026-10-12) |
 | CopyDown, CopyRight | ported | Edit → Fill → Down ⌘D, Right ⌘R |
 | EditFillAutofill | ported | the fill handle on the selection; Option makes a single number count up (the GTK Ctrl) |

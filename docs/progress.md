@@ -1020,6 +1020,44 @@
   the dialog (captured to `-stats.png`), then descriptive statistics to
   a new sheet, which the grid capture shows.
 
+## 2026-10-12: Data validation
+
+- `GnmValidation.h`: `GnmCellValidation` (the engine's `GnmValidation`
+  name is taken): kind, operator, the one or two expressions relative to
+  the edit position, empty cells allowed, the in-cell list, the action
+  (None, Stop, Warning, Information) with its title and message;
+  `GnmInputMessage`.  `GnmSheet` reads a cell's validation and input
+  message, sets the selection's as the Format Cells dialog applies its
+  pages (`gnm_validation_new` and `gnm_input_msg_new` on a partial style,
+  `cmd_selection_format` "Set validation"; Any Value and nil clear),
+  checks an entry as `wbcg_edit_finish` does (`clipboard_copy_range_undo`,
+  `sheet_cell_set_text`, `gnm_validation_eval`, `go_undo_undo`), and
+  lists an In List source's distinct displayed values sorted as the GTK
+  validation combo does.  The control's `validation_msg` vfunc asks the
+  workbook delegate (`workbook:presentValidationMessage:title:action:`)
+  and returns its status; without a delegate Stop and Warning discard,
+  as the GTK dialog's default response does.
+- Engine facts: an empty title gives "Gnumeric: Validation"; the
+  engine's own messages are "'x' is not an integer", "x is out of
+  permitted range", "<source> does not contain the new value.",
+  "<criteria> is not true.", and "Cell X is not permitted to contain
+  strings"; a None action accepts silently without asking.
+- `ValidationDialog.swift` (Data → Validation…): the Criteria rows
+  (Allow, Condition, the value fields relabeled as the GTK page does:
+  Min, Max, Value, Source, Criteria), Ignore empty cells, In-cell
+  dropdown, the Error alert rows, and the Input message rows, prefilled
+  from the edit position.  `GridView` validates an entry before the
+  command (Stop re-edits or discards, Warning accepts or discards,
+  Information accepts, through the controller's alerts with the GTK
+  default first), draws the list arrow just right of the edit cell
+  (click or Option-Down opens the choices as a menu, choosing enters the
+  value), and draws the input message under the cell while it is
+  selected.
+- `Tests/BridgeTests/validation.m` (19 XCTest programs now) and
+  `GNM_SNAPSHOT_VALID=1` (C1 takes a value from B1:B5 through the dialog,
+  captured to `-valid.png`; "7" refused with the engine's words, "3"
+  taken; the grid capture shows the arrow and the message).
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -1033,9 +1071,9 @@
    Find and Replace, the Settings window, and Export as Text with
    options, the text import assistant, cell comments, defined names,
    Fill Series, Text to Columns, Goal Seek, conditional formatting, and
-   the first analysis tools; next the rest of Phase 5 by usage
-   frequency: data validation, more analysis tools (t-tests, ANOVA,
-   sampling, moving averages), Solver, hyperlinks) from
+   the first analysis tools, and data validation; next the rest of Phase
+   5 by usage frequency: more analysis tools (t-tests, ANOVA, sampling,
+   moving averages), Solver, hyperlinks) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -1058,8 +1096,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-12: `main` at the analysis tools
-   commit (after conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-12: `main` at the data validation
+   commit (after the analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

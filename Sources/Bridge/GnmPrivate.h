@@ -24,6 +24,8 @@
 #include <colrow.h>
 #include <style-border.h>
 #include <style-conditions.h>
+#include <validation.h>
+#include <input-msg.h>
 #include <mstyle.h>
 #include <style-color.h>
 #include <pattern.h>
@@ -118,6 +120,8 @@ GType gnm_cocoa_sheet_control_get_type (void);
 - (void)_controlUndoLabelDidChange:(nullable const char *)undo redoLabel:(nullable const char *)redo;
 - (void)_controlMenuStateDidChange:(int)flags;
 - (BOOL)_controlAskYesNo:(nullable const char *)question defaultAnswer:(BOOL)defaultAnswer;
+- (GnmValidationStatus)_controlValidationMessage:(nullable const char *)message title:(nullable const char *)title style:(int)style
+                                        fallback:(GnmValidationStatus)fallback;
 - (BOOL)_controlClaimSelection;
 - (void)_controlPasteFromSelection:(GnmPasteTarget const *)target;
 /// Drop the engine's clipboard when another application has replaced the

@@ -456,7 +456,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             return gridView.sheet != nil
         case #selector(defineNames(_:)), #selector(insertName(_:)), #selector(fillSeries(_:)), #selector(textToColumns(_:)),
              #selector(goalSeek(_:)), #selector(conditionalFormatting(_:)), #selector(descriptiveStatistics(_:)),
-             #selector(correlation(_:)), #selector(covariance(_:)), #selector(regression(_:)):
+             #selector(correlation(_:)), #selector(covariance(_:)), #selector(regression(_:)), #selector(dataValidation(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(removeSheet(_:)):
             return gridView.sheet != nil && workbook.canRemoveSheets
@@ -994,6 +994,31 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         }
     }
 
+    // MARK: Validation
+
+    /// Data → Validation…: the GTK Validation and Input Message pages as
+    /// one alert sheet, applied to the selection as one command.
+    @objc func dataValidation(_ sender: Any?) {
+        guard let window, let sheet = gridView.sheet, window.attachedSheet == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let dialog = ValidationDialog(sheet: sheet)
+        dialog.present(in: window) { [weak self] validation, message in
+            guard let self else { return true }
+            do {
+                try sheet.setValidation(validation, inputMessage: message)
+                gridView.updateValidationState(sheet)
+                return true
+            } catch {
+                presentMessage(error.localizedDescription)
+                return false
+            }
+        }
+    }
+
+    /// For the headless checks: answer validation messages without the alert.
+    nonisolated(unsafe) static var validationAnswerForTesting: Validation.Status?
+    nonisolated(unsafe) static var lastValidationMessage: String?
+
     // MARK: Statistics
 
     @objc func descriptiveStatistics(_ sender: Any?) { runAnalysisDialog(.descriptiveStatistics) }
@@ -1454,6 +1479,40 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
 
     /// Engine commands that need confirmation (hide every row, paste
     /// thousands of copies) ask through a modal alert.
+    /// `wbcg_validation_msg`: the message with the action's choices, the
+    /// GTK default choice first.
+    func workbook(_ workbook: Workbook, presentValidationMessage message: String, title: String?, action: Validation.Action) -> Validation.Status {
+        if let canned = Self.validationAnswerForTesting {
+            Self.lastValidationMessage = message
+            return canned
+        }
+        let alert = NSAlert()
+        alert.messageText = title ?? "Validation"
+        alert.informativeText = message
+        switch action {
+        case .stop:
+            alert.alertStyle = .critical
+            alert.addButton(withTitle: "Discard")
+            alert.addButton(withTitle: "Re-Edit")
+            return alert.runModal() == .alertFirstButtonReturn ? .discard : .edit
+        case .warning:
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "Discard")
+            alert.addButton(withTitle: "Accept")
+            return alert.runModal() == .alertFirstButtonReturn ? .discard : .valid
+        case .parseError:
+            alert.alertStyle = .critical
+            alert.addButton(withTitle: "Accept")
+            alert.addButton(withTitle: "Re-Edit")
+            return alert.runModal() == .alertFirstButtonReturn ? .valid : .edit
+        default:
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+            return .valid
+        }
+    }
+
     func workbook(_ workbook: Workbook, askYesNo question: String, defaultAnswer: Bool) -> Bool {
         let alert = NSAlert()
         alert.messageText = question

@@ -82,6 +82,8 @@ targets:
     templates: [BridgeTestProgram]
   analysis:
     templates: [BridgeTestProgram]
+  validation:
+    templates: [BridgeTestProgram]
   BridgeTests:
     type: bundle.unit-test
     platform: macOS
@@ -106,6 +108,7 @@ targets:
       - target: goal_seek
       - target: conditional
       - target: analysis
+      - target: validation
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.github.h-bryant.gnumeric-cocoa.BridgeTests

@@ -105,7 +105,8 @@ GNM_SNAPSHOT=/tmp/grid.png scripts/run-app.sh upstream/gnumeric/samples/format-t
 `GNM_SNAPSHOT_EDITOR=1`, `GNM_SNAPSHOT_EVERYDAY=1`, `GNM_SNAPSHOT_FIND=1`,
 `GNM_SNAPSHOT_PREFS=1`, `GNM_SNAPSHOT_TEXT=1`, `GNM_SNAPSHOT_IMPORT=1`,
 `GNM_SNAPSHOT_COMMENT=1`, `GNM_SNAPSHOT_NAMES=1`, `GNM_SNAPSHOT_FILL=1`,
-`GNM_SNAPSHOT_GOAL=1`, `GNM_SNAPSHOT_COND=1`, and `GNM_SNAPSHOT_STATS=1`
+`GNM_SNAPSHOT_GOAL=1`, `GNM_SNAPSHOT_COND=1`, `GNM_SNAPSHOT_STATS=1`, and
+`GNM_SNAPSHOT_VALID=1`
 exercise zoom, editing and saving, the Format Cells model, the Phase 3
 commands, frozen panes, sheet management, the autofilter with the Sort
 command, a sheet resize, and a tab color, the sheet objects (select, move,
@@ -131,7 +132,10 @@ through the assistant), and Goal Seek (B30 driven to 0 by changing A30,
 undone), and conditional formatting ("value > 100 → yellow, bold" put on
 B5:B12 through the dialog, captured to `-cond.png`), and the analysis
 tools (a correlation into D1 through its dialog, captured to
-`-stats.png`, then descriptive statistics to a new sheet) before the
+`-stats.png`, then descriptive statistics to a new sheet), and data
+validation (C1 takes a value from B1:B5 through the dialog, captured to
+`-valid.png`; an entry outside the list refused, one from it taken)
+before the
 capture (`AppDelegate.swift`, `Snapshot`). The typing hook saves as a
 Save As next to the snapshot; with `GNM_SNAPSHOT_SAVE_INPLACE=1` it saves
 the opened file in place instead (give it a copy). Should a quit ever go

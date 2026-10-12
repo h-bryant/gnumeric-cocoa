@@ -253,6 +253,8 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         drawCommentMarkers(of: sheet, dirtyRect: dirtyRect)
         drawMarchingAnts(of: sheet, dirtyRect: dirtyRect)
         drawSelection(of: sheet, dirtyRect: dirtyRect)
+        drawValidationDropdown(of: sheet, dirtyRect: dirtyRect)
+        drawInputMessage(of: sheet, dirtyRect: dirtyRect)
         drawObjectSelection(dirtyRect: dirtyRect)
     }
 
@@ -393,6 +395,18 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         // change while the engine works would otherwise end the editor's
         // editing and commit a second time.
         endEditingSession()
+        // The cell's validation first (wbcg_edit_finish): a Stop re-edits
+        // or discards, a Warning accepts or discards, Information accepts.
+        switch sheet.validateText(text, atColumn: cell.column, row: cell.row) {
+        case .edit:
+            sheet.selectCell(atColumn: cell.column, row: cell.row)
+            beginEditing(initialText: text)
+            return
+        case .discard:
+            return
+        default:
+            break
+        }
         do {
             try sheet.setText(text, atColumn: cell.column, row: cell.row, autocorrect: true)
         } catch {
@@ -426,6 +440,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     func setEditCellText(_ text: String) {
         guard let sheet else { return }
         let cell = sheet.editPosition
+        guard sheet.validateText(text, atColumn: cell.column, row: cell.row) == .valid else { return }
         do {
             try sheet.setText(text, atColumn: cell.column, row: cell.row, autocorrect: true)
         } catch {
@@ -866,6 +881,101 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     /// The drop-down buttons of the sheet's autofilters: a small rounded
     /// square with a triangle in each heading cell, filled with the accent
     /// color while the field has a condition (the GTK arrow's checked state).
+    // MARK: Validation
+
+    /// The edit position's in-cell list (the GTK validation combo) and
+    /// input message, refreshed when the cursor moves.
+    private var validationCell: CellCoordinate?
+    private var validationChoices: [String]?
+    private var inputMessage: InputMessage?
+    private static let dropdownWidth: CGFloat = 14
+
+    func updateValidationState(_ sheet: Sheet) {
+        let cell = sheet.editPosition
+        let had = validationChoices != nil || inputMessage != nil
+        validationCell = cell
+        validationChoices = sheet.validationChoices(atColumn: cell.column, row: cell.row)
+        inputMessage = sheet.inputMessage(atColumn: cell.column, row: cell.row)
+        if had || validationChoices != nil || inputMessage != nil { needsDisplay = true }
+    }
+
+    /// For the headless checks.
+    var validationChoicesShown: [String]? { validationChoices }
+    var inputMessageShown: InputMessage? { inputMessage }
+
+    /// The arrow just right of the edit cell (where the GTK combo puts
+    /// it, clear of the cell's content), in sheet coordinates.
+    private func validationDropdownRect(in sheet: Sheet) -> NSRect? {
+        guard validationChoices != nil, let cell = validationCell else { return nil }
+        let frame = sheet.frameOfCell(atColumn: cell.column, row: cell.row)
+        guard !frame.isEmpty else { return nil }
+        return NSRect(x: frame.maxX + 1, y: frame.minY, width: Self.dropdownWidth, height: frame.height)
+    }
+
+    private func drawValidationDropdown(of sheet: Sheet, dirtyRect: NSRect) {
+        guard let arrow = validationDropdownRect(in: sheet), arrow.intersects(dirtyRect) else { return }
+        NSColor.controlBackgroundColor.setFill()
+        NSBezierPath(rect: arrow).fill()
+        NSColor.gray.setStroke()
+        let box = NSBezierPath(rect: arrow.insetBy(dx: 0.5, dy: 0.5))
+        box.lineWidth = 1
+        box.stroke()
+        let triangle = NSBezierPath()
+        let mid = arrow.midX, top = arrow.midY - 2
+        triangle.move(to: NSPoint(x: mid - 3.5, y: top))
+        triangle.line(to: NSPoint(x: mid + 3.5, y: top))
+        triangle.line(to: NSPoint(x: mid, y: top + 4))
+        triangle.close()
+        NSColor.labelColor.setFill()
+        triangle.fill()
+    }
+
+    /// The validation list as a menu; choosing enters the value.
+    private func showValidationMenu(from arrow: NSRect) {
+        guard let choices = validationChoices else { return }
+        let menu = NSMenu()
+        for choice in choices {
+            let item = menu.addItem(withTitle: choice, action: #selector(chooseValidationItem(_:)), keyEquivalent: "")
+            item.target = self
+        }
+        let anchor = viewRect(forSheetRect: arrow)
+        menu.popUp(positioning: nil, at: NSPoint(x: anchor.minX, y: anchor.maxY), in: self)
+    }
+
+    @objc private func chooseValidationItem(_ sender: NSMenuItem) {
+        guard let sheet, let cell = validationCell else { return }
+        if isEditing { cancelEditing() }
+        do {
+            try sheet.setText(sender.title, atColumn: cell.column, row: cell.row, autocorrect: false)
+        } catch {
+            presentError?(error)
+        }
+    }
+
+    /// The input message under the edit cell while it is selected (the
+    /// GTK pane shows it as a tool tip there).
+    private func drawInputMessage(of sheet: Sheet, dirtyRect: NSRect) {
+        guard let message = inputMessage, let cell = validationCell else { return }
+        let frame = sheet.frameOfCell(atColumn: cell.column, row: cell.row)
+        guard !frame.isEmpty else { return }
+        let text = NSMutableAttributedString()
+        if !message.title.isEmpty {
+            text.append(NSAttributedString(string: message.title, attributes: [.font: NSFont.boldSystemFont(ofSize: 11)]))
+            if !message.message.isEmpty { text.append(NSAttributedString(string: "\n")) }
+        }
+        text.append(NSAttributedString(string: message.message, attributes: [.font: NSFont.systemFont(ofSize: 11)]))
+        let size = text.boundingRect(with: NSSize(width: 260, height: 200), options: [.usesLineFragmentOrigin]).size
+        let box = NSRect(x: frame.minX, y: frame.maxY + 2, width: ceil(size.width) + 12, height: ceil(size.height) + 8)
+        guard box.intersects(dirtyRect) else { return }
+        let path = NSBezierPath(roundedRect: box, xRadius: 4, yRadius: 4)
+        NSColor(red: 1, green: 1, blue: 0.86, alpha: 1).setFill()
+        path.fill()
+        NSColor.gray.setStroke()
+        path.lineWidth = 0.5
+        path.stroke()
+        text.draw(with: box.insetBy(dx: 6, dy: 4), options: [.usesLineFragmentOrigin])
+    }
+
     // MARK: Comments
 
     /// The GTK comment indicator: a small red triangle in the cell's
@@ -1087,6 +1197,12 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     override func mouseDown(with event: NSEvent) {
         guard let sheet else { return }
         let point = sheetPoint(forViewPoint: convert(event.locationInWindow, from: nil))
+        if event.clickCount == 1, let arrow = validationDropdownRect(in: sheet), arrow.contains(point) {
+            if isEditing { commitEditing(text: editor.stringValue, movement: .none) }
+            window?.makeFirstResponder(self)
+            showValidationMenu(from: arrow)
+            return
+        }
         if event.clickCount == 1, let button = sheet.filterButtons.first(where: { $0.frame.contains(point) }) {
             if isEditing { commitEditing(text: editor.stringValue, movement: .none) }
             window?.makeFirstResponder(self)
@@ -1330,6 +1446,13 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
             beginEditing(initialText: nil)
             return
         }
+        // Option-Down opens the cell's validation list.
+        if event.modifierFlags.contains(.option), !isEditing, let sheet,
+           event.charactersIgnoringModifiers?.unicodeScalars.first?.value == UInt32(NSDownArrowFunctionKey),
+           let arrow = validationDropdownRect(in: sheet) {
+            showValidationMenu(from: arrow)
+            return
+        }
         if let chars = event.characters, !chars.isEmpty,
            !event.modifierFlags.contains(.command), !event.modifierFlags.contains(.control),
            chars.unicodeScalars.allSatisfy({ $0.value >= 0x20 && $0.value != 0x7f && !($0.value >= 0xF700 && $0.value <= 0xF8FF) }) {
@@ -1455,6 +1578,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
 
     func sheet(_ sheet: Sheet, cursorDidMoveTo range: CellRange) {
         invalidateSelection(sheet)
+        updateValidationState(sheet)
     }
 
     func sheetMarchingAntsDidChange(_ sheet: Sheet) {

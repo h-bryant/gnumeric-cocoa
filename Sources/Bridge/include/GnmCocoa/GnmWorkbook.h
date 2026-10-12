@@ -7,6 +7,7 @@
 // the GTK front end shut a workbook down.
 #import <Foundation/Foundation.h>
 #import <GnmCocoa/GnmGeometry.h>
+#import <GnmCocoa/GnmValidation.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -38,6 +39,13 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(WorkbookDelegate)
 /// pasting more than ten thousand copies).  Return the answer; when the
 /// delegate does not implement this, the command gets `defaultAnswer`.
 - (BOOL)workbook:(GnmWorkbook *)workbook askYesNo:(NSString *)question defaultAnswer:(BOOL)defaultAnswer NS_SWIFT_NAME(workbook(_:askYesNo:defaultAnswer:));
+/// An entry failed a cell's validation (`wb_control_validation_msg`):
+/// show the message with the action's choices (Stop: Re-Edit or Discard;
+/// Warning: Accept or Discard; Information: OK; a parse error: Re-Edit or
+/// Accept) and return the choice.  Without the delegate, Stop and Warning
+/// discard, the others accept.
+- (GnmValidationStatus)workbook:(GnmWorkbook *)workbook presentValidationMessage:(NSString *)message title:(nullable NSString *)title
+                         action:(GnmValidationAction)action NS_SWIFT_NAME(workbook(_:presentValidationMessage:title:action:));
 @end
 
 NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Workbook)

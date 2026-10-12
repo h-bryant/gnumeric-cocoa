@@ -88,5 +88,6 @@
 - (void)testGoalSeek { [self runProgram:@"goal_seek"]; }
 - (void)testConditional { [self runProgram:@"conditional"]; }
 - (void)testAnalysis { [self runProgram:@"analysis"]; }
+- (void)testValidation { [self runProgram:@"validation"]; }
 
 @end

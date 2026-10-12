@@ -93,6 +93,15 @@ cwbc_query_yes_no (WorkbookControl *wbc, gboolean default_answer, char const *qu
     return owner ? [owner _controlAskYesNo:question defaultAnswer:default_answer] : default_answer;
 }
 
+static int
+cwbc_validation_msg (WorkbookControl *wbc, ValidationStyle v, char const *title, char const *msg)
+{
+    GnmWorkbook *owner = wbc_owner (wbc);
+    GnmValidationStatus fallback = v == GNM_VALIDATION_STYLE_STOP || v == GNM_VALIDATION_STYLE_WARNING
+        ? GnmValidationStatusDiscard : GnmValidationStatusValid;   /* wbcg_validation_msg's default response */
+    return owner ? [owner _controlValidationMessage:msg title:title style:v fallback:fallback] : fallback;
+}
+
 /* Commands report errors through the control's GOCmdContext interface
  * (go_cmd_context_error_invalid (GO_CMD_CONTEXT (wbc), ...) in commands.c),
  * so the subclass must provide the interface methods the base leaves NULL. */
@@ -170,6 +179,7 @@ cwbc_class_init (GObjectClass *object_class)
     wbc_class->undo_redo.labels = cwbc_undo_redo_labels;
     wbc_class->menu_state.update = cwbc_menu_state_update;
     wbc_class->query_yes_no = cwbc_query_yes_no;
+    wbc_class->validation_msg = cwbc_validation_msg;
     wbc_class->claim_selection = cwbc_claim_selection;
     wbc_class->paste_from_selection = cwbc_paste_from_selection;
 }
@@ -889,6 +899,15 @@ region_from_text (Workbook *wb, NSString *string)
     if (cr->cols > 0 && cr->rows > 0)
         cmd_paste_copy ((WorkbookControl *) _wbc, target, cr);
     cellregion_unref (cr);
+}
+
+- (GnmValidationStatus)_controlValidationMessage:(const char *)message title:(const char *)title style:(int)style
+                                        fallback:(GnmValidationStatus)fallback
+{
+    if ([self.delegate respondsToSelector:@selector(workbook:presentValidationMessage:title:action:)])
+        return [self.delegate workbook:self presentValidationMessage:GnmString (message) title:title ? GnmString (title) : nil
+                                action:(GnmValidationAction) style];
+    return fallback;
 }
 
 - (BOOL)_controlAskYesNo:(const char *)question defaultAnswer:(BOOL)defaultAnswer

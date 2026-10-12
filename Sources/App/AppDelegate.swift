@@ -472,6 +472,57 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_VALID"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // Data validation: C1 takes a value from B1:B5 through the
+                // dialog (captured to `-valid.png`) with an input message; an
+                // entry outside the list is refused, one from the list taken;
+                // the grid capture shows the list arrow and the message.
+                do {
+                    for r in 0..<5 { try sheet.setText("\(r + 1)", atColumn: 1, row: r, autocorrect: false) }
+                } catch {
+                    NSLog("valid: data failed: %@", error.localizedDescription)
+                }
+                sheet.selectCell(atColumn: 2, row: 0)
+                ValidationDialog.headlessDriver = { dialog in
+                    dialog.kind.selectItem(at: ValidationDialog.kinds.firstIndex(of: .inList) ?? 0)
+                    dialog.criteriaChanged(nil)
+                    dialog.firstField.stringValue = "$B$1:$B$5"
+                    dialog.errorTitle.stringValue = "Pick from the list"
+                    dialog.messageTitle.stringValue = "Choose"
+                    dialog.messageText.stringValue = "A value from B1:B5"
+                    if let content = dialog.alert.accessoryView {
+                        content.layoutSubtreeIfNeeded()
+                        if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                            content.cacheDisplay(in: content.bounds, to: rep)
+                            let validPath = (path as NSString).deletingPathExtension + "-valid.png"
+                            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: validPath))
+                            NSLog("valid: captured %@ (%@)", validPath, NSStringFromRect(content.bounds))
+                        }
+                    }
+                    NSLog("valid: dialog first label '%@' dropdown enabled %d", dialog.firstLabel.stringValue, dialog.dropdown.isEnabled ? 1 : 0)
+                    return true
+                }
+                controller.dataValidation(nil)
+                ValidationDialog.headlessDriver = nil
+                let read = sheet.validation(atColumn: 2, row: 0)
+                NSLog("valid: C1 kind=%ld source='%@' title='%@' choices=%@ message='%@' undo=%@", read?.kind.rawValue ?? -1,
+                      read?.firstExpression ?? "nil", read?.errorTitle ?? "nil", controller.gridView.validationChoicesShown ?? [],
+                      controller.gridView.inputMessageShown?.message ?? "nil", sheet.workbook?.undoLabel ?? "nil")
+                WorkbookWindowController.validationAnswerForTesting = .discard
+                let refused = sheet.validateText("7", atColumn: 2, row: 0)
+                let taken = sheet.validateText("3", atColumn: 2, row: 0)
+                WorkbookWindowController.validationAnswerForTesting = nil
+                NSLog("valid: '7' -> %ld (%@); '3' -> %ld", refused.rawValue, WorkbookWindowController.lastValidationMessage ?? "nil", taken.rawValue)
+                do {
+                    try sheet.setText("3", atColumn: 2, row: 0, autocorrect: false)
+                } catch {
+                    NSLog("valid: entry failed: %@", error.localizedDescription)
+                }
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_STATS"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {
