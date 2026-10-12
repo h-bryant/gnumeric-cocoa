@@ -31,7 +31,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | Undo, Redo | ported | engine command stack, labels in the menu |
 | EditCut, EditCopy, EditPaste | ported | engine clipboard; text to and from other apps; selected objects, with a PNG out and images in |
 | EditPasteSpecial | ported | Edit → Paste Special… (⌘⇧V): what, operation, region transform, the four switches, Paste Link |
-| EditFind, EditReplace | no | Phase 5 |
+| EditFind, EditReplace | ported | Edit → Find… (⌘F) and Find and Replace… (⌥⌘F), one floating panel with the GTK dialogs' options and the matches list (2026-10-12) |
 | EditRecalc | ported | Data → Recalculate (F9), `workbook_recalc_all` |
 | EditPreferences | no | Phase 5; until then `AppDelegate` sets the `.gnumeric` compression level to 0 (plain XML) at every launch |
 | EditClearContent | ported | Delete key and Edit → Delete |

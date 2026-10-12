@@ -451,6 +451,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
              #selector(resizeSheet(_:)), #selector(setTabColor(_:)), #selector(sortCells(_:)), #selector(insertChart(_:)),
              #selector(insertImage(_:)), #selector(goTo(_:)), #selector(insertCells(_:)), #selector(deleteCells(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
+        case #selector(showFindPanel(_:)), #selector(showReplacePanel(_:)), #selector(findNext(_:)), #selector(findPrevious(_:)):
+            return gridView.sheet != nil
         case #selector(removeSheet(_:)):
             return gridView.sheet != nil && workbook.canRemoveSheets
         case #selector(pasteSpecial(_:)):
@@ -814,6 +816,39 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
 
     @objc func insertCells(_ sender: Any?) { promptCellShift(insert: true) }
     @objc func deleteCells(_ sender: Any?) { promptCellShift(insert: false) }
+
+    // MARK: Find and Replace (Edit menu)
+
+    private(set) var findPanel: FindPanel?
+
+    private func ensureFindPanel() -> FindPanel {
+        if let findPanel { return findPanel }
+        let panel = FindPanel(controller: self)
+        findPanel = panel
+        return panel
+    }
+
+    @objc func showFindPanel(_ sender: Any?) {
+        guard gridView.sheet != nil else { return }
+        ensureFindPanel().show(focusReplace: false)
+    }
+
+    @objc func showReplacePanel(_ sender: Any?) {
+        guard gridView.sheet != nil else { return }
+        ensureFindPanel().show(focusReplace: true)
+    }
+
+    /// Find Next and Find Previous from the document window: the panel's
+    /// steps when it has matches (or a text to find), else the panel.
+    @objc func findNext(_ sender: Any?) {
+        guard gridView.sheet != nil else { return }
+        if let findPanel, !findPanel.options.searchText.isEmpty { findPanel.findNext(sender) } else { showFindPanel(sender) }
+    }
+
+    @objc func findPrevious(_ sender: Any?) {
+        guard gridView.sheet != nil else { return }
+        if let findPanel, !findPanel.options.searchText.isEmpty { findPanel.findPrevious(sender) } else { showFindPanel(sender) }
+    }
 
     // MARK: Chart Properties (the chart editor)
 

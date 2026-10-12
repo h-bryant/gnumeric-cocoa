@@ -69,6 +69,12 @@ enum MainMenu {
         let goTo = editMenu.addItem(withTitle: "Go To…", action: Selector(("goTo:")), keyEquivalent: "g")
         goTo.keyEquivalentModifierMask = [.control]
         editMenu.addItem(.separator())
+        editMenu.addItem(withTitle: "Find…", action: Selector(("showFindPanel:")), keyEquivalent: "f")
+        let replace = editMenu.addItem(withTitle: "Find and Replace…", action: Selector(("showReplacePanel:")), keyEquivalent: "f")
+        replace.keyEquivalentModifierMask = [.command, .option]
+        editMenu.addItem(withTitle: "Find Next", action: Selector(("findNext:")), keyEquivalent: "g")
+        editMenu.addItem(withTitle: "Find Previous", action: Selector(("findPrevious:")), keyEquivalent: "G")
+        editMenu.addItem(.separator())
         editMenu.addItem(submenu(sheetMenu(), title: "Sheet"))
         menuBar.addItem(submenu(editMenu, title: "Edit"))
 

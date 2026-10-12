@@ -711,6 +711,47 @@
   document; `editing.m` covers the shifts with undo, the date and time
   texts, and the jumps.
 
+## 2026-10-12: Find and Replace
+
+- The bridge (`GnmSearch.h`, `GnmSearch.m`): `GnmSearchOptions` holds
+  what the GTK Search and Search & Replace dialogs collect, with the
+  `gnumeric-conf` defaults; `findMatches:inSheet:` builds the engine's
+  `GnmSearchReplace` the way `dialog-search.c` does, runs
+  `gnm_search_collect_cells` and `gnm_search_filter_matching`, and
+  returns `GnmSearchMatch` values (sheet, cell, locus, the Matches
+  page's Type and Content columns, and a quoted reference);
+  `replaceMatches:inSheet:queryHandler:` runs `cmd_search_replace` with
+  the engine's query function answered by a block (Replace, Skip,
+  Cancel, and "do not ask again"), the Fail behavior's refusal turned
+  into the error `wbc-gtk-actions.c` shows.  `GnmSheet` gained
+  `selectionText` (`selection_to_string`, absolute and sheet-qualified,
+  for the Range field) and `revealCellAtColumn:row:` (the dialog's
+  cursor change: focus the sheet, select, scroll).
+- The panel (`FindPanel.swift`): a floating utility panel per document
+  window with the two texts, the scope (workbook, sheet, a range that
+  starts as the selection), the cell kinds, the text kind (plain,
+  regular expression, number), the order, case and whole-word options,
+  the replace options (preserve case, keep strings, ask before each
+  change), the invalid-replacement behavior, Find All / Previous / Next
+  / Replace / Replace All, and the matches table; choosing a match
+  selects its cell (switching sheets), Replace runs the command over the
+  chosen cell as a range, and the ask-before-each-change question is a
+  modal alert with "Do not ask again".  Options persist in the app's
+  own defaults.  Edit → Find… (⌘F), Find and Replace… (⌥⌘F), Find Next
+  (⌘G), Find Previous (⇧⌘G); Find Next from the document window steps
+  the panel's matches.  Escape closes the panel; it closes with its
+  window.
+- Engine facts settled by `Tests/BridgeTests/search.m`: a regular
+  expression ignores case when told to (so `^a.*e$` finds "Apple pie");
+  a kept string's replacement is shown with its leading quote (`'pear`);
+  a kept string never fails to parse, so the error behaviors only act
+  with "Keep strings" off; a range scope visits cells with content only,
+  so a comment on an empty cell is reached by the sheet and workbook
+  scopes alone; a cancelled replace keeps the changes made so far as one
+  command.  `GNM_SNAPSHOT_FIND=1` drives the panel headlessly and
+  captures it to `-find.png` (the capture omits buttons, as it does tab
+  labels).
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -720,8 +761,8 @@
    resize, delete, stacking, the chart guru, the object clipboard, images,
    the chart editor with its plot type change, and Save as Image… are
    done; Phase 5 has begun with File → New, Go To and the name box,
-   Insert and Delete Cells, the current date and time, and Save As CSV;
-   next Find and Replace, the Preferences window, and the text export
+   Insert and Delete Cells, the current date and time, Save As CSV, and
+   Find and Replace; next the Preferences window and the text export
    options) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
@@ -745,8 +786,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-12: `main` at the everyday-items
-   commit (after Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-12: `main` at the Find and Replace
+   commit (after the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

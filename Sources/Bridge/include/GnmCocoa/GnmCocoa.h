@@ -18,4 +18,5 @@
 #import <GnmCocoa/GnmPlotType.h>
 #import <GnmCocoa/GnmChartEditor.h>
 #import <GnmCocoa/GnmSheet.h>
+#import <GnmCocoa/GnmSearch.h>
 #import <GnmCocoa/GnmRunLoopBridge.h>

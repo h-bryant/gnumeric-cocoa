@@ -432,6 +432,46 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FIND"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // Find and Replace: the panel over the whole workbook finds
+                // "1", steps to the second match, is captured to `-find.png`,
+                // replaces one match and then all of them, then undoes.
+                controller.showFindPanel(nil)
+                if let panel = controller.findPanel {
+                    panel.setTexts(find: "1", replace: "one")
+                    panel.findAll(nil)
+                    NSLog("find: %ld matches, first=%@ (%@ '%@')", panel.matches.count, panel.matches.first?.reference ?? "none",
+                          panel.matches.first?.kindDescription ?? "", panel.matches.first?.contents ?? "")
+                    panel.findNext(nil)
+                    let current = controller.gridView.sheet ?? sheet
+                    NSLog("find: after next, edit position %@!%ld,%ld", current.name, current.editPosition.column, current.editPosition.row)
+                    if let content = panel.panel.contentView {
+                        content.layoutSubtreeIfNeeded()
+                        if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                            content.cacheDisplay(in: content.bounds, to: rep)
+                            let findPath = (path as NSString).deletingPathExtension + "-find.png"
+                            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: findPath))
+                            NSLog("find: captured %@ (%@)", findPath, NSStringFromRect(content.bounds))
+                        }
+                        if ProcessInfo.processInfo.environment["GNM_DEBUG_LAYOUT"] != nil {
+                            dump(view: content, depth: 0)
+                        }
+                    }
+                    let before = panel.matches.count
+                    panel.replaceCurrent(nil)
+                    NSLog("find: after replacing one, %ld matches (was %ld) undo=%@", panel.matches.count, before,
+                          sheet.workbook?.undoLabel ?? "nil")
+                    panel.replaceAll(nil)
+                    NSLog("find: after replacing all, %ld matches undo=%@", panel.matches.count, sheet.workbook?.undoLabel ?? "nil")
+                    controller.gridView.undo(nil)
+                    controller.gridView.undo(nil)
+                    panel.panel.close()
+                }
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_EDITOR"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet,

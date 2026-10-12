@@ -1723,6 +1723,31 @@ pixels_from_points (Sheet const *sheet, gboolean horizontal, double points)
     sheet_update (_sheet);   /* flush the status and redraw requests */
 }
 
+- (NSString *)selectionText
+{
+    if (_sv == NULL)
+        return @"";
+    char *text = selection_to_string (_sv, TRUE);
+    NSString *result = text ? [NSString stringWithUTF8String:text] : @"";
+    g_free (text);
+    return result;
+}
+
+- (void)revealCellAtColumn:(NSInteger)column row:(NSInteger)row
+{
+    if (_sv == NULL || _sheet == NULL)
+        return;
+    /* dialog-search.c cursor_change */
+    WorkbookView *wbv = sv_wbv (_sv);
+    if (wbv && wb_view_cur_sheet (wbv) != _sheet)
+        wb_view_sheet_focus (wbv, _sheet);
+    GnmCellPos pos = { (int) column, (int) row };
+    gnm_sheet_view_set_edit_pos (_sv, &pos);
+    sv_selection_set (_sv, &pos, (int) column, (int) row, (int) column, (int) row);
+    gnm_sheet_view_make_cell_visible (_sv, (int) column, (int) row, FALSE);
+    gnm_sheet_view_update (_sv);
+}
+
 #pragma mark - Drawing
 
 - (void)drawCellsInRect:(CGRect)rect context:(CGContextRef)context backgroundColor:(CGColorRef)backgroundColor

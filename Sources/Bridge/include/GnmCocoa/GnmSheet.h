@@ -146,6 +146,14 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 @property (nonatomic, readonly) GnmCellRange selectedRange;
 - (void)selectCellAtColumn:(NSInteger)column row:(NSInteger)row NS_SWIFT_NAME(selectCell(atColumn:row:));
 - (void)selectRange:(GnmCellRange)range editPosition:(GnmCellCoordinate)editPosition NS_SWIFT_NAME(selectRange(_:editPosition:));
+/// The selection as the engine writes it, sheet-qualified and absolute
+/// (`selection_to_string`: "Sheet1!$A$1:$B$4", several ranges joined by
+/// commas): what the search dialogs' Range field starts with.
+@property (nonatomic, readonly, copy) NSString *selectionText;
+/// Make the cell the selection and the edit position and bring it into
+/// view, focusing this sheet in the workbook first (what the GTK Search
+/// dialog does when a match is chosen).
+- (void)revealCellAtColumn:(NSInteger)column row:(NSInteger)row NS_SWIFT_NAME(revealCell(atColumn:row:));
 
 // Editing.  Every method runs an undoable engine command through the
 // workbook's control; a NO return carries the engine's message in `error`.
