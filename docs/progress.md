@@ -1120,6 +1120,46 @@
   to `-link.png`, an internal link on A3 to C5 followed; the grid
   capture shows the blue underlined cells and the selection at C5).
 
+## 2026-10-12: The Solver
+
+- `GnmSolver.h`: `GnmSolverAlgorithm` (the plugins' factories: Gnumeric's
+  own `nlsolve`, and `glpk` and `lpsolve` when their programs are on the
+  path; `isFunctional` asks the factory with no GTK), `GnmSolverRule`
+  (a constraint: left side, kind ≤ ≥ = Int Bool, right side),
+  `GnmSolverSettings` (a sheet's `GnmSolverParameters`: target, goal,
+  input cells, rules, algorithm, model, iterations, time, the flags,
+  the reports), `GnmSolverOutcome` (status, reason, quality, the
+  objective, elapsed).  `GnmSheet` reads the settings, records them as
+  `extract_settings` and `check_for_changed_options` do (the engine's
+  `gnm_solver_param_valid` first, "Changing solver parameters" through
+  the parameter-swap undo, unchanged settings record nothing), and runs
+  as `run_solver` does: the factory's solver started on the control, the
+  GLib context iterated until `gnm_solver_finished` with the time limit
+  checked each pass (a 100 ms ticker keeps the wait from blocking), the
+  result stored, the reports created inside sheet-state undo and redo,
+  "Running solver" as one command.  The dialog's entries force absolute
+  references with the sheet implicit, so rules read back as "$C$1 ≤ 4".
+- Engine bug, patched (`patches/0004-solver-constant-bound.patch`,
+  engine rebuilt): a constraint's constant right-hand side was zeroed
+  when deriving the variables' bounds (`cell_is_constant` for the
+  missing cell), so "A1 ≤ 3" with Assume Non-Negative became an
+  equality that `nlsolve` refuses; the program report asked
+  `cell_name` for the same missing cell (CRITICAL).  Both the GTK's.
+  `nlsolve` is a local non-linear method: on the test's small LP it
+  stops at a feasible point (2.2, 1.8) rather than the corner (3, 1).
+  An infeasible start is "The initial values do not satisfy the
+  constraints." with no solution stored.
+- `SolverDialog.swift` (Tools → Solver…): the parameters, model and
+  algorithm (functional ones), the constraints table with its editor
+  (Add, Change, Delete; a rule the engine refuses is not added), the
+  options and reports; Solve records and runs, then shows the outcome
+  (status, problem status, objective, elapsed); Save only records.  The
+  run blocks the window until the solver finishes or the time limit
+  passes (the GTK nests its main loop the same way; no Stop button yet).
+- `Tests/BridgeTests/solver.m` (21 XCTest programs now) and
+  `GNM_SNAPSHOT_SOLVE=1` (the LP through the dialog, captured to
+  `-solve.png`; the grid capture shows the solution).
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -1133,8 +1173,8 @@
    Find and Replace, the Settings window, and Export as Text with
    options, the text import assistant, cell comments, defined names,
    Fill Series, Text to Columns, Goal Seek, conditional formatting, and
-   twelve analysis tools, data validation, and hyperlinks; next the rest
-   of Phase 5 by usage frequency: Solver, the remaining statistics
+   twelve analysis tools, data validation, hyperlinks, and the Solver;
+   next the rest of Phase 5 by usage frequency: the remaining statistics
    (frequencies, histograms, the non-parametric tests, two-factor
    ANOVA, Fourier, Kaplan-Meier, principal components)) from
    `docs/mvp-known-gaps.md`, which also
@@ -1159,8 +1199,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-12: `main` at the hyperlinks commit
-   (after the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-12: `main` at the Solver commit
+   (after hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

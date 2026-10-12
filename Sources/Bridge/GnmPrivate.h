@@ -58,6 +58,7 @@
 #include <tools/analysis-tools.h>
 #include <tools/analysis-regression.h>
 #include <tools/goal-seek.h>
+#include <tools/gnm-solver.h>
 #include <goffice/goffice.h>
 #include <goffice/app/go-cmd-context-impl.h>
 #include <goffice/graph/gog-plot-engine.h>
@@ -209,6 +210,20 @@ GType gnm_cocoa_sheet_control_get_type (void);
 - (instancetype)initWithTitle:(NSString *)title;
 - (GnmAnalysisTool *)_newEngineTool;
 - (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool engine:(GnmEngine *)engine error:(NSError **)error;
+@end
+
+@interface GnmSolverAlgorithm ()
+- (instancetype)initWithFactory:(GnmSolverFactory *)factory NS_DESIGNATED_INITIALIZER;
+@end
+
+@interface GnmSolverSettings ()
+- (instancetype)initWithParameters:(GnmSolverParameters *)param sheet:(nullable Sheet *)sheet NS_DESIGNATED_INITIALIZER;
+/// extract_settings: write the settings into a sheet's parameters.
+- (void)_fillParameters:(GnmSolverParameters *)param sheet:(Sheet *)sheet;
+@end
+
+@interface GnmSolverOutcome ()
+- (instancetype)initWithSolver:(GnmSolver *)solver NS_DESIGNATED_INITIALIZER;
 @end
 
 @interface GnmCellComment ()

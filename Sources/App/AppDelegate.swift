@@ -472,6 +472,55 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_SOLVE"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // The Solver: maximize B1 = 3*A1 + 2*A2 with A1 + A2 <= 4 and
+                // A1 <= 3, non-negative, through the dialog (captured to
+                // `-solve.png`); the grid capture shows A1 = 3, A2 = 1, B1 = 11.
+                do {
+                    try sheet.setText("1", atColumn: 0, row: 0, autocorrect: false)
+                    try sheet.setText("1", atColumn: 0, row: 1, autocorrect: false)
+                    try sheet.setText("=3*A1+2*A2", atColumn: 1, row: 0, autocorrect: false)
+                    try sheet.setText("=A1+A2", atColumn: 2, row: 0, autocorrect: false)
+                } catch {
+                    NSLog("solve: data failed: %@", error.localizedDescription)
+                }
+                SolverDialog.headlessDriver = { dialog in
+                    dialog.targetField.stringValue = "B1"
+                    dialog.goal.selectItem(at: 0)
+                    dialog.inputField.stringValue = "A1:A2"
+                    dialog.model.selectItem(at: 2)
+                    dialog.nonNegative.state = .on
+                    dialog.lhsField.stringValue = "C1"
+                    dialog.kind.selectItem(at: 0)
+                    dialog.rhsField.stringValue = "4"
+                    dialog.addRule(nil)
+                    dialog.lhsField.stringValue = "A1"
+                    dialog.rhsField.stringValue = "3"
+                    dialog.addRule(nil)
+                    NSLog("solve: dialog algorithms %@; rules %ld", dialog.algorithms.map(\.identifier), dialog.rules.count)
+                    if let content = dialog.alert.accessoryView {
+                        content.layoutSubtreeIfNeeded()
+                        if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                            content.cacheDisplay(in: content.bounds, to: rep)
+                            let solvePath = (path as NSString).deletingPathExtension + "-solve.png"
+                            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: solvePath))
+                            NSLog("solve: captured %@ (%@)", solvePath, NSStringFromRect(content.bounds))
+                        }
+                    }
+                    return true
+                }
+                controller.solver(nil)
+                SolverDialog.headlessDriver = nil
+                let outcome = WorkbookWindowController.lastSolverOutcome
+                NSLog("solve: status=%@ quality=%ld objective=%g A1=%@ A2=%@ B1=%@ undo=%@", outcome?.status ?? "nil", outcome?.quality.rawValue ?? -1,
+                      outcome?.objectiveValue ?? .nan, sheet.displayTextOfCell(atColumn: 0, row: 0) ?? "nil",
+                      sheet.displayTextOfCell(atColumn: 0, row: 1) ?? "nil", sheet.displayTextOfCell(atColumn: 1, row: 0) ?? "nil",
+                      sheet.workbook?.undoLabel ?? "nil")
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_LINK"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

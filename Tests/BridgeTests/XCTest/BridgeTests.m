@@ -90,5 +90,6 @@
 - (void)testAnalysis { [self runProgram:@"analysis"]; }
 - (void)testValidation { [self runProgram:@"validation"]; }
 - (void)testHyperlink { [self runProgram:@"hyperlink"]; }
+- (void)testSolver { [self runProgram:@"solver"]; }
 
 @end

@@ -345,15 +345,17 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    `GnmValidation.h`, `ValidationDialog.swift`, the grid's entry check,
    `validation.m`) and hyperlinks (Insert → Hyperlink…; `GnmHyperlink.h`,
    `HyperlinkDialog.swift`, the grid's click and tool tip, `hyperlink.m`)
-   followed. Next, by usage: Solver, the remaining statistics on the
-   same pattern;
+   and the Solver (Tools → Solver…; `GnmSolver.h`, `SolverDialog.swift`,
+   `solver.m`, engine patch 0004) followed. Next, by usage: the
+   remaining statistics on the analysis pattern, a Stop button and
+   progress for long solver runs;
    image and widget editors (`cmd_so_set_*`) later; the smaller Phase 3
    gaps (Insert/Delete Cells,
    Goto and the name box, the formula bar, autocomplete, drag and drop,
    outlines) as filler.
 6. Headless checks for all of it: `GNM_SNAPSHOT=out.png scripts/run-app.sh
    file` plus `GNM_SNAPSHOT_TYPE`, `_FORMAT`, `_PHASE3`, `_FREEZE`,
-   `_SHEETS`, `_FILTER`, `_OBJECTS`, `_CHART`, `_EDITOR`, `_EVERYDAY`, `_FIND`, `_PREFS`, `_TEXT`, `_IMPORT`, `_COMMENT`, `_NAMES`, `_FILL`, `_GOAL`, `_COND`, `_STATS`, `_VALID`, `_LINK`, `_ZOOM` (`docs/build.md`); compare `out.png` with
+   `_SHEETS`, `_FILTER`, `_OBJECTS`, `_CHART`, `_EDITOR`, `_EVERYDAY`, `_FIND`, `_PREFS`, `_TEXT`, `_IMPORT`, `_COMMENT`, `_NAMES`, `_FILL`, `_GOAL`, `_COND`, `_STATS`, `_VALID`, `_LINK`, `_SOLVE`, `_ZOOM` (`docs/build.md`); compare `out.png` with
    `out-window.png`. Engine fixes go to `patches/` (0001 decouplings, 0002
    Merge and Center, 0003 analysis tool undo); `scripts/build-gnumeric.sh` re-applies them and
    takes a few minutes.

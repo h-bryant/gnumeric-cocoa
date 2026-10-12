@@ -1,0 +1,42 @@
+Keep a constraint's constant right-hand side in the bounds and the report.
+
+gnm_solver_update_derived turns constraints on the input cells into the
+variables' bounds.  For a constant right-hand side,
+gnm_solver_constraint_get_part puts the constant in *cr and no cell in
+*rhs; cell_is_constant then overwrote *cr with 0 for the missing cell, so
+"A1 <= 3" bounded A1 by 0, and with "Assume Non-Negative" the bounds met
+and Gnumeric's own solver refused the problem as an equality constraint.
+The program report's gnm_solver_constraint_part_as_str likewise asked
+cell_name for the missing cell (a CRITICAL and an empty right-hand side
+in the report).  Found through the Cocoa front end on 2026-10-12; the GTK
+front end runs the same code.  Leave *pc alone when there is no cell
+(get_part set it to 0 for an empty cell and to the constant otherwise),
+and write the constant through gnm_solver_constraint_side_as_str.
+
+--- a/src/tools/gnm-solver.c	2026-10-12 18:20:00
++++ b/src/tools/gnm-solver.c	2026-10-12 18:20:00
+@@ -485,7 +485,10 @@
+ 	g_string_append (buf, translate ? _(type) : type);
+ 	if (gnm_solver_constraint_has_rhs (c)) {
+ 		g_string_append_c (buf, ' ');
+-		g_string_append (buf, cell_name (rhs));
++		if (rhs)
++			g_string_append (buf, cell_name (rhs));
++		else	/* a constant */
++			gnm_solver_constraint_side_as_str (c, sp->sheet, buf, FALSE);
+ 	}
+ 
+ 	return g_string_free (buf, FALSE);
+@@ -1470,10 +1473,9 @@
+ static gboolean
+ cell_is_constant (GnmCell *cell, gnm_float *pc)
+ {
+-	if (!cell) {
+-		*pc = 0;
++	/* No cell: an empty one, or a constant the caller put in *pc.  */
++	if (!cell)
+ 		return TRUE;
+-	}
+ 
+ 	if (cell->base.texpr)
+ 		return FALSE;

@@ -23,6 +23,7 @@
 #import <GnmCocoa/GnmAnalysis.h>
 #import <GnmCocoa/GnmValidation.h>
 #import <GnmCocoa/GnmHyperlink.h>
+#import <GnmCocoa/GnmSolver.h>
 #import <GnmCocoa/GnmSearch.h>
 #import <GnmCocoa/GnmTextExport.h>
 #import <GnmCocoa/GnmTextImport.h>

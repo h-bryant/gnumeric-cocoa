@@ -159,6 +159,7 @@ enum MainMenu {
 
         let toolsMenu = NSMenu(title: "Tools")
         toolsMenu.addItem(withTitle: "Goal Seek…", action: Selector(("goalSeek:")), keyEquivalent: "")
+        toolsMenu.addItem(withTitle: "Solver…", action: Selector(("solver:")), keyEquivalent: "")
         let statisticsMenu = NSMenu(title: "Statistics")
         statisticsMenu.addItem(withTitle: "Descriptive Statistics…", action: Selector(("descriptiveStatistics:")), keyEquivalent: "")
         statisticsMenu.addItem(withTitle: "Correlation…", action: Selector(("correlation:")), keyEquivalent: "")

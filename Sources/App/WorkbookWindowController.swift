@@ -458,7 +458,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
              #selector(goalSeek(_:)), #selector(conditionalFormatting(_:)), #selector(descriptiveStatistics(_:)),
              #selector(correlation(_:)), #selector(covariance(_:)), #selector(regression(_:)), #selector(dataValidation(_:)),
              #selector(meanTest(_:)), #selector(varianceTest(_:)), #selector(anovaSingleFactor(_:)), #selector(ranking(_:)),
-             #selector(sampling(_:)), #selector(movingAverage(_:)), #selector(exponentialSmoothing(_:)), #selector(insertHyperlink(_:)):
+             #selector(sampling(_:)), #selector(movingAverage(_:)), #selector(exponentialSmoothing(_:)), #selector(insertHyperlink(_:)),
+             #selector(solver(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(removeSheet(_:)):
             return gridView.sheet != nil && workbook.canRemoveSheets
@@ -994,6 +995,59 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
                 present(error)
             }
         }
+    }
+
+    // MARK: Solver
+
+    /// For the headless checks: the last run's outcome.
+    nonisolated(unsafe) static var lastSolverOutcome: SolverOutcome?
+
+    /// Tools → Solver…: the GTK dialog as an alert sheet; Solve records
+    /// the settings and runs to the end, then shows the outcome.
+    @objc func solver(_ sender: Any?) {
+        guard let window, let sheet = gridView.sheet, window.attachedSheet == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let dialog = SolverDialog(sheet: sheet)
+        dialog.present(in: window) { [weak self] settings, solve in
+            guard let self else { return true }
+            do {
+                try sheet.setSolverSettings(settings)
+            } catch {
+                presentMessage(error.localizedDescription)
+                return false
+            }
+            guard solve else { return true }
+            do {
+                let outcome = try sheet.runSolver()
+                Self.lastSolverOutcome = outcome
+                presentSolverOutcome(outcome)
+            } catch {
+                presentMessage(error.localizedDescription)
+            }
+            return true
+        }
+    }
+
+    /// The dialog's Results page: the solver and problem status, the
+    /// objective value, the elapsed time.
+    private func presentSolverOutcome(_ outcome: SolverOutcome) {
+        guard let window else { return }
+        let quality: String
+        switch outcome.quality {
+        case .feasible: quality = "Feasible"
+        case .optimal: quality = "Optimal"
+        case .infeasible: quality = "Infeasible"
+        case .unbounded: quality = "Unbounded"
+        default: quality = "None"
+        }
+        var lines = ["Solver status: \(outcome.status)" + (outcome.reason.map { " (\($0))" } ?? ""), "Problem status: \(quality)"]
+        if outcome.hasSolution { lines.append("Objective value: \(outcome.objectiveValue)") }
+        lines.append(String(format: "Elapsed time: %.2f s", outcome.elapsedSeconds))
+        let alert = NSAlert()
+        alert.messageText = outcome.hasSolution ? "The solver found a solution." : "The solver found no solution."
+        alert.informativeText = lines.joined(separator: "\n")
+        alert.alertStyle = outcome.hasSolution ? .informational : .warning
+        if ProcessInfo.processInfo.environment["GNM_SNAPSHOT"] == nil { alert.beginSheetModal(for: window) }
     }
 
     // MARK: Hyperlinks
