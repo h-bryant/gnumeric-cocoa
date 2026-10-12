@@ -99,6 +99,8 @@ enum MainMenu {
         insertMenu.addItem(withTitle: "Current Time", action: Selector(("insertCurrentTime:")), keyEquivalent: ":")
         insertMenu.addItem(withTitle: "Current Date and Time", action: Selector(("insertCurrentDateTime:")), keyEquivalent: "")
         insertMenu.addItem(.separator())
+        insertMenu.addItem(withTitle: "Comment…", action: Selector(("insertComment:")), keyEquivalent: "")
+        insertMenu.addItem(.separator())
         insertMenu.addItem(withTitle: "Chart…", action: Selector(("insertChart:")), keyEquivalent: "")
         insertMenu.addItem(withTitle: "Image…", action: Selector(("insertImage:")), keyEquivalent: "")
         menuBar.addItem(submenu(insertMenu, title: "Insert"))

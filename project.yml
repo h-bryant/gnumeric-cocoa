@@ -70,6 +70,8 @@ targets:
     templates: [BridgeTestProgram]
   text_import:
     templates: [BridgeTestProgram]
+  comments:
+    templates: [BridgeTestProgram]
   BridgeTests:
     type: bundle.unit-test
     platform: macOS
@@ -88,6 +90,7 @@ targets:
       - target: preferences
       - target: text_export
       - target: text_import
+      - target: comments
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.github.h-bryant.gnumeric-cocoa.BridgeTests

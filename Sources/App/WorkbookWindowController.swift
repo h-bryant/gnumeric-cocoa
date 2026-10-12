@@ -186,6 +186,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             self?.promptFilterCondition(for: button, choices: choices, custom: custom)
         }
         gridView.requestObjectEditor = { [weak self] object in self?.editObject(object) }
+        gridView.requestCommentEditor = { [weak self] cell in self?.editComment(at: cell) }
         gridView.requestObjectImageSave = { [weak self] object in self?.saveObjectAsImage(object) }
     }
 
@@ -816,6 +817,58 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
 
     @objc func insertCells(_ sender: Any?) { promptCellShift(insert: true) }
     @objc func deleteCells(_ sender: Any?) { promptCellShift(insert: false) }
+
+    // MARK: Comments (Insert → Comment…, the cell's context menu)
+
+    /// The GTK cell comment dialog as a sheet: the author (the user's name
+    /// for a new one) and the text; OK sets it, Remove clears it.
+    func editComment(at cell: CellCoordinate) {
+        guard let window, let sheet = gridView.sheet, window.attachedSheet == nil else { return }
+        let existing = sheet.comment(atColumn: cell.column, row: cell.row)
+        let alert = NSAlert()
+        alert.messageText = (existing == nil ? "Comment for " : "Edit the comment for ") + sheet.name(ofColumn: cell.column) + sheet.name(ofRow: cell.row)
+        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: "Cancel")
+        if existing != nil {
+            alert.addButton(withTitle: "Remove")
+        }
+        let author = NSTextField(string: existing?.author ?? NSFullUserName())
+        author.placeholderString = "Author"
+        let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: 320, height: 110))
+        scroll.hasVerticalScroller = true
+        scroll.borderType = .bezelBorder
+        let text = NSTextView(frame: scroll.bounds)
+        text.isRichText = false
+        text.font = .systemFont(ofSize: NSFont.systemFontSize)
+        text.string = existing?.text ?? ""
+        text.autoresizingMask = [.width]
+        text.textContainer?.widthTracksTextView = true
+        text.isVerticallyResizable = true
+        scroll.documentView = text
+        scroll.heightAnchor.constraint(equalToConstant: 110).isActive = true
+        let stack = NSStackView(views: [author, scroll])
+        stack.orientation = .vertical
+        stack.alignment = .width
+        stack.spacing = 8
+        stack.frame = NSRect(x: 0, y: 0, width: 320, height: 150)
+        alert.accessoryView = stack
+        alert.window.initialFirstResponder = text
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard let self else { return }
+            let newText: String
+            switch response {
+            case .alertFirstButtonReturn: newText = text.string
+            case .alertThirdButtonReturn: newText = ""
+            default: return
+            }
+            do {
+                try sheet.setComment(newText, author: author.stringValue, atColumn: cell.column, row: cell.row)
+            } catch {
+                present(error)
+            }
+            window.makeFirstResponder(gridView)
+        }
+    }
 
     // MARK: Export as Text (the options before a text save)
 

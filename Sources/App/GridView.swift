@@ -17,6 +17,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
             }
             sheet?.delegate = self
             updateFrameSize()
+            updateCommentToolTips()
             scroll(.zero)
             needsDisplay = true
             headerViews.forEach { $0.needsDisplay = true }
@@ -249,6 +250,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         sheet.drawCells(in: dirtyRect, context: context, backgroundColor: NSColor.white.cgColor)
         sheet.drawSheetObjects(in: dirtyRect, context: context)
         drawFilterButtons(of: sheet, dirtyRect: dirtyRect)
+        drawCommentMarkers(of: sheet, dirtyRect: dirtyRect)
         drawMarchingAnts(of: sheet, dirtyRect: dirtyRect)
         drawSelection(of: sheet, dirtyRect: dirtyRect)
         drawObjectSelection(dirtyRect: dirtyRect)
@@ -628,7 +630,25 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     override func menu(for event: NSEvent) -> NSMenu? {
         guard let sheet else { return nil }
         let point = sheetPoint(forViewPoint: convert(event.locationInWindow, from: nil))
-        guard let object = sheet.sheetObject(at: point) else { return nil }
+        guard let object = sheet.sheetObject(at: point) else {
+            // A cell: its comment.
+            if isEditing { commitEditing(text: editor.stringValue, movement: .none) }
+            let cell = CellCoordinate(column: sheet.column(atX: point.x), row: sheet.row(atY: point.y))
+            let selection = sheet.selectedRange
+            let inside = cell.column >= selection.start.column && cell.column <= selection.end.column
+                && cell.row >= selection.start.row && cell.row <= selection.end.row
+            if !inside || sheet.editPosition.column != cell.column || sheet.editPosition.row != cell.row {
+                sheet.selectCell(atColumn: cell.column, row: cell.row)
+            }
+            let menu = NSMenu(title: "Cell")
+            if sheet.comment(atColumn: cell.column, row: cell.row) != nil {
+                menu.addItem(withTitle: "Edit Comment…", action: #selector(insertComment(_:)), keyEquivalent: "")
+                menu.addItem(withTitle: "Delete Comment", action: #selector(deleteComment(_:)), keyEquivalent: "")
+            } else {
+                menu.addItem(withTitle: "Insert Comment…", action: #selector(insertComment(_:)), keyEquivalent: "")
+            }
+            return menu
+        }
         if !selectedObjects.contains(object) {
             select(objects: [object])
         }
@@ -831,6 +851,74 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     /// The drop-down buttons of the sheet's autofilters: a small rounded
     /// square with a triangle in each heading cell, filled with the accent
     /// color while the field has a condition (the GTK arrow's checked state).
+    // MARK: Comments
+
+    /// The GTK comment indicator: a small red triangle in the cell's
+    /// top-right corner (`comment_view_set_bounds`).
+    private static let commentMarkerSize: CGFloat = 6
+
+    private func drawCommentMarkers(of sheet: Sheet, dirtyRect: NSRect) {
+        let range = CellRange(start: CellCoordinate(column: sheet.column(atX: dirtyRect.minX), row: sheet.row(atY: dirtyRect.minY)),
+                              end: CellCoordinate(column: sheet.column(atX: dirtyRect.maxX), row: sheet.row(atY: dirtyRect.maxY)))
+        let comments = sheet.comments(in: range)
+        guard !comments.isEmpty else { return }
+        NSColor(red: 0.85, green: 0.1, blue: 0.1, alpha: 1).setFill()
+        for comment in comments {
+            let frame = sheet.frameOfCell(atColumn: comment.column, row: comment.row)
+            guard !frame.isEmpty, frame.intersects(dirtyRect) else { continue }
+            let size = min(Self.commentMarkerSize, frame.width, frame.height)
+            let path = NSBezierPath()
+            path.move(to: NSPoint(x: frame.maxX - size, y: frame.minY + 1))
+            path.line(to: NSPoint(x: frame.maxX, y: frame.minY + 1))
+            path.line(to: NSPoint(x: frame.maxX, y: frame.minY + 1 + size))
+            path.close()
+            path.fill()
+        }
+    }
+
+    /// One tool tip rect per commented cell, so hovering shows the
+    /// comment (the GTK pane shows it when the pointer enters the marker).
+    private func updateCommentToolTips() {
+        removeAllToolTips()
+        guard let sheet else { return }
+        let whole = CellRange(start: CellCoordinate(column: 0, row: 0),
+                              end: CellCoordinate(column: sheet.columnCount - 1, row: sheet.rowCount - 1))
+        for comment in sheet.comments(in: whole) {
+            let frame = viewRect(forSheetRect: sheet.frameOfCell(atColumn: comment.column, row: comment.row))
+            if !frame.isEmpty {
+                addToolTip(frame, owner: self, userData: nil)
+            }
+        }
+    }
+
+    /// What the tool tip over a cell says: the author, then the text.
+    func commentToolTip(atColumn column: Int, row: Int) -> String? {
+        guard let comment = sheet?.comment(atColumn: column, row: row) else { return nil }
+        return comment.author.isEmpty ? comment.text : "\(comment.author):\n\(comment.text)"
+    }
+
+    @objc func view(_ view: NSView, stringForToolTip tag: NSView.ToolTipTag, point: NSPoint, userData: UnsafeMutableRawPointer?) -> String {
+        guard let sheet else { return "" }
+        let p = sheetPoint(forViewPoint: point)
+        return commentToolTip(atColumn: sheet.column(atX: p.x), row: sheet.row(atY: p.y)) ?? ""
+    }
+
+    /// Insert → Comment… and the cell's context menu: the editor for the
+    /// edit position's comment, provided by the window controller.
+    var requestCommentEditor: ((CellCoordinate) -> Void)?
+
+    @objc func insertComment(_ sender: Any?) {
+        guard let sheet else { return }
+        if isEditing { commitEditing(text: editor.stringValue, movement: .none) }
+        requestCommentEditor?(sheet.editPosition)
+    }
+
+    @objc func deleteComment(_ sender: Any?) {
+        guard let sheet else { return }
+        let cell = sheet.editPosition
+        run { try $0.setComment("", author: "", atColumn: cell.column, row: cell.row) }
+    }
+
     private func drawFilterButtons(of sheet: Sheet, dirtyRect: NSRect) {
         for button in sheet.filterButtons {
             let frame = button.frame
@@ -961,6 +1049,15 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         case #selector(showAllFilteredRows(_:)), #selector(clearAllFiltered(_:)), #selector(clearFormatsFiltered(_:)),
              #selector(clearCommentsFiltered(_:)), #selector(clearContentsFiltered(_:)):
             return sheet.hasFilteredRows
+        case #selector(insertComment(_:)):
+            if let menuItem = item as? NSMenuItem, menuItem.menu?.title != "Cell" {
+                let cell = sheet.editPosition
+                menuItem.title = sheet.comment(atColumn: cell.column, row: cell.row) == nil ? "Comment…" : "Edit Comment…"
+            }
+            return window?.attachedSheet == nil
+        case #selector(deleteComment(_:)):
+            let cell = sheet.editPosition
+            return sheet.comment(atColumn: cell.column, row: cell.row) != nil
         case #selector(editObjectProperties(_:)):
             return selectedObjects.count == 1 && selectedObjects[0].typeName == "SheetObjectGraph" && window?.attachedSheet == nil
         case #selector(saveObjectAsImage(_:)):
@@ -1335,6 +1432,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
 
     func sheetGeometryDidChange(_ sheet: Sheet) {
         updateFrameSize()
+        updateCommentToolTips()
         needsDisplay = true
         headerViews.forEach { $0.needsDisplay = true }
         geometryDidChange?()
@@ -1349,6 +1447,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     }
 
     func sheetObjectsDidChange(_ sheet: Sheet) {
+        updateCommentToolTips()
         let survivors = selectedObjects.filter { $0.isAttached }
         if survivors.count != selectedObjects.count {
             selectedObjects = survivors

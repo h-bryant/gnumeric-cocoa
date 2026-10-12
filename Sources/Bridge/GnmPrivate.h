@@ -164,6 +164,10 @@ GType gnm_cocoa_sheet_control_get_type (void);
 - (void)_engineObjectDidChange;
 @end
 
+@interface GnmCellComment ()
+- (instancetype)initWithComment:(GnmComment *)comment NS_DESIGNATED_INITIALIZER;
+@end
+
 @interface GnmPreferences ()
 - (instancetype)initPrivate NS_DESIGNATED_INITIALIZER;
 @end

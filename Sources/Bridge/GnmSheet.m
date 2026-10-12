@@ -753,6 +753,29 @@ gnm_cocoa_cairo_for_context (CGContextRef context, CGRect rect, cairo_surface_t 
 
 /* ------------------------------------------------------------------------ */
 
+@implementation GnmCellComment
+
+- (instancetype)initWithComment:(GnmComment *)comment
+{
+    if (!(self = [super init]))
+        return nil;
+    GnmRange const *r = sheet_object_get_range (GNM_SO (comment));
+    _column = r ? r->start.col : 0;
+    _row = r ? r->start.row : 0;
+    const char *author = cell_comment_author_get (comment);
+    const char *text = cell_comment_text_get (comment);
+    _author = author ? [NSString stringWithUTF8String:author] : @"";
+    _text = text ? [NSString stringWithUTF8String:text] : @"";
+    return self;
+}
+
+- (NSString *)description
+{
+    return [NSString stringWithFormat:@"<%@ %ld,%ld %@: %@>", self.class, (long) _column, (long) _row, _author, _text];
+}
+
+@end
+
 @implementation GnmSheet {
     Sheet *_sheet;
     SheetView *_sv;
@@ -1746,6 +1769,48 @@ pixels_from_points (Sheet const *sheet, gboolean horizontal, double points)
     sv_selection_set (_sv, &pos, (int) column, (int) row, (int) column, (int) row);
     gnm_sheet_view_make_cell_visible (_sv, (int) column, (int) row, FALSE);
     gnm_sheet_view_update (_sv);
+}
+
+#pragma mark - Comments
+
+- (GnmCellComment *)commentAtColumn:(NSInteger)column row:(NSInteger)row
+{
+    if (_sheet == NULL)
+        return nil;
+    GnmCellPos pos = { (int) column, (int) row };
+    GnmComment *comment = sheet_get_comment (_sheet, &pos);
+    return comment ? [[GnmCellComment alloc] initWithComment:comment] : nil;
+}
+
+- (NSArray<GnmCellComment *> *)commentsInRange:(GnmCellRange)range
+{
+    NSMutableArray *comments = [NSMutableArray array];
+    if (_sheet == NULL)
+        return comments;
+    GnmRange r;
+    range_init (&r, (int) range.start.column, (int) range.start.row, (int) range.end.column, (int) range.end.row);
+    GSList *objects = sheet_objects_get (_sheet, &r, GNM_CELL_COMMENT_TYPE);
+    for (GSList *l = objects; l; l = l->next)
+        [comments addObject:[[GnmCellComment alloc] initWithComment:GNM_CELL_COMMENT (l->data)]];
+    g_slist_free (objects);
+    return comments;
+}
+
+- (BOOL)setCommentText:(NSString *)text author:(NSString *)author atColumn:(NSInteger)column row:(NSInteger)row error:(NSError **)error
+{
+    if (_sheet == NULL || _workbook == nil)
+        return NO;
+    GnmCellPos pos = { (int) column, (int) row };
+    /* The command wants both strings; an empty text clears the comment. */
+    const char *newText = text.UTF8String ?: "";
+    const char *newAuthor = author.UTF8String ?: "";
+    Sheet *sheet = _sheet;
+    BOOL ok = [_workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_set_comment (wbc, sheet, &pos, newText, NULL, newAuthor);
+    } description:[NSString stringWithFormat:@"Could not set the comment of %s.", cellpos_as_string (&pos)] error:error];
+    if (ok)
+        [self _objectsDidChange];
+    return ok;
 }
 
 #pragma mark - Drawing

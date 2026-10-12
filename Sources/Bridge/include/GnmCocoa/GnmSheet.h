@@ -83,6 +83,17 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(SheetDelegate)
 - (void)sheetObjectsDidChange:(GnmSheet *)sheet NS_SWIFT_NAME(sheetObjectsDidChange(_:));
 @end
 
+/// A cell's comment (`GnmComment`): its position, author, and text.
+NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(CellComment)
+@interface GnmCellComment : NSObject
+- (instancetype)init NS_UNAVAILABLE;
++ (instancetype)new NS_UNAVAILABLE;
+@property (nonatomic, readonly) NSInteger column;
+@property (nonatomic, readonly) NSInteger row;
+@property (nonatomic, readonly, copy) NSString *author;
+@property (nonatomic, readonly, copy) NSString *text;
+@end
+
 NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 @interface GnmSheet : NSObject
 
@@ -168,6 +179,16 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 - (BOOL)fillSelectionWithText:(NSString *)text error:(NSError **)error NS_SWIFT_NAME(fillSelection(with:));
 /// Clear parts of the selected cells (`cmd_selection_clear`).
 - (BOOL)clearSelection:(GnmClearOptions)options error:(NSError **)error NS_SWIFT_NAME(clearSelection(_:));
+
+// Comments.
+/// The cell's comment, nil without one (`sheet_get_comment`).
+- (nullable GnmCellComment *)commentAtColumn:(NSInteger)column row:(NSInteger)row NS_SWIFT_NAME(comment(atColumn:row:));
+/// The comments anchored in `range`, for the markers.
+- (NSArray<GnmCellComment *> *)commentsInRange:(GnmCellRange)range NS_SWIFT_NAME(comments(in:));
+/// Set, change, or with nil or empty text remove the cell's comment
+/// (`cmd_set_comment`, undoable as "Setting comment of C3").
+- (BOOL)setCommentText:(nullable NSString *)text author:(nullable NSString *)author atColumn:(NSInteger)column row:(NSInteger)row
+                 error:(NSError **)error NS_SWIFT_NAME(setComment(_:author:atColumn:row:));
 - (BOOL)insertColumns:(NSInteger)count atColumn:(NSInteger)column error:(NSError **)error NS_SWIFT_NAME(insertColumns(_:at:));
 - (BOOL)insertRows:(NSInteger)count atRow:(NSInteger)row error:(NSError **)error NS_SWIFT_NAME(insertRows(_:at:));
 - (BOOL)deleteColumns:(NSRange)columns error:(NSError **)error NS_SWIFT_NAME(deleteColumns(_:));

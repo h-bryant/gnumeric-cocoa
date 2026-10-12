@@ -225,7 +225,7 @@ enum Snapshot {
                let sheet = controller.gridView.sheet {
                 // Exercise the editing path headlessly: type into C3, commit
                 // with Return, undo, redo, then paste a block at E5.
-                sheet.selectCell(atColumn: 2, row: 2)
+                sheet.selectCell(atColumn: 0, row: 2)
                 controller.gridView.beginEditing(initialText: text)
                 controller.gridView.commitEditing(text: text, movement: .down)
                 controller.gridView.undo(nil)
@@ -319,7 +319,7 @@ enum Snapshot {
                 NSLog("phase3: auto-expression '%@'", sheet.workbook?.autoExpressionText ?? "nil")
                 sheet.workbook?.setAutoExpression(function: "average", label: "Average")
                 NSLog("phase3: auto-expression '%@'", sheet.workbook?.autoExpressionText ?? "nil")
-                sheet.selectCell(atColumn: 2, row: 2)
+                sheet.selectCell(atColumn: 0, row: 2)
                 grid.recalculate(nil)
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
@@ -469,6 +469,35 @@ enum Snapshot {
                 NSLog("everyday: documents=%ld untitled=%@ sheets=%ld windows=%ld", NSDocumentController.shared.documents.count,
                       untitled?.displayName ?? "none", untitled?.workbook?.sheets.count ?? 0, untitled?.windowControllers.count ?? 0)
                 untitled?.close()
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_COMMENT"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // A comment on C3: the marker in the capture, the tool tip
+                // text, the context menu's items, and the removal undone.
+                do {
+                    try sheet.setComment("Checked in Cocoa", author: "Hook", atColumn: 0, row: 2)
+                } catch {
+                    NSLog("comment: set failed: %@", error.localizedDescription)
+                }
+                NSLog("comment: A3 tool tip '%@' undo=%@ markers=%ld",
+                      controller.gridView.commentToolTip(atColumn: 0, row: 2)?.replacingOccurrences(of: "\n", with: "|") ?? "nil",
+                      sheet.workbook?.undoLabel ?? "nil",
+                      sheet.comments(in: CellRange(start: CellCoordinate(column: 0, row: 0), end: CellCoordinate(column: 20, row: 20))).count)
+                sheet.selectCell(atColumn: 0, row: 2)
+                let point = controller.gridView.viewRect(forSheetRect: sheet.frameOfCell(atColumn: 0, row: 2))
+                let fake = NSEvent.mouseEvent(with: .rightMouseDown, location: controller.gridView.convert(NSPoint(x: point.midX, y: point.midY), to: nil),
+                                              modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber, context: nil,
+                                              eventNumber: 0, clickCount: 1, pressure: 1)
+                if let fake, let menu = controller.gridView.menu(for: fake) {
+                    NSLog("comment: context menu %@", menu.items.map(\.title))
+                }
+                controller.gridView.deleteComment(nil)
+                NSLog("comment: after delete, comment=%@ undo=%@", sheet.comment(atColumn: 0, row: 2)?.text ?? "nil", sheet.workbook?.undoLabel ?? "nil")
+                controller.gridView.undo(nil)
+                NSLog("comment: after undo, comment=%@", sheet.comment(atColumn: 0, row: 2)?.text ?? "nil")
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }

@@ -843,6 +843,29 @@
   general until guessed again.  `GNM_SNAPSHOT_IMPORT=1` imports a
   semicolon file headlessly (the assistant captured to `-import.png`).
 
+## 2026-10-12: Cell comments
+
+- `GnmSheet` gained comments: `commentAtColumn:row:` and
+  `commentsInRange:` (`sheet_get_comment`, `sheet_objects_get` with
+  the comment type) return `GnmCellComment` values (position, author,
+  text); `setCommentText:author:atColumn:row:` runs `cmd_set_comment`
+  ("Setting comment of C3", or "Clearing comment of C3" for an empty
+  text, which is how the engine removes one; it wants both strings
+  non-NULL).  `Tests/BridgeTests/comments.m` covers set, read, range
+  listing, change, undo and redo, removal, the search finding comments,
+  and Edit → Clear → Comments.
+- The grid draws the GTK indicator (a small red triangle in the cell's
+  top-right corner, `comment_view_set_bounds`) and keeps a tool tip
+  rect per commented cell, so hovering shows "Author:\ntext".  A cell's
+  context menu (new: right-clicking a cell selects it) offers Insert
+  Comment…, or Edit Comment… and Delete Comment; Insert → Comment… (the
+  title says Edit Comment… over one) opens the GTK dialog's equivalent
+  as an alert sheet: the author (the user's full name for a new one)
+  and the text, with Remove for an existing one.
+- `GNM_SNAPSHOT_COMMENT=1` sets a comment on A3, logs the tool tip, the
+  context menu, the removal and its undo, and leaves the marker in the
+  capture.
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -854,8 +877,8 @@
    done; Phase 5 has begun with File → New, Go To and the name box,
    Insert and Delete Cells, the current date and time, Save As CSV,
    Find and Replace, the Settings window, and Export as Text with
-   options, and the text import assistant; next the rest of Phase 5 by
-   usage frequency: cell comments, names, Text to Columns, Fill Series,
+   options, the text import assistant, and cell comments; next the rest
+   of Phase 5 by usage frequency: names, Text to Columns, Fill Series,
    conditional formatting, the analysis tools) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
@@ -879,8 +902,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-12: `main` at the text import
-   assistant commit (after Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-12: `main` at the cell comments
+   commit (after the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in
