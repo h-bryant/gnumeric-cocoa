@@ -162,6 +162,10 @@ GType gnm_cocoa_sheet_control_get_type (void);
 - (void)_engineObjectDidChange;
 @end
 
+@interface GnmPreferences ()
+- (instancetype)initPrivate NS_DESIGNATED_INITIALIZER;
+@end
+
 @interface GnmImageFormat ()
 - (instancetype)initWithFormat:(GOImageFormat)format NS_DESIGNATED_INITIALIZER;
 @property (nonatomic, readonly) GOImageFormat format;

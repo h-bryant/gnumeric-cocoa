@@ -79,5 +79,6 @@
 - (void)testObjects { [self runProgram:@"objects"]; }
 - (void)testChart { [self runProgram:@"chart"]; }
 - (void)testSearch { [self runProgram:@"search"]; }
+- (void)testPreferences { [self runProgram:@"preferences"]; }
 
 @end

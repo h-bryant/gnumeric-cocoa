@@ -25,14 +25,15 @@ final class WorkbookDocument: NSDocument {
         hasUndoManager = false
     }
 
-    /// File → New: an empty workbook with one sheet, the engine's defaults.
+    /// File → New: an empty workbook with the preferred number of sheets
+    /// (Settings → General), the engine's defaults otherwise.
     convenience init(type typeName: String) throws {
         self.init()
         guard let engine = Engine.shared else {
             throw NSError(domain: GnmErrorDomain, code: GnmError.Code.engineNotRunning.rawValue,
                           userInfo: [NSLocalizedDescriptionKey: "The Gnumeric engine is not running."])
         }
-        workbook = engine.makeWorkbook(sheetCount: 1)
+        workbook = engine.makeWorkbook(sheetCount: UInt(max(1, engine.preferences.newWorkbookSheetCount)))
         fileType = typeName
     }
 

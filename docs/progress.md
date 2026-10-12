@@ -752,6 +752,38 @@
   captures it to `-find.png` (the capture omits buttons, as it does tab
   labels).
 
+## 2026-10-12: The Settings window
+
+- `GnmPreferences` (`GnmEngine.preferences`): the engine's configuration
+  keys the app or the engine honors, as properties over `gnm_conf_get_*`
+  and `gnm_conf_set_*`, each write taking effect at once and persisting
+  through GSettings' NSUserDefaults backend under the bundle identifier
+  (ADR-010): the `.gnumeric` compression level, the new-workbook sheet
+  count, rows, columns, and zoom, the default font, where Return moves,
+  the four Auto Correct switches, the undo limits and sheet naming, and
+  the Sort dialog's defaults.  `Tests/BridgeTests/preferences.m` checks
+  the schema's defaults (sheet count 1, undo size 100000, sheet names
+  off in 1.12.62), the round trips and clamping, the Sort defaults
+  following, and the saver writing plain XML at 0 and gzip at 9.
+- Gnumeric → Settings… (⌘,): `PreferencesWindow.swift`, a SwiftUI form
+  in five tabs (General: files and new workbooks; Editing: Return's
+  direction and Auto Correct; Undo; Sorting; Font) over an
+  `ObservableObject` whose `didSet`s write to the bridge.  A standalone
+  hosting window starts at no size, so it is sized from the view's
+  fitting size.  `GNM_SNAPSHOT_PREFS=1` opens it, changes the
+  compression level through the model and reads it back from the
+  engine, captures `-settings.png`, and closes it.
+- What follows the preferences now: File → New makes the preferred
+  number of sheets; Return in the grid and the cell editor moves in the
+  preferred direction (`CellEditorField.Movement.enter`,
+  `GridView.moveAfterReturn`); the Sort dialog already read its
+  defaults.  The launch-time compression override in `AppDelegate` is
+  gone: Henry's 0 is in the app's defaults
+  (`/org/gnome/gnumeric/core/xml/compression-level`), and a fresh
+  install gets the GTK default 9 until changed in Settings.  Reads come
+  from the defaults even with `GNM_PERSIST_PREFS=0`, which only stops
+  writes.
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -761,9 +793,9 @@
    resize, delete, stacking, the chart guru, the object clipboard, images,
    the chart editor with its plot type change, and Save as Image… are
    done; Phase 5 has begun with File → New, Go To and the name box,
-   Insert and Delete Cells, the current date and time, Save As CSV, and
-   Find and Replace; next the Preferences window and the text export
-   options) from
+   Insert and Delete Cells, the current date and time, Save As CSV,
+   Find and Replace, and the Settings window; next the text import and
+   export options, then the rest of Phase 5 by usage frequency) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -786,8 +818,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-12: `main` at the Find and Replace
-   commit (after the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-12: `main` at the Settings window
+   commit (after Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

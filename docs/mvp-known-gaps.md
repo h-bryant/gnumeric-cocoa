@@ -33,7 +33,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | EditPasteSpecial | ported | Edit → Paste Special… (⌘⇧V): what, operation, region transform, the four switches, Paste Link |
 | EditFind, EditReplace | ported | Edit → Find… (⌘F) and Find and Replace… (⌥⌘F), one floating panel with the GTK dialogs' options and the matches list (2026-10-12) |
 | EditRecalc | ported | Data → Recalculate (F9), `workbook_recalc_all` |
-| EditPreferences | no | Phase 5; until then `AppDelegate` sets the `.gnumeric` compression level to 0 (plain XML) at every launch |
+| EditPreferences | partial | Gnumeric → Settings… (⌘,) with the GTK pages that have an effect here: files (compression), new workbooks, Return's direction, Auto Correct, undo, sorting, default font (2026-10-12); no header/footer font, screen DPI, autosave, or copy-and-paste pages |
 | EditClearContent | ported | Delete key and Edit → Delete |
 | EditClearAll, EditClearFormats, EditClearComments | ported | Edit → Clear submenu |
 | EditClear*Filtered (4) | ported | Edit → Clear → "… Filtered Rows" (2026-10-12); as in GTK they skip the rows a filter hides |
@@ -136,7 +136,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | Column and row header drag resizing, double-click autosize | ported | 2026-10-11; resizes every selected column (row) when the dragged one is selected |
 | Sheet tab context menu, tab colors | partial | context menu 2026-10-11; Tab Color… 2026-10-12 shows the background as a swatch before the name (the text color is kept in the file, not shown) |
 | Printing and page setup | no | Phase 3+ (`NSPrintOperation` with the engine's `print-cell.c`) |
-| Preferences window | no | Phase 5 |
+| Preferences window | partial | see EditPreferences (2026-10-12) |
 | Plugin manager | no | Phase 5 |
 | Localization of the UI (the engine's messages follow the process locale) | no | Phase 7 |
 | Bundled distribution (dylibs, plugins, schemas inside the `.app`) | no | Phase 6 |

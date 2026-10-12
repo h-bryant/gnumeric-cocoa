@@ -10,6 +10,7 @@
 
 #import <GnmCocoa/GnmGeometry.h>
 #import <GnmCocoa/GnmError.h>
+#import <GnmCocoa/GnmPreferences.h>
 #import <GnmCocoa/GnmEngine.h>
 #import <GnmCocoa/GnmWorkbook.h>
 #import <GnmCocoa/GnmCellFormat.h>

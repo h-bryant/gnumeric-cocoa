@@ -133,6 +133,14 @@ static BOOL engineWasStarted;   /* gnm_init cannot be repeated in one process */
     NSUInteger _collectionDepth;             /* commands nest: a paste that inserts an image */
     NSHashTable<GnmWorkbook *> *_workbooks;
     char *_argv0;
+    GnmPreferences *_preferences;
+}
+
+- (GnmPreferences *)preferences
+{
+    if (!_preferences)
+        _preferences = [[GnmPreferences alloc] initPrivate];
+    return _preferences;
 }
 
 + (GnmEngine *)shared

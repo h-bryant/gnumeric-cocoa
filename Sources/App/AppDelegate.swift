@@ -5,6 +5,16 @@ import GnmCocoa
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var engine: Engine?
+    private(set) var settings: PreferencesWindowController?
+
+    /// Gnumeric → Settings… (⌘,): the engine's preferences the app honors.
+    @objc func showSettings(_ sender: Any?) {
+        guard let engine else { return }
+        if settings == nil {
+            settings = PreferencesWindowController(preferences: engine.preferences)
+        }
+        settings?.show()
+    }
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         NSApp.mainMenu = MainMenu.build()
@@ -90,11 +100,9 @@ enum EngineLocator {
         if let prefix {
             configuration.settingsSchemaDirectory = prefix + "/share/glib-2.0/schemas"
         }
-        // Henry's standing choice (2026-10-12): `.gnumeric` files as plain
-        // XML, the GTK preference's 0, so they diff under version control.
-        // Set here at every launch until the Preferences window exists;
-        // remove this line when it does.
-        configuration.xmlCompressionLevel = 0
+        // The compression level of `.gnumeric` files is a preference
+        // (Settings → General; Henry's choice of 0, plain XML, is in the
+        // app's defaults since 2026-10-12), so nothing is set here.
         return configuration
     }
 }
@@ -431,6 +439,34 @@ enum Snapshot {
                 untitled?.close()
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
+            }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_PREFS"] != nil,
+               let delegate = NSApp.delegate as? AppDelegate, let engine = Engine.shared {
+                // Settings: the window captured to `-settings.png`, a change
+                // in the model reaching the engine, then put back.
+                delegate.showSettings(nil)
+                if let settings = delegate.settings {
+                    let level = engine.preferences.xmlCompressionLevel
+                    settings.model.xmlCompressionLevel = level == 5 ? 4 : 5
+                    NSLog("settings: compression %ld -> engine says %ld; sheets %ld, enter %ld, font %@ %g",
+                          level, engine.preferences.xmlCompressionLevel, engine.preferences.newWorkbookSheetCount,
+                          engine.preferences.enterMovesDirection.rawValue, engine.preferences.defaultFontName,
+                          engine.preferences.defaultFontSize)
+                    settings.model.xmlCompressionLevel = level
+                    settings.window.layoutIfNeeded()
+                    NSLog("settings: window frame %@ visible=%d content %@", NSStringFromRect(settings.window.frame),
+                          settings.window.isVisible ? 1 : 0, NSStringFromRect(settings.window.contentView?.bounds ?? .zero))
+                    if let content = settings.window.contentView {
+                        content.layoutSubtreeIfNeeded()
+                        if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                            content.cacheDisplay(in: content.bounds, to: rep)
+                            let settingsPath = (path as NSString).deletingPathExtension + "-settings.png"
+                            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: settingsPath))
+                            NSLog("settings: captured %@ (%@)", settingsPath, NSStringFromRect(content.bounds))
+                        }
+                    }
+                    settings.window.close()
+                }
             }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FIND"] != nil,
                let controller = window.windowController as? WorkbookWindowController,

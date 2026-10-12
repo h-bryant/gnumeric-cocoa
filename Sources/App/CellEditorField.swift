@@ -5,7 +5,8 @@ import AppKit
 /// `onCommit` and `onCancel`; the field itself handles text editing.
 @MainActor
 final class CellEditorField: NSTextField, NSTextFieldDelegate {
-    enum Movement { case none, down, up, right, left }
+    /// `enter` is Return: where it goes is a preference (down by default).
+    enum Movement { case none, enter, down, up, right, left }
     var onCommit: ((String, Movement) -> Void)?
     var onCancel: (() -> Void)?
     var onTextChange: ((String) -> Void)?
@@ -35,7 +36,7 @@ final class CellEditorField: NSTextField, NSTextFieldDelegate {
     func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
         switch commandSelector {
         case #selector(NSResponder.insertNewline(_:)):
-            onCommit?(stringValue, .down)
+            onCommit?(stringValue, .enter)
         case #selector(NSResponder.insertTab(_:)):
             onCommit?(stringValue, .right)
         case #selector(NSResponder.insertBacktab(_:)):

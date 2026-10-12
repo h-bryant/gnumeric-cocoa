@@ -400,11 +400,23 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
             return
         }
         switch movement {
+        case .enter: moveAfterReturn()
         case .down: move(columns: 0, rows: 1, extend: false)
         case .up: move(columns: 0, rows: -1, extend: false)
         case .right: move(columns: 1, rows: 0, extend: false)
         case .left: move(columns: -1, rows: 0, extend: false)
         case .none: break
+        }
+    }
+
+    /// Where Return moves: the preference (`core/gui/editing/enter_moves_dir`),
+    /// down unless changed in Settings.
+    private func moveAfterReturn() {
+        switch Engine.shared?.preferences.enterMovesDirection ?? .down {
+        case .up: move(columns: 0, rows: -1, extend: false)
+        case .left: move(columns: -1, rows: 0, extend: false)
+        case .right: move(columns: 1, rows: 0, extend: false)
+        default: move(columns: 0, rows: 1, extend: false)
         }
     }
 
@@ -1302,7 +1314,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     override func insertBacktab(_ sender: Any?) {
         if selectedObjects.isEmpty { move(columns: -1, rows: 0, extend: false) } else { selectNextObject(reverse: true) }
     }
-    override func insertNewline(_ sender: Any?) { move(columns: 0, rows: 1, extend: false) }
+    override func insertNewline(_ sender: Any?) { moveAfterReturn() }
 
     // MARK: SheetDelegate
 

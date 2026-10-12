@@ -2,6 +2,7 @@
 // (docs/architecture.md §2) wrapped in one main-thread singleton.
 #import <Foundation/Foundation.h>
 #import <GnmCocoa/GnmError.h>
+#import <GnmCocoa/GnmPreferences.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -62,6 +63,8 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Engine)
 - (void)shutdown;
 
 @property (nonatomic, readonly, copy) GnmEngineConfiguration *configuration;
+/// The engine's preferences, read and written live (`GnmPreferences.h`).
+@property (nonatomic, readonly) GnmPreferences *preferences;
 @property (nonatomic, readonly, copy) NSString *version;
 @property (nonatomic, readonly) NSUInteger availablePluginCount;
 @property (nonatomic, readonly) NSUInteger activePluginCount;
