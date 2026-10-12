@@ -109,6 +109,67 @@ int main (void)
         [wb undo];
         GNM_ASSERT (s.sheetObjects.firstObject == chart, @"undo of the push");
 
+        /* the plot type catalogue, and a chart built from the selection */
+        NSArray<GnmPlotType *> *types = GnmPlotType.allTypes;
+        GNM_ASSERT (types.count > 50, @"%lu plot types", (unsigned long) types.count);
+        GNM_ASSERT (types.firstObject.familyPriority >= types.lastObject.familyPriority, @"families by priority");
+        NSLog (@"first plot type: %@ (priority %ld), %lu types", types.firstObject, (long) types.firstObject.familyPriority,
+               (unsigned long) types.count);
+        GnmPlotType *column = nil;
+        for (GnmPlotType *t in types)
+            if (column == nil && [t.family isEqualToString:@"Column"] && [t.engine isEqualToString:@"GogBarColPlot"])
+                column = t;
+        GNM_ASSERT (column != nil && column.name.length > 0 && column.summary.length > 0, @"a column type: %@", column);
+        NSData *png = column.sampleImageData;
+        GNM_ASSERT (png.length > 8 && ((unsigned char const *) png.bytes)[1] == 'P' && ((unsigned char const *) png.bytes)[2] == 'N',
+                    @"sample image is a PNG of %lu bytes", (unsigned long) png.length);
+        CGSize chartSize = s.defaultChartSize;
+        GNM_ASSERT (chartSize.width > 100 && chartSize.height > 100 && chartSize.width > chartSize.height, @"default size %@",
+                    NSStringFromSize (chartSize));
+        [s selectRange:GnmCellRangeMake (0, 0, 3, 5) editPosition:GnmCellCoordinateMake (0, 0)];   /* A1:D6: labels and three series */
+        CGRect where = CGRectMake (400, 300, chartSize.width, chartSize.height);
+        NSUInteger before = s.sheetObjects.count;
+        GnmSheetObject *inserted = [s insertChartOfType:column seriesLayout:GnmChartSeriesLayoutAuto sharedAbscissa:NO frame:where error:&error];
+        GNM_ASSERT (inserted != nil, @"insert chart: %@", error);
+        GNM_ASSERT (inserted.isAttached && [inserted.typeName isEqualToString:@"SheetObjectGraph"] && s.sheetObjects.count == before + 1,
+                    @"chart on the sheet: %@", inserted);
+        GNM_ASSERT (rect_close (inserted.frame, where), @"chart at %@", NSStringFromRect (inserted.frame));
+        GNM_ASSERT (s.sheetObjects.firstObject == inserted && inserted.isSelectable && inserted.canResize, @"new chart in front");
+        GNM_ASSERT_EQ_STR (wb.undoLabel ?: @"", @"Insert 1 Object");
+        {
+            CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB ();
+            CGContextRef ctx = CGBitmapContextCreate (NULL, 900, 700, 8, 0, space, kCGImageAlphaPremultipliedLast);
+            CGContextTranslateCTM (ctx, 0, 700);
+            CGContextScaleCTM (ctx, 1, -1);
+            CGContextSetRGBFillColor (ctx, 1, 1, 1, 1);
+            CGContextFillRect (ctx, CGRectMake (0, 0, 900, 700));
+            [s drawSheetObjectsInRect:where context:ctx];
+            unsigned char const *pixels = CGBitmapContextGetData (ctx);
+            size_t stride = CGBitmapContextGetBytesPerRow (ctx);
+            unsigned dark = 0;
+            for (int y = (int) where.origin.y; y < (int) CGRectGetMaxY (where); y += 3)
+                for (int x = (int) where.origin.x; x < (int) CGRectGetMaxX (where); x += 3)
+                    if (pixels[(size_t) (700 - 1 - y) * stride + (size_t) x * 4] < 128)
+                        dark++;
+            GNM_ASSERT (dark > 50, @"the chart drew something (%u dark samples)", dark);
+            CGContextRelease (ctx);
+            CGColorSpaceRelease (space);
+        }
+        [wb undo];
+        GNM_ASSERT (!inserted.isAttached && s.sheetObjects.count == before, @"insertion undone");
+        [wb redo];
+        GNM_ASSERT (inserted.isAttached && s.sheetObjects.count == before + 1, @"insertion redone");
+        [wb undo];
+        GnmPlotType *pie = nil;
+        for (GnmPlotType *t in types)
+            if (pie == nil && [t.engine isEqualToString:@"GogPiePlot"])
+                pie = t;
+        GNM_ASSERT (pie != nil, @"a pie type");
+        [s selectRange:GnmCellRangeMake (0, 1, 1, 5) editPosition:GnmCellCoordinateMake (0, 1)];   /* A2:B6: labels and one series */
+        inserted = [s insertChartOfType:pie seriesLayout:GnmChartSeriesLayoutColumns sharedAbscissa:YES frame:where error:&error];
+        GNM_ASSERT (inserted != nil && inserted.isAttached, @"pie: %@", error);
+        [wb undo];
+
         /* an autofilter's combo is a sheet object the user cannot select;
          * drawing with it present must not crash (no cairo renderer) */
         [s setText:@"h" atColumn:50 row:50 autocorrect:NO error:NULL];

@@ -1856,6 +1856,71 @@ anchor_from_frame (Sheet const *sheet, CGRect frame, SheetObjectAnchor *in_out)
     } description:@"Could not restack the object." error:error];
 }
 
+#pragma mark - Charts
+
+- (CGSize)defaultChartSize
+{
+    /* gnm_sog_default_size: 12 by 8 cm in points, at the sheet's scale */
+    return CGSizeMake (GO_CM_TO_PT (12.0) * colrow_compute_pixel_scale (_sheet, TRUE),
+                       GO_CM_TO_PT (8.0) * colrow_compute_pixel_scale (_sheet, FALSE));
+}
+
+- (GnmSheetObject *)insertChartOfType:(GnmPlotType *)type seriesLayout:(GnmChartSeriesLayout)layout
+                       sharedAbscissa:(BOOL)shared frame:(CGRect)frame error:(NSError **)error
+{
+    if (_sv == NULL || type.engineType == NULL)
+        return nil;
+    GogPlot *plot = gog_plot_new_by_type (type.engineType);
+    if (plot == NULL) {
+        if (error)
+            *error = [self.workbook.engine _errorWithCode:GnmErrorCommandFailed
+                                             description:[NSString stringWithFormat:@"The plot type %@ is not available.", type.engine]
+                                               collected:@[]];
+        return nil;
+    }
+    /* The guru's new graph: a chart holding the plot, the series read from
+     * the selection through the data closure sv_selection_to_plot expects. */
+    GogGraph *graph = g_object_new (GOG_TYPE_GRAPH, NULL);
+    GogObject *chart = gog_object_add_by_name (GOG_OBJECT (graph), "Chart", NULL);
+    gog_object_add_by_name (chart, "Plot", GOG_OBJECT (plot));
+    GnmGraphDataClosure closure = { 0 };
+    closure.colrowmode = (int) layout;
+    closure.share_x = shared;
+    closure.anchor_mode = GNM_SO_ANCHOR_ONE_CELL;   /* graphs do not resize with cells */
+    g_object_set_data (G_OBJECT (graph), "data-closure", &closure);
+    sv_selection_to_plot (_sv, plot);
+    g_object_set_data (G_OBJECT (graph), "data-closure", NULL);
+    NSString *hints = [type propertyNamed:@"guru-hints"];
+    if ([hints containsString:@"backplane"])
+        gog_object_add_by_name (chart, "Backplane", NULL);
+    if ([hints containsString:@"major-grid"]) {
+        GSList *axes = gog_chart_get_axes (GOG_CHART (chart), GOG_AXIS_Y);
+        if (axes)
+            gog_object_add_by_name (GOG_OBJECT (axes->data), "MajorGrid", NULL);
+        g_slist_free (axes);
+    }
+    if (g_slist_length ((GSList *) gog_plot_get_series (plot)) > 1)
+        gog_object_add_by_name (chart, "Legend", NULL);
+
+    SheetObject *so = sheet_object_graph_new (graph);   /* takes its own reference */
+    g_object_unref (graph);
+    SheetObjectAnchor anchor;
+    sheet_object_anchor_init (&anchor, NULL, NULL, GOD_ANCHOR_DIR_DOWN_RIGHT, GNM_SO_ANCHOR_ONE_CELL);
+    anchor_from_frame (_sheet, frame, &anchor);
+    sheet_object_set_anchor (so, &anchor);
+    sheet_object_set_sheet (so, _sheet);
+    /* As scg_objects_drag_commit does for a created object: the command
+     * owns the insertion, so undo removes the chart again. */
+    GSList *objects = g_slist_prepend (NULL, so);
+    GSList *anchors = g_slist_prepend (NULL, sheet_object_anchor_dup (&anchor));
+    BOOL ok = [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_objects_move (wbc, objects, anchors, TRUE, "Insert 1 Object");   /* takes both lists */
+    } description:@"Could not insert the chart." error:error];
+    GnmSheetObject *wrapper = ok ? [self _wrapperForObject:so] : nil;
+    g_object_unref (so);   /* the sheet and the command hold theirs */
+    return wrapper;
+}
+
 #pragma mark - Control callbacks
 
 - (void)_controlNeedsDisplayIncludingHeaders:(BOOL)headers

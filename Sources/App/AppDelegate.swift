@@ -325,6 +325,49 @@ enum Snapshot {
                 view.displayIfNeeded()
             }
             }
+            autoreleasepool {
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_CHART"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // A clustered column chart from A1:D6 through the guru's
+                // outcome, placed where the guru would put it, selected.
+                let grid = controller.gridView
+                let types = PlotType.allTypes
+                let column = types.first { $0.family == "Column" && $0.engine == "GogBarColPlot" }
+                NSLog("chart: %ld plot types, first family %@, column type %@ image=%ld bytes", types.count,
+                      types.first?.family ?? "nil", column?.name ?? "nil", column?.sampleImageData?.count ?? 0)
+                if let column {
+                    sheet.selectRange(CellRange(start: CellCoordinate(column: 0, row: 0), end: CellCoordinate(column: 3, row: 5)),
+                                      editPosition: CellCoordinate(column: 0, row: 0))
+                    let frame = grid.suggestedFrameForNewObject(size: sheet.defaultChartSize)
+                    do {
+                        let object = try sheet.insertChart(column, seriesLayout: .auto, sharedAbscissa: false, frame: frame)
+                        grid.select(objects: [object])
+                        NSLog("chart: inserted %@ at %@ undo=%@", object.typeName, NSStringFromRect(object.frame), sheet.workbook?.undoLabel ?? "nil")
+                    } catch {
+                        NSLog("chart: insert failed: %@", error.localizedDescription)
+                    }
+                }
+                // The guru sheet itself, captured to `-guru.png`, then dismissed.
+                let guru = ChartGuru()
+                guru.run(in: window) { _ in }
+                if let content = guru.window.contentView {
+                    content.layoutSubtreeIfNeeded()
+                    if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                        content.cacheDisplay(in: content.bounds, to: rep)
+                        let guruPath = (path as NSString).deletingPathExtension + "-guru.png"
+                        try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: guruPath))
+                        NSLog("chart: guru captured %@ (%@)", guruPath, NSStringFromRect(content.bounds))
+                    }
+                    if ProcessInfo.processInfo.environment["GNM_DEBUG_LAYOUT"] != nil {
+                        dump(view: content, depth: 0)
+                    }
+                }
+                guru.cancel()
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_SHEETS"] != nil,
                let controller = window.windowController as? WorkbookWindowController {
                 // Sheet management through the controller's actions.

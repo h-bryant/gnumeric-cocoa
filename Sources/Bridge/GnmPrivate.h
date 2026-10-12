@@ -45,10 +45,14 @@
 #include <sheet-filter-combo.h>
 #include <sheet-object-impl.h>
 #include <sheet-object-cell-comment.h>
+#include <sheet-object-graph.h>
+#include <graph.h>
 #include <sheet-utils.h>
 #include <tools/filter.h>
 #include <goffice/goffice.h>
 #include <goffice/app/go-cmd-context-impl.h>
+#include <goffice/graph/gog-plot-engine.h>
+#include <goffice/utils/go-rsm.h>
 #include <gsf/gsf-impl-utils.h>
 #include <cairo.h>
 #include <cairo-quartz.h>
@@ -147,6 +151,13 @@ GType gnm_cocoa_sheet_control_get_type (void);
 @property (nonatomic, readonly, nullable) SheetObject *engineObject;
 - (void)_detachFromEngine;
 - (void)_engineObjectDidChange;
+@end
+
+@interface GnmPlotType ()
+- (instancetype)initWithEngineType:(GogPlotType const *)type NS_DESIGNATED_INITIALIZER;
+@property (nonatomic, readonly) GogPlotType const *engineType;
+/// A value from the type's property table ("guru-hints", "type", ...).
+- (nullable NSString *)propertyNamed:(NSString *)name;
 @end
 
 @interface GnmFilterButton ()

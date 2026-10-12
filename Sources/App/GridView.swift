@@ -580,6 +580,19 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         select(objects: [candidates[next]])
     }
 
+    /// Where a new object of `size` goes: beside the selection when that
+    /// fits in view, else near the top-left of the visible area.
+    func suggestedFrameForNewObject(size: NSSize) -> NSRect {
+        guard let sheet else { return NSRect(origin: .zero, size: size) }
+        let visible = scrollingVisibleRect
+        let selection = rect(of: sheet.selectedRange, in: sheet)
+        let beside = NSRect(x: selection.maxX + 16, y: selection.minY, width: size.width, height: size.height)
+        if visible.contains(beside) {
+            return beside
+        }
+        return NSRect(x: visible.minX + 24, y: visible.minY + 24, width: size.width, height: size.height)
+    }
+
     @objc func deleteObjects(_ sender: Any?) { deleteSelectedObjects() }
     @objc func pullObjectToFront(_ sender: Any?) { restackSelectedObject(.pullToFront) }
     @objc func pullObjectForward(_ sender: Any?) { restackSelectedObject(.pullForward) }

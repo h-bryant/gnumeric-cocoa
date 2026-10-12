@@ -448,14 +448,52 @@
   present. `GNM_SNAPSHOT_OBJECTS=1` moves and widens the front object
   and shows the handles in the capture.
 
+## 2026-10-12: Phase 4, second step: the chart guru
+
+- `GnmPlotType` (Swift `PlotType`): goffice's plot registry
+  (`gog_plot_families`), 64 types in 18 families from the six plot
+  plugins, ordered as the GTK guru shows them (families by priority, XY
+  first, then Column, Bar, ...; types by row and column), each with its
+  name, description, engine class, and the sample PNG the guru shows
+  (`go_rsm_lookup` on the `res:go:...` resource names).
+- `insertChartOfType:seriesLayout:sharedAbscissa:frame:` on the sheet
+  builds what the guru's closure would hand back: a `GogGraph` with a
+  chart and the plot (`gog_plot_new_by_type` applies the type's
+  properties), the series read from the selection by the engine's own
+  `sv_selection_to_plot` through the `GnmGraphDataClosure` it expects
+  (series as columns or rows, the shared abscissa; a heading row names
+  the series), the "guru-hints" backplane and major grid, a legend when
+  there is more than one series, and a one-cell anchor (graphs do not
+  resize with cells, as the GTK closure sets). The object is attached and
+  committed with `cmd_objects_move` as a created object, so "Insert 1
+  Object" undoes to nothing, as `scg_objects_drag_commit` does.
+- `ChartGuru.swift` (Insert → Chart…): a sheet with the families in one
+  table, the family's types with their sample images in another, the
+  type's description, "Series as" (Auto, Columns, Rows), and the shared
+  abscissa switch. Insert places the chart beside the selection when that
+  fits in view, else near the visible area's top-left, at the engine's
+  default 12 by 8 cm, and selects it. Not in it: the guru's later pages
+  (every chart, plot, and series property), which are the object editor's
+  job.
+- `GNM_SNAPSHOT_CHART=1` inserts a clustered column chart from A1:D6 of
+  `chart-tests.gnumeric` and writes the guru sheet to `-guru.png` (the
+  two tables and their images render there; the description, pop-up,
+  and buttons below come out blank in captures, the known limitation,
+  and `GNM_DEBUG_LAYOUT=1` logs their frames instead).
+  `Tests/BridgeTests/objects.m` covers the catalogue, the sample PNGs, a
+  column chart from a three-series block (drawn into a bitmap and checked
+  for ink), undo and redo of the insertion, and a pie from one series
+  with the options set.
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
    continue with Phase 4". `HANDOFF.md` §9 is the checklist: smoke tests,
    the Xcode build, the ADR-011 rule on upstream, what Henry has and has
    not seen on screen, and the rest of Phase 4 (object selection, move,
-   resize, delete, and stacking are done; next the chart guru, object
-   cut/copy/paste, and the object editors) from `docs/mvp-known-gaps.md`, which also
+   resize, delete, stacking, and the chart guru are done; next object
+   cut/copy/paste, the chart and object editors, images from files) from
+   `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
 2. Working pattern that held up: wrap the engine call in the bridge with a
@@ -464,7 +502,7 @@
    on `MainMenu`, action on `GridView` or the window controller), drive it
    from a `GNM_SNAPSHOT_*` hook in `AppDelegate.swift`, look at the
    `-window.png` capture, update `docs/mvp-known-gaps.md`, commit.
-3. The state at the end of 2026-10-12: `main` at the sheet objects
-   commit (after the autofilter one), clean tree, nothing pushed,
+3. The state at the end of 2026-10-12: `main` at the chart guru commit
+   (after the sheet objects and autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in
    `build/prefix` has both patches applied.

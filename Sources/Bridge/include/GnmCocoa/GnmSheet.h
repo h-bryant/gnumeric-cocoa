@@ -7,6 +7,7 @@
 #import <GnmCocoa/GnmCellFormat.h>
 #import <GnmCocoa/GnmFilter.h>
 #import <GnmCocoa/GnmSheetObject.h>
+#import <GnmCocoa/GnmPlotType.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -322,6 +323,19 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 /// Change an object's place in the stacking order (`cmd_object_raise`).
 - (BOOL)restackSheetObject:(GnmSheetObject *)object direction:(GnmSheetObjectStacking)direction
                      error:(NSError **)error NS_SWIFT_NAME(restack(_:_:));
+
+// Charts (Insert → Chart…, the GTK chart guru's outcome).
+/// The engine's default chart size (12 by 8 cm) in sheet pixels.
+@property (nonatomic, readonly) CGSize defaultChartSize;
+/// Insert a chart of `type` whose series come from the selection, the
+/// way the guru fills a new plot (`sv_selection_to_plot`: a heading row
+/// or column names the series, `layout` picks rows or columns, `shared`
+/// makes the first series the abscissa of the others), at `frame`, as one
+/// undoable command ("Insert 1 Object").  A legend is added when there is
+/// more than one series.  Returns the new object, selected by nobody.
+- (nullable GnmSheetObject *)insertChartOfType:(GnmPlotType *)type seriesLayout:(GnmChartSeriesLayout)layout
+                                sharedAbscissa:(BOOL)shared frame:(CGRect)frame
+                                         error:(NSError **)error NS_SWIFT_NAME(insertChart(_:seriesLayout:sharedAbscissa:frame:));
 
 @end
 

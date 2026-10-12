@@ -298,7 +298,7 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    Everything Phase 3 added after that (fill handle, header resizing, the
    status pull-down, freeze panes, tab context menu, the Paste Special,
    size, resize, tab color, sort, and filter sheets, the filter buttons
-   and their pop-up, the object handles and drags) is verified only
+   and their pop-up, the object handles and drags, the chart guru) is verified only
    headlessly: ask what he sees before
    changing UI behavior, and take his report over the captures.
 5. Phase 3 (`docs/mvp-known-gaps.md` says what the MVP lacks). Done on
@@ -309,15 +309,17 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    Paste Special, quick sort and the Sort dialog, autofilter, sheet resize,
    tab colors. Phase 4 started the same day: objects are selected,
    moved, resized, deleted, and restacked (`GnmSheetObject`,
-   `Tests/BridgeTests/objects.m`). Next: the chart guru (a native
-   dialog over goffice's plot types, since the GOffice guru is GTK),
-   object cut/copy/paste (`gnm_app_clipboard_cut_copy_obj`), the object
-   editors, then Phase 5; the smaller Phase 3 gaps (Insert/Delete Cells,
+   `Tests/BridgeTests/objects.m`), and Insert → Chart… builds a chart
+   from the selection with every goffice plot type (`GnmPlotType`,
+   `ChartGuru.swift`). Next: object cut/copy/paste
+   (`gnm_app_clipboard_cut_copy_obj`), the chart and object editors (the
+   guru's later pages: `cmd_so_graph_config`), images from files, then
+   Phase 5; the smaller Phase 3 gaps (Insert/Delete Cells,
    Goto and the name box, the formula bar, autocomplete, drag and drop,
    outlines) as filler.
 6. Headless checks for all of it: `GNM_SNAPSHOT=out.png scripts/run-app.sh
    file` plus `GNM_SNAPSHOT_TYPE`, `_FORMAT`, `_PHASE3`, `_FREEZE`,
-   `_SHEETS`, `_FILTER`, `_OBJECTS`, `_ZOOM` (`docs/build.md`); compare `out.png` with
+   `_SHEETS`, `_FILTER`, `_OBJECTS`, `_CHART`, `_ZOOM` (`docs/build.md`); compare `out.png` with
    `out-window.png`. Engine fixes go to `patches/` (0001 decouplings, 0002
    Merge and Center); `scripts/build-gnumeric.sh` re-applies them and
    takes a few minutes.

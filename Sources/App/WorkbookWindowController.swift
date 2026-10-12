@@ -423,7 +423,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             return gridView.sheet != nil && formatSheetWindow == nil
         case #selector(setColumnWidth(_:)), #selector(setRowHeight(_:)),
              #selector(setDefaultColumnWidth(_:)), #selector(setDefaultRowHeight(_:)), #selector(renameSheet(_:)),
-             #selector(resizeSheet(_:)), #selector(setTabColor(_:)), #selector(sortCells(_:)):
+             #selector(resizeSheet(_:)), #selector(setTabColor(_:)), #selector(sortCells(_:)), #selector(insertChart(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(removeSheet(_:)):
             return gridView.sheet != nil && workbook.canRemoveSheets
@@ -666,6 +666,30 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             runSizeCommand { sheet in
                 try sheet.sort(request.range, byRows: request.byRows, hasHeader: request.hasHeader, keys: request.keys,
                                retainFormats: request.retainFormats)
+            }
+        }
+    }
+
+    // MARK: Insert Chart (the chart guru)
+
+    private var chartGuru: ChartGuru?
+
+    @objc func insertChart(_ sender: Any?) {
+        guard let window, gridView.sheet != nil, chartGuru == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let guru = ChartGuru()
+        chartGuru = guru
+        guru.run(in: window) { [weak self] choice in
+            guard let self else { return }
+            chartGuru = nil
+            guard let choice, let sheet = gridView.sheet else { return }
+            let frame = gridView.suggestedFrameForNewObject(size: sheet.defaultChartSize)
+            do {
+                let object = try sheet.insertChart(choice.type, seriesLayout: choice.layout, sharedAbscissa: choice.sharedAbscissa, frame: frame)
+                gridView.select(objects: [object])
+                gridView.scrollToVisible(frame.insetBy(dx: -8, dy: -8))
+            } catch {
+                present(error)
             }
         }
     }

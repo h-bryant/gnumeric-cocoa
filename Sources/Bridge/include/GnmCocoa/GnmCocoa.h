@@ -15,5 +15,6 @@
 #import <GnmCocoa/GnmCellFormat.h>
 #import <GnmCocoa/GnmFilter.h>
 #import <GnmCocoa/GnmSheetObject.h>
+#import <GnmCocoa/GnmPlotType.h>
 #import <GnmCocoa/GnmSheet.h>
 #import <GnmCocoa/GnmRunLoopBridge.h>

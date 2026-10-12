@@ -66,7 +66,8 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | InsertCells | no | Phase 3 |
 | InsertColumns, InsertRows | ported | Insert menu; as many as the selection spans, before it |
 | SheetInsert | ported | Edit → Sheet → Insert |
-| ChartGuru, InsertComponent, InsertShapedComponent, NewGOComponent, GOComponentFromFile, InsertImage | no | Phase 4; existing charts and images draw, move, resize, and delete |
+| ChartGuru | partial | Insert → Chart… (2026-10-12): every goffice plot type with its sample image, series from the selection, the two guru options; no later guru pages (chart, plot, series properties) |
+| InsertComponent, InsertShapedComponent, NewGOComponent, GOComponentFromFile, InsertImage | no | Phase 4; existing images draw, move, resize, and delete |
 | InsertFormula (function selector), InsertNames | no | Phase 5 |
 | InsertComment, InsertHyperlink | no | Phase 5 |
 | InsertSortDecreasing, InsertSortIncreasing | ported | Data → Sort Ascending / Descending (the GTK quick sort: by the selection's columns, heading kept) |
