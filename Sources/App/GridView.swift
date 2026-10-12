@@ -245,6 +245,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     private func drawPass(_ sheet: Sheet, context: CGContext, dirtyRect: NSRect) {
         sheet.drawCells(in: dirtyRect, context: context, backgroundColor: NSColor.white.cgColor)
         sheet.drawSheetObjects(in: dirtyRect, context: context)
+        drawFilterButtons(of: sheet, dirtyRect: dirtyRect)
         drawMarchingAnts(of: sheet, dirtyRect: dirtyRect)
         drawSelection(of: sheet, dirtyRect: dirtyRect)
     }
@@ -514,6 +515,111 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     @objc func sortAscending(_ sender: Any?) { run { try $0.sortSelection(descending: false) } }
     @objc func sortDescending(_ sender: Any?) { run { try $0.sortSelection(descending: true) } }
 
+    // MARK: Autofilter (Data → Filter)
+
+    /// Set by the window controller: the "(Custom…)" and "(Top 10…)"
+    /// choices need a dialog (`custom` says which).
+    var requestFilterDialog: ((_ button: FilterButton, _ choices: FilterChoices, _ custom: Bool) -> Void)?
+    private var filterMenuButton: FilterButton?
+    private var filterMenuChoices: FilterChoices?
+
+    @objc func toggleAutofilter(_ sender: Any?) { run { try $0.toggleAutofilter() } }
+    @objc func showAllFilteredRows(_ sender: Any?) {
+        guard let sheet else { return }
+        if isEditing { commitEditing(text: editor.stringValue, movement: .none) }
+        sheet.showAllFilteredRows()
+    }
+    @objc func clearAllFiltered(_ sender: Any?) {
+        run { try $0.clearSelection([.values, .formats, .comments, .objects, .filteredRowsOnly]) }
+    }
+    @objc func clearFormatsFiltered(_ sender: Any?) { run { try $0.clearSelection([.formats, .filteredRowsOnly]) } }
+    @objc func clearCommentsFiltered(_ sender: Any?) { run { try $0.clearSelection([.comments, .filteredRowsOnly]) } }
+    @objc func clearContentsFiltered(_ sender: Any?) { run { try $0.clearSelection([.values, .filteredRowsOnly]) } }
+
+    /// The drop-down buttons of the sheet's autofilters: a small rounded
+    /// square with a triangle in each heading cell, filled with the accent
+    /// color while the field has a condition (the GTK arrow's checked state).
+    private func drawFilterButtons(of sheet: Sheet, dirtyRect: NSRect) {
+        for button in sheet.filterButtons {
+            let frame = button.frame
+            guard !frame.isEmpty, frame.intersects(dirtyRect) else { continue }
+            // Fixed colors: the grid is drawn white whatever the appearance.
+            let box = frame.insetBy(dx: 1.5, dy: 1.5)
+            let path = NSBezierPath(roundedRect: box, xRadius: 2, yRadius: 2)
+            (button.isActive ? NSColor.controlAccentColor : NSColor.white).setFill()
+            path.fill()
+            (button.isActive ? NSColor.controlAccentColor : NSColor(white: 0.55, alpha: 1)).setStroke()
+            path.lineWidth = 1
+            path.stroke()
+            let w = box.width * 0.5, h = box.height * 0.3   // the triangle points down (flipped view)
+            let triangle = NSBezierPath()
+            triangle.move(to: NSPoint(x: box.midX - w / 2, y: box.midY - h / 2))
+            triangle.line(to: NSPoint(x: box.midX + w / 2, y: box.midY - h / 2))
+            triangle.line(to: NSPoint(x: box.midX, y: box.midY + h / 2))
+            triangle.close()
+            (button.isActive ? NSColor.white : NSColor(white: 0.2, alpha: 1)).setFill()
+            triangle.fill()
+        }
+    }
+
+    /// The button's list (fcombo_create_list): All, Top 10…, Custom…, the
+    /// column's values, and Blanks / Non Blanks when the column has blanks.
+    private func showFilterMenu(for button: FilterButton, event: NSEvent) {
+        guard let sheet else { return }
+        let choices = sheet.choices(for: button)
+        let current = choices.current
+        let menu = NSMenu(title: "Filter")
+        @discardableResult
+        func add(_ title: String, _ condition: FilterCondition?, checked: Bool, tag: Int = 0) -> NSMenuItem {
+            let item = menu.addItem(withTitle: title, action: #selector(filterChoiceSelected(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = condition
+            item.state = checked ? .on : .off
+            item.tag = tag
+            return item
+        }
+        add("(All)", .showAll(), checked: current.kind == .showAll)
+        add("(Top 10…)", nil, checked: current.kind == .bucket, tag: 1)
+        add("(Custom…)", nil, checked: current.kind == .custom, tag: 2)
+        if !choices.values.isEmpty {
+            menu.addItem(.separator())
+        }
+        for (i, value) in choices.values.enumerated() {
+            add(value, choices.condition(forValueAt: i), checked: current.kind == .value && current.valueIndex == i)
+        }
+        if choices.hasBlanks {
+            menu.addItem(.separator())
+            add("(Blanks)", .blanks(true), checked: current.kind == .blanks)
+            add("(Non Blanks)", .blanks(false), checked: current.kind == .nonBlanks)
+        }
+        filterMenuButton = button
+        filterMenuChoices = choices
+        let frame = viewRect(forSheetRect: button.frame)
+        menu.popUp(positioning: nil, at: NSPoint(x: frame.minX, y: frame.maxY), in: self)
+    }
+
+    @objc private func filterChoiceSelected(_ item: NSMenuItem) {
+        guard let button = filterMenuButton, let choices = filterMenuChoices else { return }
+        filterMenuButton = nil
+        filterMenuChoices = nil
+        switch item.tag {
+        case 1: requestFilterDialog?(button, choices, false)
+        case 2: requestFilterDialog?(button, choices, true)
+        default:
+            guard let condition = item.representedObject as? FilterCondition else { return }
+            applyFilterCondition(condition, to: button)
+        }
+    }
+
+    func applyFilterCondition(_ condition: FilterCondition, to button: FilterButton) {
+        guard let sheet else { return }
+        do {
+            try sheet.setFilterCondition(condition, for: button)
+        } catch {
+            presentError?(error)
+        }
+    }
+
     /// Paste Special, with the options the window controller collected.
     func paste(options: PasteOptions) {
         if isEditing { commitEditing(text: editor.stringValue, movement: .none) }
@@ -555,6 +661,14 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
                 menuItem.title = sheet.isFrozen ? "Unfreeze Panes" : "Freeze Panes"
             }
             return true
+        case #selector(toggleAutofilter(_:)):
+            if let menuItem = item as? NSMenuItem {
+                menuItem.title = sheet.editPositionIsInFilter ? "Remove Auto Filter" : "Add Auto Filter"
+            }
+            return true
+        case #selector(showAllFilteredRows(_:)), #selector(clearAllFiltered(_:)), #selector(clearFormatsFiltered(_:)),
+             #selector(clearCommentsFiltered(_:)), #selector(clearContentsFiltered(_:)):
+            return sheet.hasFilteredRows
         default:
             return true
         }
@@ -565,6 +679,12 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     override func mouseDown(with event: NSEvent) {
         guard let sheet else { return }
         let point = sheetPoint(forViewPoint: convert(event.locationInWindow, from: nil))
+        if event.clickCount == 1, let button = sheet.filterButtons.first(where: { $0.frame.contains(point) }) {
+            if isEditing { commitEditing(text: editor.stringValue, movement: .none) }
+            window?.makeFirstResponder(self)
+            showFilterMenu(for: button, event: event)
+            return
+        }
         if !isEditing, event.clickCount == 1,
            fillHandleRect(for: rect(of: sheet.selectedRange, in: sheet)).insetBy(dx: -2, dy: -2).contains(point) {
             fillSource = sheet.selectedRange

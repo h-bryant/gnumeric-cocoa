@@ -348,21 +348,84 @@
 - `docs/mvp-known-gaps.md` updated. Next in Phase 3: the filtered Clear
   variants (with autofilter), sheet resize, tab colors, the Sort dialog.
 
-## How to resume (updated 2026-10-11)
+## 2026-10-12: Phase 3, the rest: autofilter, sheet resize, tab colors, the Sort dialog
+
+- Autofilter (Data → Filter → Add/Remove Auto Filter, Show All). The
+  bridge wraps `cmd_autofilter_add_remove` (`toggleAutofilter`) and
+  `cmd_autofilter_set_condition` (`setFilterCondition:forButton:`), and
+  describes each filter field as a `GnmFilterButton` (heading cell, the
+  square at the cell's bottom-right as `filter_view_set_bounds` places it,
+  active flag). `choicesForFilterButton:` ports `fcombo_create_list`
+  (`widgets/gnm-filter-combo-view.c`): the column's distinct values,
+  formatted and sorted, rows hidden by the other fields left out through
+  the same temporary-sheet trick, plus the current condition read back.
+  `GnmFilterCriterion` (Swift `FilterCondition`; the engine's typedef owns
+  the name `GnmFilterCondition`) covers All, one value, Blanks, Non
+  Blanks, the custom one- or two-comparison form with the twelve
+  operators of `dialog-autofilter.c` (the text ones travel as `*`
+  wildcards and come back as such), and the Top/Bottom N items or percent
+  bucket. The grid draws the buttons (accent-filled while active) and
+  pops up an `NSMenu` with the GTK list on a click; "(Custom…)" and
+  "(Top 10…)" open `NSAlert` sheets on the window controller. Edit →
+  Clear gained the four "… Filtered Rows" items (`CLEAR_FILTERED_ONLY`).
+- Three engine facts the tests settled, all shared with the GTK front end:
+  `has_filtered_rows` is kept only by the advanced filter, so
+  `hasFilteredRows` looks at the rows of the active autofilters; the
+  "filtered rows" clear variants skip the rows a filter hides (they act
+  on the rows it shows: `cmd_selection_clear_row_handler`); and undoing a
+  filter removal re-attaches the filter without its conditions
+  (`gnm_filter_attach` recreates the fields). `filter_show_all` serves
+  only the advanced filter, so `showAllFilteredRows` also drops every
+  autofilter condition (one undoable command each) before calling it.
+- `sheet_object_draw_cairo_sized` calls the class's `draw_cairo` without a
+  NULL check, and the filter combo objects have none: `drawSheetObjectsInRect:`
+  now skips objects without a renderer (and invisible ones). Any file
+  with an autofilter would have crashed the grid before.
+- Sheet resize (Edit → Sheet → Resize…): `resizeSheets:toColumns:rows:`
+  over `cmd_resize_sheets` (the list's first sheet keeps the focus on
+  undo), `isValidSheetSizeWithColumns:rows:` and the four limits; the
+  sheet offers the powers of two between them in two pop-ups and an
+  "Apply to all sheets" switch, as the GTK sliders do.
+- Tab colors (Edit → Sheet → Tab Color…, the tab context menu):
+  `setTabColor:textColor:ofSheet:` sets the sheet's `tab-background`
+  and `tab-foreground` between a sheet-state snapshot and
+  `cmd_reorganize_sheets`, as `dialog-sheet-order.c` does, and the two
+  `notify::` signals reach `sheetDidChange:`. The tab strip shows the
+  background as a swatch before the name (`NSSegmentedControl` has no
+  per-segment background; the text color is kept in the file but not
+  shown). The sheet has two color wells with "None" switches.
+- Sort dialog (Data → Sort…, `SortDialog.swift`): direction (rows or
+  columns, defaulting to rows for a range taller than wide as GTK does),
+  a header switch preset by `sheet_range_has_heading`, three keys named
+  like the GTK dialog ("Price (Column B)"), each with order and case
+  sensitivity, and "keep formats". `sortRange:byRows:hasHeader:keys:retainFormats:`
+  builds the `GnmSortData` as `cb_dialog_ok_clicked` does; `sortableRange`
+  grows a single cell to its data block (`gnm_sheet_guess_data_range`).
+  Left out: more than three keys, the locale selector, the per-key "by
+  value" switch (always on), the saved sort setups.
+- `GNM_SNAPSHOT_FILTER=1` drives a table at A20:B25 through add filter,
+  a value choice, the Sort command, a resize, and a tab color; the
+  capture shows the active and inactive buttons and the hidden rows.
+  Covered in `Tests/BridgeTests/editing.m`. The window captures still do
+  not render the tab labels (a capture limitation seen before the
+  swatches too).
+
+## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
-   continue with Phase 3". `HANDOFF.md` §9 is the checklist: smoke tests,
+   continue with Phase 4". `HANDOFF.md` §9 is the checklist: smoke tests,
    the Xcode build, the ADR-011 rule on upstream, what Henry has and has
-   not seen on screen, and the Phase 3 items left (autofilter with the
-   filtered Clear variants, sheet resize, tab colors, the Sort dialog),
-   then Phase 4 from `docs/mvp-known-gaps.md`.
+   not seen on screen, and Phase 4 (sheet objects: selection, move,
+   resize, the chart guru) from `docs/mvp-known-gaps.md`, which also
+   lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
+   the name box, the formula bar, autocomplete, drag and drop, outlines).
 2. Working pattern that held up: wrap the engine call in the bridge with a
    test in `Tests/BridgeTests/editing.m` (mirror the GTK callback in
    `wbc-gtk-actions.c` or `wbc-gtk.c`), add the menu item (string selector
    on `MainMenu`, action on `GridView` or the window controller), drive it
    from a `GNM_SNAPSHOT_*` hook in `AppDelegate.swift`, look at the
    `-window.png` capture, update `docs/mvp-known-gaps.md`, commit.
-3. The state at the end of 2026-10-11: `main` at the "Paste Special and the
-   quick sort" commit, clean tree, nothing pushed, `v0.1.0` and
-   `upstream-baseline-2026-10-11` tagged. The engine in `build/prefix` has
-   both patches applied.
+3. The state at the end of 2026-10-12: `main` at the autofilter, sheet
+   resize, tab colors, and Sort dialog commit, clean tree, nothing pushed,
+   `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in
+   `build/prefix` has both patches applied.

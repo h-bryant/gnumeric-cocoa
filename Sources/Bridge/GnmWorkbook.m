@@ -430,6 +430,53 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
     } undoFocus:target error:error];
 }
 
+- (BOOL)resizeSheets:(NSArray<GnmSheet *> *)sheets toColumns:(NSInteger)columns rows:(NSInteger)rows error:(NSError **)error
+{
+    if (![self.class isValidSheetSizeWithColumns:columns rows:rows]) {
+        if (error)
+            *error = [_engine _errorWithCode:GnmErrorCommandFailed
+                                 description:@"Sheet sizes must be powers of two within the engine's limits." collected:@[]];
+        return NO;
+    }
+    GSList *list = NULL;
+    for (GnmSheet *sheet in sheets.reverseObjectEnumerator)
+        if (sheet.engineSheet)
+            list = g_slist_prepend (list, sheet.engineSheet);
+    if (list == NULL)
+        return YES;
+    return [self _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_resize_sheets (wbc, list, (int) columns, (int) rows);   /* takes the list */
+    } description:@"Could not resize the sheets." error:error];
+}
+
++ (BOOL)isValidSheetSizeWithColumns:(NSInteger)columns rows:(NSInteger)rows
+{
+    return columns > 0 && rows > 0 && columns <= INT_MAX && rows <= INT_MAX
+        && gnm_sheet_valid_size ((int) columns, (int) rows);
+}
+
++ (NSInteger)minimumSheetColumns { return GNM_MIN_COLS; }
++ (NSInteger)maximumSheetColumns { return GNM_MAX_COLS; }
++ (NSInteger)minimumSheetRows { return GNM_MIN_ROWS; }
++ (NSInteger)maximumSheetRows { return GNM_MAX_ROWS; }
+
+- (BOOL)setTabColor:(CGColorRef)background textColor:(CGColorRef)text ofSheet:(GnmSheet *)sheet error:(NSError **)error
+{
+    Sheet *target = sheet.engineSheet;
+    if (target == NULL)
+        return NO;
+    /* dialogs/dialog-sheet-order.c cb_color_changed_back: the property
+     * change between a sheet-state snapshot and cmd_reorganize_sheets. */
+    GnmColor *bg = background ? gnm_color_new_go (gnm_cocoa_go_from_cgcolor (background)) : NULL;
+    GnmColor *fg = text ? gnm_color_new_go (gnm_cocoa_go_from_cgcolor (text)) : NULL;
+    BOOL ok = [self _reorganizeSheetsWith:^{
+        g_object_set (target, "tab-background", bg, "tab-foreground", fg, NULL);
+    } undoFocus:NULL error:error];
+    style_color_unref (bg);
+    style_color_unref (fg);
+    return ok;
+}
+
 - (void)recalculate
 {
     workbook_recalc (_wb);
@@ -581,6 +628,8 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
         [_sheetWrappers addObject:wrapper];
         g_signal_connect (G_OBJECT (sheet), "notify::name", G_CALLBACK (cb_sheet_changed), (__bridge void *) self);
         g_signal_connect (G_OBJECT (sheet), "notify::visibility", G_CALLBACK (cb_sheet_changed), (__bridge void *) self);
+        g_signal_connect (G_OBJECT (sheet), "notify::tab-background", G_CALLBACK (cb_sheet_changed), (__bridge void *) self);
+        g_signal_connect (G_OBJECT (sheet), "notify::tab-foreground", G_CALLBACK (cb_sheet_changed), (__bridge void *) self);
     }
     if ([self.delegate respondsToSelector:@selector(workbook:didAddSheet:)])
         [self.delegate workbook:self didAddSheet:wrapper];

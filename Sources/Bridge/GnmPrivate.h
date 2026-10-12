@@ -41,6 +41,11 @@
 #include <gnm-format.h>
 #include <sort.h>
 #include <func.h>
+#include <sheet-filter.h>
+#include <sheet-filter-combo.h>
+#include <sheet-object-impl.h>
+#include <sheet-utils.h>
+#include <tools/filter.h>
 #include <goffice/goffice.h>
 #include <goffice/app/go-cmd-context-impl.h>
 #include <gsf/gsf-impl-utils.h>
@@ -130,6 +135,31 @@ GType gnm_cocoa_sheet_control_get_type (void);
 - (void)_controlMakeVisibleColumn:(int)column row:(int)row;
 - (void)_controlMarchingAntsDidChange;
 - (void)_controlFrozenPanesDidChange;
+@end
+
+@interface GnmFilterButton ()
+/// Keeps a reference on the filter; `field` indexes `filter->fields`.
+- (instancetype)initWithFilter:(GnmFilter *)filter field:(unsigned)field sheet:(Sheet *)sheet NS_DESIGNATED_INITIALIZER;
+@property (nonatomic, readonly) GnmFilter *filter;
+@property (nonatomic, readonly) unsigned field;
+/// NO once the filter was removed from the sheet (undo, Remove Autofilter).
+@property (nonatomic, readonly) BOOL isAttached;
+@end
+
+@interface GnmFilterCriterion ()
+/// Value conditions: the engine value (owned).
+- (instancetype)initWithValue:(GnmValue *)value index:(NSInteger)index text:(NSString *)text;
+@property (nonatomic, readonly, nullable) GnmValue const *value;
+/// The engine's condition of a field as a description; ShowAll for NULL.
++ (instancetype)conditionFromEngine:(nullable GnmFilterCondition const *)cond
+                             values:(nullable GPtrArray *)values labels:(nullable NSArray<NSString *> *)labels;
+/// A new engine condition (caller owns), or NULL for ShowAll.
+- (nullable GnmFilterCondition *)newEngineConditionWithWorkbook:(Workbook *)wb;
+@end
+
+@interface GnmFilterChoices ()
+- (instancetype)initWithValues:(GPtrArray *)values labels:(NSArray<NSString *> *)labels
+                     hasBlanks:(BOOL)hasBlanks current:(GnmFilterCriterion *)current NS_DESIGNATED_INITIALIZER;
 @end
 
 /// Color conversions shared by the drawing and style code.

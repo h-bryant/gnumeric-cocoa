@@ -237,6 +237,60 @@ enum Snapshot {
                 view.displayIfNeeded()
             }
             }
+            autoreleasepool {
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FILTER"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // A small table at A20:B25, an autofilter over it, one value
+                // chosen from the first button's choices, the Sort dialog's
+                // command, a sheet resize, and a tab color.
+                let grid = controller.gridView
+                let table: [(String, String)] = [("Name", "Qty"), ("apple", "3"), ("pear", "5"), ("apple", "7"), ("", "1"), ("kiwi", "9")]
+                for (i, row) in table.enumerated() {
+                    if !row.0.isEmpty { try? sheet.setText(row.0, atColumn: 0, row: 19 + i, autocorrect: false) }
+                    try? sheet.setText(row.1, atColumn: 1, row: 19 + i, autocorrect: false)
+                }
+                let range = CellRange(start: CellCoordinate(column: 0, row: 19), end: CellCoordinate(column: 1, row: 24))
+                sheet.selectRange(range, editPosition: range.start)
+                grid.toggleAutofilter(nil)
+                let buttons = sheet.filterButtons
+                NSLog("filter: buttons=%ld inFilter=%d undo=%@", buttons.count, sheet.editPositionIsInFilter ? 1 : 0,
+                      sheet.workbook?.undoLabel ?? "nil")
+                if let first = buttons.first {
+                    let choices = sheet.choices(for: first)
+                    NSLog("filter: choices=%@ blanks=%d frame=%@", choices.values.joined(separator: ","), choices.hasBlanks ? 1 : 0,
+                          NSStringFromRect(first.frame))
+                    grid.applyFilterCondition(choices.condition(forValueAt: 0), to: first)
+                    NSLog("filter: row 21 visible=%d row 22 visible=%d filtered=%d active=%d undo=%@",
+                          sheet.isRowVisible(20) ? 1 : 0, sheet.isRowVisible(21) ? 1 : 0, sheet.hasFilteredRows ? 1 : 0,
+                          sheet.filterButtons.first?.isActive ?? false ? 1 : 0, sheet.workbook?.undoLabel ?? "nil")
+                }
+                let key = SortKey(index: 1, descending: true, caseSensitive: false, byValue: true)
+                do {
+                    try sheet.sort(range, byRows: true, hasHeader: true, keys: [key], retainFormats: true)
+                } catch {
+                    NSLog("filter: sort failed: %@", error.localizedDescription)
+                }
+                NSLog("filter: sorted B21=%@ B25=%@ undo=%@", sheet.displayTextOfCell(atColumn: 1, row: 20) ?? "nil",
+                      sheet.displayTextOfCell(atColumn: 1, row: 24) ?? "nil", sheet.workbook?.undoLabel ?? "nil")
+                do {
+                    try sheet.workbook?.resize([sheet], toColumns: sheet.columnCount * 2, rows: sheet.rowCount)
+                } catch {
+                    NSLog("filter: resize failed: %@", error.localizedDescription)
+                }
+                NSLog("filter: columns=%ld rows=%ld undo=%@", sheet.columnCount, sheet.rowCount, sheet.workbook?.undoLabel ?? "nil")
+                do {
+                    try sheet.workbook?.setTabColor(NSColor.systemOrange.cgColor, textColor: nil, of: sheet)
+                } catch {
+                    NSLog("filter: tab color failed: %@", error.localizedDescription)
+                }
+                NSLog("filter: tab color=%d tabs=%ld undo=%@", sheet.tabColor() != nil ? 1 : 0, controller.tabCount,
+                      sheet.workbook?.undoLabel ?? "nil")
+                sheet.selectCell(atColumn: 0, row: 19)
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_SHEETS"] != nil,
                let controller = window.windowController as? WorkbookWindowController {
                 // Sheet management through the controller's actions.

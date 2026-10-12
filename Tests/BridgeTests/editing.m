@@ -335,6 +335,181 @@ int main (void)
         [wb undo];
         [wb recalculateAll];
 
+        /* autofilter: a small table, the buttons, the choices, a value
+         * condition hiding rows, show all, custom and bucket conditions,
+         * the filtered clear, undo of the removal */
+        {
+            char const *names[] = { "Name", "apple", "pear", "apple", NULL, "kiwi" };
+            char const *qtys[] = { "Qty", "3", "5", "7", "1", "9" };
+            for (int i = 0; i < 6; i++) {
+                if (names[i])
+                    [s setText:@(names[i]) atColumn:0 row:200 + i autocorrect:NO error:NULL];
+                [s setText:@(qtys[i]) atColumn:1 row:200 + i autocorrect:NO error:NULL];
+            }
+        }
+        [s selectRange:GnmCellRangeMake (0, 200, 1, 205) editPosition:GnmCellCoordinateMake (0, 200)];
+        GNM_ASSERT (!s.editPositionIsInFilter && s.filterButtons.count == 0, @"no filter yet");
+        GNM_ASSERT ([s toggleAutofilter:&error], @"add filter: %@", error);
+        GNM_ASSERT (s.editPositionIsInFilter, @"edit position in the filter");
+        GNM_ASSERT ([wb.undoLabel containsString:@"Autofilter"], @"undo label '%@'", wb.undoLabel);
+        GNM_ASSERT (s.filterButtons.count == 2, @"%lu buttons", (unsigned long) s.filterButtons.count);
+        GnmFilterButton *nameButton = s.filterButtons[0];
+        GNM_ASSERT (nameButton.cell.column == 0 && nameButton.cell.row == 200 && !nameButton.isActive, @"button at A201");
+        GNM_ASSERT (nameButton.frame.size.width > 0 && nameButton.frame.size.width <= 20
+                    && CGRectGetMaxX (nameButton.frame) == [s leftEdgeOfColumn:1], @"button frame %@", NSStringFromRect (nameButton.frame));
+        GNM_ASSERT (nameButton.filterRange.end.row == 205, @"filter range");
+        GnmFilterChoices *choices = [s choicesForFilterButton:nameButton];
+        NSArray *expected = @[@"apple", @"kiwi", @"pear"];
+        GNM_ASSERT ([choices.values isEqualToArray:expected] && choices.hasBlanks, @"choices %@", choices.values);
+        GNM_ASSERT (choices.current.kind == GnmFilterConditionShowAll, @"no condition yet");
+        GNM_ASSERT ([s setFilterCondition:[choices conditionForValueAtIndex:0] forButton:nameButton error:&error], @"value condition: %@", error);
+        GNM_ASSERT (s.hasFilteredRows, @"rows filtered");
+        GNM_ASSERT ([s isRowVisible:201] && ![s isRowVisible:202] && [s isRowVisible:203] && ![s isRowVisible:204] && ![s isRowVisible:205],
+                    @"only the apples show: %d %d %d %d %d", [s isRowVisible:201], [s isRowVisible:202], [s isRowVisible:203],
+                    [s isRowVisible:204], [s isRowVisible:205]);
+        GNM_ASSERT ([wb.undoLabel containsString:@"filter"], @"undo label '%@'", wb.undoLabel);
+        nameButton = s.filterButtons[0];
+        GNM_ASSERT (nameButton.isActive, @"button active");
+        choices = [s choicesForFilterButton:nameButton];
+        GNM_ASSERT (choices.current.kind == GnmFilterConditionValue && choices.current.valueIndex == 0, @"current is apple: kind %ld index %ld",
+                    (long) choices.current.kind, (long) choices.current.valueIndex);
+        /* the other field lists only the rows this one leaves */
+        GnmFilterChoices *qtyChoices = [s choicesForFilterButton:s.filterButtons[1]];
+        GNM_ASSERT (([qtyChoices.values isEqualToArray:@[@"3", @"7"]]) && !qtyChoices.hasBlanks, @"qty choices %@", qtyChoices.values);
+        [s showAllFilteredRows];   /* drops the condition */
+        GNM_ASSERT (!s.hasFilteredRows && [s isRowVisible:202] && !s.filterButtons[0].isActive, @"show all");
+        [wb undo];
+        GNM_ASSERT (s.hasFilteredRows && ![s isRowVisible:202], @"show all undone");
+        GNM_ASSERT ([s setFilterCondition:[GnmFilterCriterion showAll] forButton:s.filterButtons[0] error:&error], @"clear condition: %@", error);
+        GNM_ASSERT (!s.hasFilteredRows, @"condition cleared");
+        /* custom: Qty > 4 */
+        GNM_ASSERT ([s setFilterCondition:[GnmFilterCriterion customWithOperator:GnmFilterOperatorGreaterThan text:@"4"]
+                                forButton:s.filterButtons[1] error:&error], @"custom: %@", error);
+        GNM_ASSERT (![s isRowVisible:201] && [s isRowVisible:202] && [s isRowVisible:203] && ![s isRowVisible:204] && [s isRowVisible:205],
+                    @"qty > 4");
+        GnmFilterCriterion *cond = [s choicesForFilterButton:s.filterButtons[1]].current;
+        GNM_ASSERT (cond.kind == GnmFilterConditionCustom && cond.firstOperator == GnmFilterOperatorGreaterThan
+                    && [cond.firstText isEqualToString:@"4"] && cond.secondOperator == GnmFilterOperatorNone,
+                    @"custom read back: kind %ld op %ld '%@'", (long) cond.kind, (long) cond.firstOperator, cond.firstText);
+        /* text operators travel as wildcards */
+        GNM_ASSERT ([s setFilterCondition:[GnmFilterCriterion customWithOperator:GnmFilterOperatorBeginsWith text:@"ap" joinedWithAnd:NO
+                                                                        operator:GnmFilterOperatorEquals text:@"kiwi"]
+                                forButton:s.filterButtons[0] error:&error], @"begins with: %@", error);
+        cond = [s choicesForFilterButton:s.filterButtons[0]].current;
+        GNM_ASSERT (cond.kind == GnmFilterConditionCustom && cond.firstOperator == GnmFilterOperatorBeginsWith
+                    && [cond.firstText isEqualToString:@"ap"] && !cond.joinedWithAnd && cond.secondOperator == GnmFilterOperatorEquals
+                    && [cond.secondText isEqualToString:@"kiwi"], @"wildcards read back: op %ld '%@' / op %ld '%@'",
+                    (long) cond.firstOperator, cond.firstText, (long) cond.secondOperator, cond.secondText);
+        GNM_ASSERT ([s isRowVisible:203] && [s isRowVisible:205] && ![s isRowVisible:202], @"apple 7 and kiwi 9 show");
+        /* bucket: the top 2 quantities */
+        GNM_ASSERT ([s setFilterCondition:[GnmFilterCriterion showAll] forButton:s.filterButtons[0] error:&error], @"clear: %@", error);
+        GNM_ASSERT ([s setFilterCondition:[GnmFilterCriterion bucketTop:YES count:2 percent:NO] forButton:s.filterButtons[1] error:&error], @"bucket: %@", error);
+        GNM_ASSERT ([s isRowVisible:203] && [s isRowVisible:205] && ![s isRowVisible:201] && ![s isRowVisible:202] && ![s isRowVisible:204], @"top 2");
+        cond = [s choicesForFilterButton:s.filterButtons[1]].current;
+        GNM_ASSERT (cond.kind == GnmFilterConditionBucket && cond.isTop && !cond.isPercent && cond.count == 2, @"bucket read back");
+        /* the filtered clear skips the rows the filter hides (commands.c
+         * cmd_selection_clear_row_handler) */
+        [s selectRange:GnmCellRangeMake (0, 201, 1, 205) editPosition:GnmCellCoordinateMake (0, 201)];
+        GNM_ASSERT ([s clearSelection:GnmClearValues | GnmClearFilteredRowsOnly error:&error], @"filtered clear: %@", error);
+        GNM_ASSERT ([[s displayTextOfCellAtColumn:0 row:202] isEqualToString:@"pear"] && [s displayTextOfCellAtColumn:0 row:203] == nil,
+                    @"hidden pear kept, visible apple cleared: '%@' '%@'", [s displayTextOfCellAtColumn:0 row:202], [s displayTextOfCellAtColumn:0 row:203]);
+        [wb undo];
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:0 row:203] ?: @"", @"apple");
+        /* remove and undo */
+        [s selectCellAtColumn:0 row:200];
+        GNM_ASSERT ([s toggleAutofilter:&error], @"remove filter: %@", error);
+        GNM_ASSERT (s.filterButtons.count == 0 && !s.editPositionIsInFilter && [s isRowVisible:201], @"filter removed");
+        [wb undo];
+        /* gnm_filter_attach recreates the fields, so the undo brings the
+         * filter back without its conditions (the GTK front end too) */
+        GNM_ASSERT (s.filterButtons.count == 2 && s.editPositionIsInFilter, @"removal undone: %lu buttons", (unsigned long) s.filterButtons.count);
+        GNM_ASSERT ([s toggleAutofilter:&error], @"remove again: %@", error);
+        GNM_ASSERT (![s setFilterCondition:[GnmFilterCriterion blanks:YES] forButton:nameButton error:&error], @"a stale button is refused");
+        /* a sheet with no filter: the edit position decides what is added */
+        [s selectCellAtColumn:0 row:200];
+        GNM_ASSERT ([s toggleAutofilter:&error] && s.filterButtons.count == 2, @"one cell adds over the region: %@", error);
+        GNM_ASSERT ([s toggleAutofilter:&error], @"remove: %@", error);
+
+        /* sheet resize: powers of two only, undoable */
+        NSInteger cols = s.columnCount, rows = s.rowCount;
+        GNM_ASSERT ([GnmWorkbook isValidSheetSizeWithColumns:256 rows:65536] && ![GnmWorkbook isValidSheetSizeWithColumns:100 rows:65536], @"valid sizes");
+        GNM_ASSERT (GnmWorkbook.minimumSheetColumns == 128 && GnmWorkbook.maximumSheetRows == 16777216, @"limits");
+        GNM_ASSERT ([wb resizeSheets:@[s] toColumns:cols * 2 rows:rows * 2 error:&error], @"resize: %@", error);
+        GNM_ASSERT (s.columnCount == cols * 2 && s.rowCount == rows * 2, @"now %ld x %ld", (long) s.columnCount, (long) s.rowCount);
+        GNM_ASSERT ([wb.undoLabel containsString:@"Resizing"], @"undo label '%@'", wb.undoLabel);
+        [wb undo];
+        GNM_ASSERT (s.columnCount == cols && s.rowCount == rows, @"size back");
+        GNM_ASSERT (![wb resizeSheets:@[s] toColumns:100 rows:rows error:&error], @"odd size refused");
+
+        /* tab colors: set through the workbook, read on the sheet, undoable */
+        CGColorRef initialTab = [s copyTabColor];   /* the sample may carry one */
+        CGColorRef red = CGColorCreateSRGB (1, 0, 0, 1);
+        CGColorRef blue = CGColorCreateSRGB (0, 0, 1, 1);
+        [rec.events removeAllObjects];
+        GNM_ASSERT ([wb setTabColor:red textColor:blue ofSheet:s error:&error], @"tab color: %@", error);
+        CGColorRef got = [s copyTabColor];
+        GNM_ASSERT (got != NULL && CGColorGetComponents (got)[0] > 0.99 && CGColorGetComponents (got)[1] < 0.01, @"tab color read back");
+        if (got) CGColorRelease (got);
+        got = [s copyTabTextColor];
+        GNM_ASSERT (got != NULL && CGColorGetComponents (got)[2] > 0.99, @"tab text color read back");
+        if (got) CGColorRelease (got);
+        GNM_ASSERT ([rec.events containsObject:[@"sheet:" stringByAppendingString:s.name]], @"delegate saw the color: %@", rec.events);
+        GNM_ASSERT ([wb setTabColor:NULL textColor:NULL ofSheet:s error:&error], @"clear tab color: %@", error);
+        GNM_ASSERT ([s copyTabColor] == NULL, @"cleared");
+        [wb undo];
+        got = [s copyTabColor];
+        GNM_ASSERT (got != NULL, @"undo restores the color");
+        if (got) CGColorRelease (got);
+        [wb undo];
+        got = [s copyTabColor];
+        GNM_ASSERT ((got == NULL) == (initialTab == NULL) && (got == NULL || CGColorEqualToColor (got, initialTab)), @"undo again restores the original");
+        if (got) CGColorRelease (got);
+        if (initialTab) CGColorRelease (initialTab);
+        CGColorRelease (red);
+        CGColorRelease (blue);
+
+        /* the Sort dialog's command: keys, a heading, by rows and by columns */
+        {
+            char const *table[][2] = { { "N", "V" }, { "b", "2" }, { "c", "3" }, { "a", "1" } };
+            for (int i = 0; i < 4; i++) {
+                [s setText:@(table[i][0]) atColumn:90 row:110 + i autocorrect:NO error:NULL];
+                [s setText:@(table[i][1]) atColumn:91 row:110 + i autocorrect:NO error:NULL];
+            }
+        }
+        [s selectCellAtColumn:90 row:111];
+        GnmCellRange region = s.sortableRange;
+        GNM_ASSERT (region.start.column == 90 && region.start.row == 110 && region.end.column == 91 && region.end.row == 113,
+                    @"region around the cell: %ld,%ld-%ld,%ld", (long) region.start.column, (long) region.start.row,
+                    (long) region.end.column, (long) region.end.row);
+        NSLog (@"heading detected: %d", [s range:region hasHeadingByRows:YES]);
+        NSString *keyName = [s sortKeyNameForIndex:91 inRange:region byRows:YES hasHeader:YES];
+        GNM_ASSERT ([keyName hasPrefix:@"V ("] && [keyName hasSuffix:@"Column CN)"], @"key name '%@'", keyName);
+        GNM_ASSERT_EQ_STR ([s sortKeyNameForIndex:91 inRange:region byRows:YES hasHeader:NO], @"Column CN");
+        GnmSortKey *byV = [[GnmSortKey alloc] initWithIndex:91 descending:NO caseSensitive:NO byValue:YES];
+        GNM_ASSERT ([s sortRange:region byRows:YES hasHeader:YES keys:@[byV] retainFormats:YES error:&error], @"sort by V: %@", error);
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:90 row:110] ?: @"", @"N");   /* heading kept */
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:90 row:111] ?: @"", @"a");
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:91 row:113] ?: @"", @"3");
+        GnmSortKey *byN = [[GnmSortKey alloc] initWithIndex:90 descending:YES caseSensitive:YES byValue:YES];
+        GNM_ASSERT ([s sortRange:region byRows:YES hasHeader:YES keys:(@[byN, byV]) retainFormats:NO error:&error], @"sort by N desc: %@", error);
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:90 row:111] ?: @"", @"c");
+        GNM_ASSERT (![s sortRange:region byRows:YES hasHeader:YES keys:@[] retainFormats:YES error:&error], @"no keys refused");
+        /* by columns: a row of keys */
+        [s setText:@"x" atColumn:95 row:120 autocorrect:NO error:NULL];
+        [s setText:@"z" atColumn:96 row:120 autocorrect:NO error:NULL];
+        [s setText:@"y" atColumn:97 row:120 autocorrect:NO error:NULL];
+        [s setText:@"2" atColumn:95 row:121 autocorrect:NO error:NULL];
+        [s setText:@"3" atColumn:96 row:121 autocorrect:NO error:NULL];
+        [s setText:@"1" atColumn:97 row:121 autocorrect:NO error:NULL];
+        GnmSortKey *byRow = [[GnmSortKey alloc] initWithIndex:121 descending:NO caseSensitive:NO byValue:YES];
+        GNM_ASSERT ([s sortRange:GnmCellRangeMake (95, 120, 97, 121) byRows:NO hasHeader:NO keys:@[byRow] retainFormats:YES error:&error],
+                    @"sort by columns: %@", error);
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:95 row:120] ?: @"", @"y");
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:97 row:120] ?: @"", @"z");
+        GNM_ASSERT_EQ_STR ([s sortKeyNameForIndex:121 inRange:GnmCellRangeMake (95, 120, 97, 121) byRows:NO hasHeader:NO], @"Row 122");
+        NSLog (@"sort defaults: case %d formats %d ascending %d", GnmSheet.sortDefaultsToCaseSensitive,
+               GnmSheet.sortDefaultsToRetainingFormats, GnmSheet.sortDefaultsToAscending);
+
         /* save the edited file and reopen */
         [s setText:@"saved" atColumn:3 row:3 autocorrect:NO error:NULL];
         NSURL *out = [NSURL fileURLWithPath:[gnm_test_env ("GNM_TEST_OUT") stringByAppendingPathComponent:@"bridge-edited.gnumeric"]];

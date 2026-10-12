@@ -1,11 +1,11 @@
 # gnumeric-cocoa — Handoff for Claude Code
 
-Status: MVP tagged `v0.1.0` on 2026-10-11 (Phases 0, 1, 2, 2b), and Phase 3
-mostly done the same day (menu commands, fill handle, header resizing, merge,
-status bar, freeze panes, sheet management, Paste Special, quick sort; left:
-autofilter, sheet resize, tab colors, the Sort dialog). The app opens, edits,
-formats, and saves real files with undo and clipboard, built with Xcode 27 or
-the clang/swiftc scripts. `docs/mvp-known-gaps.md` lists what is missing. §8
+Status: MVP tagged `v0.1.0` on 2026-10-11 (Phases 0, 1, 2, 2b), and the
+Phase 3 list done on 2026-10-11 and 2026-10-12 (menu commands, fill handle,
+header resizing, merge, status bar, freeze panes, sheet management, Paste
+Special, sorting with its dialog, autofilter, sheet resize, tab colors).
+The app opens, edits, formats, and saves real files with undo and
+clipboard, built with Xcode 27 or the clang/swiftc scripts. `docs/mvp-known-gaps.md` lists what is missing. §8
 questions 1 to 5 are resolved; upstream engagement is deferred (ADR-011).
 `docs/progress.md` has the session log; §9 says where to pick up.
 Owner: Henry.
@@ -296,21 +296,23 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    `docs/upstream-issue.md`; keep any engine patch minimal and upstreamable.
 4. Henry has used the app once (2026-10-11, confirming the blank-grid fix).
    Everything Phase 3 added after that (fill handle, header resizing, the
-   status pull-down, freeze panes, tab context menu, the Paste Special and
-   size sheets) is verified only headlessly: ask what he sees before
+   status pull-down, freeze panes, tab context menu, the Paste Special,
+   size, resize, tab color, sort, and filter sheets, the filter buttons
+   and their pop-up) is verified only headlessly: ask what he sees before
    changing UI behavior, and take his report over the captures.
 5. Phase 3 (`docs/mvp-known-gaps.md` says what the MVP lacks). Done on
-   2026-10-11: insert/delete rows and columns, hide and unhide, clear
-   variants, fill and autofill (fill handle), column and row sizes with
-   header drag-resizing, merge, recalc, the auto-expression in the tab bar,
-   freeze panes, sheet management, Paste Special, quick sort. Next: the
-   autofilter (`gnm_filter_new`, `cmd_autofilter_add_remove` in
-   `commands.h`) with the filtered Clear variants, sheet resize
-   (`cmd_resize_sheets`), tab colors (`notify::tab-background`), the Sort
-   dialog, then Phase 4.
+   2026-10-11 and 2026-10-12: insert/delete rows and columns, hide and
+   unhide, clear variants (filtered ones too), fill and autofill (fill
+   handle), column and row sizes with header drag-resizing, merge, recalc,
+   the auto-expression in the tab bar, freeze panes, sheet management,
+   Paste Special, quick sort and the Sort dialog, autofilter, sheet resize,
+   tab colors. Next: Phase 4 (sheet objects: selection handles, move and
+   resize, the chart guru; `docs/architecture.md` §6 on object drawing),
+   with the smaller Phase 3 gaps (Insert/Delete Cells, Goto and the name
+   box, the formula bar, autocomplete, drag and drop, outlines) as filler.
 6. Headless checks for all of it: `GNM_SNAPSHOT=out.png scripts/run-app.sh
    file` plus `GNM_SNAPSHOT_TYPE`, `_FORMAT`, `_PHASE3`, `_FREEZE`,
-   `_SHEETS`, `_ZOOM` (`docs/build.md`); compare `out.png` with
+   `_SHEETS`, `_FILTER`, `_ZOOM` (`docs/build.md`); compare `out.png` with
    `out-window.png`. Engine fixes go to `patches/` (0001 decouplings, 0002
    Merge and Center); `scripts/build-gnumeric.sh` re-applies them and
    takes a few minutes.

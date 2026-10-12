@@ -80,6 +80,22 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Workbook)
 - (BOOL)renameSheet:(GnmSheet *)sheet to:(NSString *)name error:(NSError **)error NS_SWIFT_NAME(rename(_:to:));
 /// Move `sheet` to position `index` in the workbook order.
 - (BOOL)moveSheet:(GnmSheet *)sheet toIndex:(NSInteger)index error:(NSError **)error NS_SWIFT_NAME(move(_:toIndex:));
+/// Resize `sheets` to `columns` by `rows` (`cmd_resize_sheets`), one
+/// undoable command; the first sheet keeps the focus on undo.  Sizes
+/// must be powers of two within the limits below (the GTK dialog's
+/// sliders).
+- (BOOL)resizeSheets:(NSArray<GnmSheet *> *)sheets toColumns:(NSInteger)columns rows:(NSInteger)rows
+               error:(NSError **)error NS_SWIFT_NAME(resize(_:toColumns:rows:));
++ (BOOL)isValidSheetSizeWithColumns:(NSInteger)columns rows:(NSInteger)rows NS_SWIFT_NAME(isValidSheetSize(columns:rows:));
+@property (class, nonatomic, readonly) NSInteger minimumSheetColumns;
+@property (class, nonatomic, readonly) NSInteger maximumSheetColumns;
+@property (class, nonatomic, readonly) NSInteger minimumSheetRows;
+@property (class, nonatomic, readonly) NSInteger maximumSheetRows;
+/// Set a sheet's tab background and text colors (nil clears one), as one
+/// undoable command (`cmd_reorganize_sheets`, the GTK Manage Sheets
+/// dialog); the sheet's `sheetDidChange:` follows.
+- (BOOL)setTabColor:(nullable CGColorRef)background textColor:(nullable CGColorRef)text ofSheet:(GnmSheet *)sheet
+              error:(NSError **)error NS_SWIFT_NAME(setTabColor(_:textColor:of:));
 
 /// The status bar's auto-expression: the function's label, " = ", and the
 /// value over the current selection, formatted as the engine suggests

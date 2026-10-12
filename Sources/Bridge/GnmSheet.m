@@ -722,6 +722,23 @@ cairo_for_context (CGContextRef context, CGRect rect, cairo_surface_t **surface_
 
 /* ------------------------------------------------------------------------ */
 
+@implementation GnmSortKey
+
+- (instancetype)initWithIndex:(NSInteger)index descending:(BOOL)descending caseSensitive:(BOOL)caseSensitive byValue:(BOOL)byValue
+{
+    if (!(self = [super init]))
+        return nil;
+    _index = index;
+    _descending = descending;
+    _caseSensitive = caseSensitive;
+    _byValue = byValue;
+    return self;
+}
+
+@end
+
+/* ------------------------------------------------------------------------ */
+
 @implementation GnmSheet {
     Sheet *_sheet;
     SheetView *_sv;
@@ -1046,6 +1063,295 @@ cell_range_from (GnmRange const *r)
     } description:@"Could not sort." error:error];
 }
 
+#pragma mark - Sort dialog
+
+- (GnmCellRange)sortableRange
+{
+    GnmRange const *r = _sv ? selection_first_range (_sv, NULL, NULL) : NULL;
+    GnmRange region;
+    if (r == NULL) {
+        GnmCellCoordinate p = self.editPosition;
+        range_init (&region, (int) p.column, (int) p.row, (int) p.column, (int) p.row);
+    } else {
+        region = *r;
+    }
+    if (range_is_singleton (&region))
+        gnm_sheet_guess_data_range (_sheet, &region);   /* the block around the cell, in every direction */
+    range_clip_to_finite (&region, _sheet);
+    return cell_range_from (&region);
+}
+
+static GnmRange
+range_from (GnmCellRange r)
+{
+    GnmRange out;
+    range_init (&out, (int) r.start.column, (int) r.start.row, (int) r.end.column, (int) r.end.row);
+    return out;
+}
+
+- (BOOL)range:(GnmCellRange)range hasHeadingByRows:(BOOL)byRows
+{
+    GnmRange r = range_from (range);
+    return sheet_range_has_heading (_sheet, &r, byRows, FALSE);
+}
+
+- (NSString *)sortKeyNameForIndex:(NSInteger)index inRange:(GnmCellRange)range byRows:(BOOL)byRows hasHeader:(BOOL)hasHeader
+{
+    /* dialog-cell-sort.c col_row_name */
+    NSString *generic = byRows ? [NSString stringWithFormat:@"Column %@", GnmString (col_name ((int) index))]
+                               : [NSString stringWithFormat:@"Row %@", GnmString (row_name ((int) index))];
+    if (!hasHeader)
+        return generic;
+    GnmCell *cell = byRows ? sheet_cell_get (_sheet, (int) index, (int) range.start.row)
+                           : sheet_cell_get (_sheet, (int) range.start.column, (int) index);
+    if (cell == NULL || gnm_cell_is_blank (cell))
+        return generic;
+    char *text = value_get_as_string (cell->value);
+    NSString *name = [NSString stringWithFormat:@"%@ (%@)", GnmString (text), generic];
+    g_free (text);
+    return name;
+}
+
+- (BOOL)sortRange:(GnmCellRange)range byRows:(BOOL)byRows hasHeader:(BOOL)hasHeader keys:(NSArray<GnmSortKey *> *)keys
+    retainFormats:(BOOL)retainFormats error:(NSError **)error
+{
+    if (keys.count == 0) {
+        if (error)
+            *error = [self.workbook.engine _errorWithCode:GnmErrorCommandFailed
+                                             description:@"Sort needs at least one key." collected:@[]];
+        return NO;
+    }
+    /* dialog-cell-sort.c cb_dialog_ok_clicked */
+    GnmSortClause *clauses = g_new0 (GnmSortClause, keys.count);
+    NSInteger base = byRows ? range.start.column : range.start.row;
+    NSUInteger i = 0;
+    for (GnmSortKey *key in keys) {
+        clauses[i].offset = (int) (key.index - base);
+        clauses[i].asc = key.isDescending;   /* sic, as the quick sort */
+        clauses[i].cs = key.isCaseSensitive;
+        clauses[i].val = key.byValue;
+        i++;
+    }
+    GnmSortData *data = gnm_sort_data_new ();
+    data->sheet = _sheet;
+    range_init (&data->range,
+                (int) range.start.column + ((hasHeader && !byRows) ? 1 : 0),
+                (int) range.start.row + ((hasHeader && byRows) ? 1 : 0),
+                (int) range.end.column, (int) range.end.row);
+    range_clip_to_finite (&data->range, _sheet);
+    data->num_clause = (int) keys.count;
+    data->clauses = clauses;
+    data->top = byRows;
+    data->retain_formats = retainFormats;
+    data->locale = NULL;
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_sort (wbc, data);   /* takes ownership of data */
+    } description:@"Could not sort." error:error];
+}
+
++ (BOOL)sortDefaultsToCaseSensitive { return gnm_conf_get_core_sort_default_by_case (); }
++ (BOOL)sortDefaultsToRetainingFormats { return gnm_conf_get_core_sort_default_retain_formats (); }
++ (BOOL)sortDefaultsToAscending { return gnm_conf_get_core_sort_default_ascending (); }
+
+#pragma mark - Autofilter
+
+- (BOOL)editPositionIsInFilter
+{
+    return _sv != NULL && gnm_sheet_view_editpos_in_filter (_sv) != NULL;
+}
+
+- (BOOL)hasFilteredRows
+{
+    /* The engine's flag is only kept by the advanced filter (tools/filter.c);
+     * for autofilters, look at the rows of the active ones. */
+    if (_sheet->has_filtered_rows)
+        return YES;
+    for (GSList *l = _sheet->filters; l; l = l->next) {
+        GnmFilter const *filter = l->data;
+        if (!filter->is_active)
+            continue;
+        for (int row = filter->r.start.row + 1; row <= filter->r.end.row; row++) {
+            ColRowInfo const *ri = sheet_row_get (_sheet, row);
+            if (ri != NULL && !ri->visible)
+                return YES;
+        }
+    }
+    return NO;
+}
+
+- (BOOL)toggleAutofilter:(NSError **)error
+{
+    if (_sv == NULL)
+        return NO;
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_autofilter_add_remove (wbc);
+    } description:@"Could not add or remove the autofilter." error:error];
+}
+
+- (void)showAllFilteredRows
+{
+    if (wb_view_cur_sheet (self.workbook.workbookView) != _sheet)
+        wb_view_sheet_focus (self.workbook.workbookView, _sheet);
+    /* The GTK item only serves the advanced filter (tools/filter.c
+     * cb_show_all looks at in_advanced_filter); here every autofilter
+     * condition goes too, each one an undoable command. */
+    for (GSList *l = _sheet->filters; l; l = l->next) {
+        GnmFilter *filter = l->data;
+        for (unsigned i = 0; i < filter->fields->len; i++) {
+            GnmFilterCombo *fcombo = g_ptr_array_index (filter->fields, i);
+            if (fcombo->cond == NULL)
+                continue;
+            [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+                return cmd_autofilter_set_condition (wbc, filter, i, NULL);
+            } description:@"Could not show the filtered rows." error:NULL];
+        }
+    }
+    [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        filter_show_all (wbc);
+        return FALSE;
+    } description:@"Could not show the filtered rows." error:NULL];
+    sheet_update (_sheet);
+}
+
+- (NSArray<GnmFilterButton *> *)filterButtons
+{
+    NSMutableArray *buttons = [NSMutableArray array];
+    for (GSList *l = _sheet->filters; l; l = l->next) {
+        GnmFilter *filter = l->data;
+        for (unsigned i = 0; i < filter->fields->len; i++)
+            [buttons addObject:[[GnmFilterButton alloc] initWithFilter:filter field:i sheet:_sheet]];
+    }
+    return buttons;
+}
+
+/* Port of fcombo_create_list (widgets/gnm-filter-combo-view.c): the
+ * column's distinct values, leaving out rows the other fields hide. */
+typedef struct {
+    gboolean has_blank;
+    GHashTable *hash;
+    GODateConventions const *date_conv;
+    Sheet *src_sheet;
+} UniqueCollection;
+
+static GnmValue *
+cb_collect_content (GnmCellIter const *iter, UniqueCollection *uc)
+{
+    GnmCell const *cell = (iter->pp.sheet == uc->src_sheet) ? iter->cell
+        : sheet_cell_get (uc->src_sheet, iter->pp.eval.col, iter->pp.eval.row);
+    if (gnm_cell_is_blank (cell))
+        uc->has_blank = TRUE;
+    else {
+        GOFormat const *fmt = gnm_cell_get_format (cell);
+        GnmValue const *v = cell->value;
+        g_hash_table_replace (uc->hash, value_dup (v), format_value (fmt, v, -1, uc->date_conv));
+    }
+    return NULL;
+}
+
+static void
+cb_hash_domain (GnmValue *key, G_GNUC_UNUSED gpointer value, gpointer accum)
+{
+    g_ptr_array_add (accum, key);
+}
+
+static gboolean
+formatted_value_equal (GnmValue const *a, GnmValue const *b)
+{
+    return value_equal (a, b) && (VALUE_FMT (a) == VALUE_FMT (b));
+}
+
+- (GnmFilterChoices *)choicesForFilterButton:(GnmFilterButton *)button
+{
+    if (!button.isAttached)
+        return [[GnmFilterChoices alloc] initWithValues:g_ptr_array_new () labels:@[] hasBlanks:NO
+                                                current:[GnmFilterCriterion showAll]];
+    GnmFilter const *filter = button.filter;
+    unsigned field_num = button.field;
+    GnmFilterCombo *fcombo = g_ptr_array_index (filter->fields, field_num);
+    GnmRange r = filter->r;
+    UniqueCollection uc;
+
+    r.start.row++;
+    r.end.col = r.start.col += field_num;
+    uc.has_blank = FALSE;
+    uc.hash = g_hash_table_new_full ((GHashFunc) value_hash, (GEqualFunc) formatted_value_equal,
+                                     (GDestroyNotify) value_release, (GDestroyNotify) g_free);
+    uc.src_sheet = filter->sheet;
+    uc.date_conv = sheet_date_conv (uc.src_sheet);
+
+    if (filter->fields->len > 1) {
+        /* A temporary sheet carries the other fields' visibility. */
+        Workbook *wb = uc.src_sheet->workbook;
+        char *name = workbook_sheet_get_free_name (wb, "DummyFilterPopulate", FALSE, FALSE);
+        Sheet *filtered_sheet = sheet_new (wb, name, gnm_sheet_get_max_cols (uc.src_sheet),
+                                           gnm_sheet_get_max_rows (uc.src_sheet));
+        g_free (name);
+        for (unsigned i = 0; i < filter->fields->len; i++)
+            if (i != field_num)
+                gnm_filter_combo_apply (g_ptr_array_index (filter->fields, i), filtered_sheet);
+        sheet_foreach_cell_in_range (filtered_sheet, CELL_ITER_IGNORE_HIDDEN, &r,
+                                     (CellIterFunc) cb_collect_content, &uc);
+        g_object_unref (filtered_sheet);
+    } else {
+        sheet_foreach_cell_in_range (filter->sheet, CELL_ITER_ALL, &r,
+                                     (CellIterFunc) cb_collect_content, &uc);
+    }
+
+    GPtrArray *sorted = g_ptr_array_new ();
+    g_hash_table_foreach (uc.hash, (GHFunc) cb_hash_domain, sorted);
+    g_ptr_array_sort (sorted, value_cmp);
+
+    GPtrArray *values = g_ptr_array_new ();
+    NSMutableArray<NSString *> *labels = [NSMutableArray arrayWithCapacity:sorted->len];
+    for (unsigned i = 0; i < sorted->len; i++) {
+        GnmValue const *v = g_ptr_array_index (sorted, i);
+        char const *str = g_hash_table_lookup (uc.hash, v);
+        unsigned const max = 50;
+        NSString *label = GnmString (str);
+        if (g_utf8_strlen (str, -1) > max + 3) {
+            char *cut = g_strdup (str);
+            strcpy (g_utf8_offset_to_pointer (cut, max), "...");
+            label = GnmString (cut);
+            g_free (cut);
+        }
+        [labels addObject:label];
+        g_ptr_array_add (values, value_dup (v));
+    }
+    g_hash_table_destroy (uc.hash);
+    g_ptr_array_free (sorted, TRUE);
+
+    GnmFilterCriterion *current = [GnmFilterCriterion conditionFromEngine:fcombo->cond values:values labels:labels];
+    return [[GnmFilterChoices alloc] initWithValues:values labels:labels hasBlanks:uc.has_blank current:current];
+}
+
+- (BOOL)setFilterCondition:(GnmFilterCriterion *)condition forButton:(GnmFilterButton *)button error:(NSError **)error
+{
+    if (!button.isAttached) {
+        if (error)
+            *error = [self.workbook.engine _errorWithCode:GnmErrorCommandFailed
+                                             description:@"The filter is gone." collected:@[]];
+        return NO;
+    }
+    GnmFilter *filter = button.filter;
+    unsigned field = button.field;
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        GnmFilterCondition *cond = [condition newEngineConditionWithWorkbook:_sheet->workbook];
+        return cmd_autofilter_set_condition (wbc, filter, field, cond);   /* takes cond */
+    } description:@"Could not change the filter condition." error:error];
+}
+
+#pragma mark - Tab colors
+
+- (CGColorRef)copyTabColor
+{
+    return _sheet->tab_color ? gnm_cocoa_cgcolor_from_go (_sheet->tab_color->go_color) : NULL;
+}
+
+- (CGColorRef)copyTabTextColor
+{
+    return _sheet->tab_text_color ? gnm_cocoa_cgcolor_from_go (_sheet->tab_text_color->go_color) : NULL;
+}
+
 - (NSArray<NSValue *> *)marchingAntsFrames
 {
     NSMutableArray *frames = [NSMutableArray array];
@@ -1351,6 +1657,11 @@ pixels_from_points (Sheet const *sheet, gboolean horizontal, double points)
     for (GSList *l = _sheet->sheet_objects; l; l = l->next) {
         SheetObject *so = l->data;
         double c[4];
+        /* Autofilter combos and other widget-like objects have no cairo
+         * renderer (sheet_object_draw_cairo_sized would call NULL); the
+         * app draws the filter buttons itself. */
+        if (GNM_SO_CLASS (G_OBJECT_GET_CLASS (so))->draw_cairo == NULL || !(so->flags & SHEET_OBJECT_IS_VISIBLE))
+            continue;
         object_pixel_frame (_sheet, so, c);
         CGRect frame = CGRectMake (c[0], c[1], c[2] - c[0], c[3] - c[1]);
         if (!CGRectIntersectsRect (frame, rect) || frame.size.width <= 0 || frame.size.height <= 0)

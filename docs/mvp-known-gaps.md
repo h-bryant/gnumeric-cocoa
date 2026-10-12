@@ -36,13 +36,13 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | EditPreferences | no | Phase 5 |
 | EditClearContent | ported | Delete key and Edit → Delete |
 | EditClearAll, EditClearFormats, EditClearComments | ported | Edit → Clear submenu |
-| EditClear*Filtered (4) | bridge | `clearSelection:` takes the flags; filtered-only variants wait for autofilter (Phase 3) |
+| EditClear*Filtered (4) | ported | Edit → Clear → "… Filtered Rows" (2026-10-12); as in GTK they skip the rows a filter hides |
 | EditDeleteColumns, EditDeleteRows | ported | Edit menu; the selection's columns or rows |
 | EditDeleteCells | no | Phase 3 |
 | EditClearHyperlinks, EditComment, EditHyperlink, EditNames | no | Phase 5 |
 | InsertSheet, InsertSheetAtEnd, EditDuplicateSheet, SheetRemove, SheetChangeName | ported | Edit → Sheet and the tab context menu; rename through a prompt |
 | SheetReorder | partial | Move Left / Move Right; no Manage Sheets dialog or drag |
-| SheetResize | no | Phase 3 (`cmd_resize_sheets`) |
+| SheetResize | ported | Edit → Sheet → Resize… (2026-10-12): powers of two, optionally every sheet |
 | EditSelectAll | ported | ⌘A and the header corner |
 | EditSelectColumn, EditSelectRow | ported | header clicks and Edit → Select |
 | EditSelectArray, EditSelectDepends, EditSelectInputs, EditSelectObject | no | Phase 3/4 |
@@ -97,12 +97,13 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 
 | Action | Status | Notes / Phase |
 |---|---|---|
-| DataSort | partial | quick sort only; no Sort dialog (clauses, case, by columns) |
+| DataSort | partial | Data → Sort… (2026-10-12): rows or columns, header, three keys with order and case, keep formats; no locale, no more than three keys, no saved setups |
 | DataShuffle, DataValidate, DataConsolidate, DataTable, DataTextToColumns | no | Phase 3/5 |
 | CopyDown, CopyRight | ported | Edit → Fill → Down ⌘D, Right ⌘R |
 | EditFillAutofill | ported | the fill handle on the selection; Option makes a single number count up (the GTK Ctrl) |
 | EditFillSeries, ToolsMerge, ToolsTabulate, RandomGenerator* | no | Phase 3/5 |
-| DataAutoFilter, DataFilterShowAll, DataFilterAdvancedfilter | no | Phase 3; filtered rows in files draw hidden |
+| DataAutoFilter, DataFilterShowAll | ported | Data → Filter (2026-10-12): buttons in the heading cells with the GTK list, Custom… and Top 10… sheets; Show All also drops every autofilter condition (GTK's only serves the advanced filter) |
+| DataFilterAdvancedfilter | no | Phase 5 |
 | DataOutline* (7) | no | Phase 3 |
 | DataSlicer* (3) | no | Phase 5 |
 | DataImportText, DataImportOther, DataExportText, DataExportCSV, DataExport, DataExportRepeat | no | Phase 5; the text import dialog is also needed for CSV options |
@@ -131,7 +132,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | Marching ants animation | partial | static dashed outline |
 | Drag and drop (cells, files, sheet tabs) | no | Phase 3; sheets move through the menu for now |
 | Column and row header drag resizing, double-click autosize | ported | 2026-10-11; resizes every selected column (row) when the dragged one is selected |
-| Sheet tab context menu, tab colors | partial | context menu 2026-10-11 (right-click selects the tab); no tab colors |
+| Sheet tab context menu, tab colors | partial | context menu 2026-10-11; Tab Color… 2026-10-12 shows the background as a swatch before the name (the text color is kept in the file, not shown) |
 | Printing and page setup | no | Phase 3+ (`NSPrintOperation` with the engine's `print-cell.c`) |
 | Preferences window | no | Phase 5 |
 | Plugin manager | no | Phase 5 |

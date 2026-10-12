@@ -177,6 +177,9 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             }
         }
         gridView.presentError = { [weak self] error in self?.present(error) }
+        gridView.requestFilterDialog = { [weak self] button, choices, custom in
+            self?.promptFilterCondition(for: button, choices: choices, custom: custom)
+        }
     }
 
     private func present(_ error: Error) {
@@ -223,6 +226,14 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         for (i, sheet) in tabSheets.enumerated() {
             tabs.setLabel(sheet.name, forSegment: i)
             tabs.setWidth(0, forSegment: i)
+            // The tab color as a swatch before the name: a segmented control
+            // has no per-segment background (the text color is not shown).
+            if let color = sheet.tabColor().flatMap(NSColor.init(cgColor:)) {
+                tabs.setImage(Self.swatch(color), forSegment: i)
+                tabs.setImageScaling(.scaleNone, forSegment: i)
+            } else {
+                tabs.setImage(nil, forSegment: i)
+            }
         }
         if let current = gridView.sheet, let index = tabSheets.firstIndex(of: current) {
             tabs.selectedSegment = index
@@ -235,6 +246,14 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         tabs.frame = NSRect(x: 0, y: 3, width: max(tabs.fittingSize.width, tabs.intrinsicContentSize.width), height: 24)
         if ProcessInfo.processInfo.environment["GNM_DEBUG_LAYOUT"] != nil {
             NSLog("tabs: %d segments, natural width %.1f", tabs.segmentCount, tabs.frame.width)
+        }
+    }
+
+    private static func swatch(_ color: NSColor) -> NSImage {
+        NSImage(size: NSSize(width: 10, height: 10), flipped: false) { rect in
+            color.setFill()
+            NSBezierPath(roundedRect: rect.insetBy(dx: 0.5, dy: 0.5), xRadius: 2, yRadius: 2).fill()
+            return true
         }
     }
 
@@ -399,7 +418,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         case #selector(formatCells(_:)):
             return gridView.sheet != nil && formatSheetWindow == nil
         case #selector(setColumnWidth(_:)), #selector(setRowHeight(_:)),
-             #selector(setDefaultColumnWidth(_:)), #selector(setDefaultRowHeight(_:)), #selector(renameSheet(_:)):
+             #selector(setDefaultColumnWidth(_:)), #selector(setDefaultRowHeight(_:)), #selector(renameSheet(_:)),
+             #selector(resizeSheet(_:)), #selector(setTabColor(_:)), #selector(sortCells(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(removeSheet(_:)):
             return gridView.sheet != nil && workbook.canRemoveSheets
@@ -539,6 +559,193 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             let name = field.stringValue.trimmingCharacters(in: .whitespaces)
             guard !name.isEmpty, name != current.name else { return }
             self?.runSheetCommand { try $0.rename(current, to: name) }
+        }
+    }
+
+    /// The GTK Resize Sheet dialog: sizes are powers of two between the
+    /// engine's limits; the change can apply to every sheet.
+    @objc func resizeSheet(_ sender: Any?) {
+        guard let window, let sheet = gridView.sheet else { return }
+        let alert = NSAlert()
+        alert.messageText = "Resize Sheet"
+        alert.informativeText = "Sizes are powers of two. A sheet cannot shrink below its data."
+        alert.addButton(withTitle: "Resize")
+        alert.addButton(withTitle: "Cancel")
+        func sizes(from minimum: Int, to maximum: Int, current: Int) -> NSPopUpButton {
+            let popUp = NSPopUpButton(frame: .zero, pullsDown: false)
+            var n = minimum
+            while n <= maximum {
+                popUp.addItem(withTitle: n >= 1 << 20 ? "\(n >> 20)M" : "\(n)")
+                popUp.lastItem?.tag = n
+                n *= 2
+            }
+            _ = popUp.selectItem(withTag: current)
+            return popUp
+        }
+        let columns = sizes(from: Workbook.minimumSheetColumns, to: Workbook.maximumSheetColumns, current: sheet.columnCount)
+        let rows = sizes(from: Workbook.minimumSheetRows, to: Workbook.maximumSheetRows, current: sheet.rowCount)
+        let all = NSButton(checkboxWithTitle: "Apply to all sheets", target: nil, action: nil)
+        let grid = NSGridView(views: [
+            [NSTextField(labelWithString: "Columns:"), columns],
+            [NSTextField(labelWithString: "Rows:"), rows],
+            [NSView(), all],
+        ])
+        grid.column(at: 0).xPlacement = .trailing
+        grid.rowSpacing = 6
+        grid.frame = NSRect(x: 0, y: 0, width: 260, height: grid.fittingSize.height)
+        alert.accessoryView = grid
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard let self, response == .alertFirstButtonReturn else { return }
+            let cols = columns.selectedTag(), rws = rows.selectedTag()
+            var targets = [sheet]   // first, so the focus stays here on undo
+            if all.state == .on {
+                targets += workbook.sheets.filter { $0 != sheet && ($0.columnCount != cols || $0.rowCount != rws) }
+            }
+            if targets.count == 1 && sheet.columnCount == cols && sheet.rowCount == rws { return }
+            runSheetCommand { try $0.resize(targets, toColumns: cols, rows: rws) }
+        }
+    }
+
+    /// Tab colors (the GTK Manage Sheets dialog's color pickers).
+    @objc func setTabColor(_ sender: Any?) {
+        guard let window, let sheet = gridView.sheet else { return }
+        let alert = NSAlert()
+        alert.messageText = "Tab Color"
+        alert.informativeText = "Colors of the tab for the sheet \"\(sheet.name)\"."
+        alert.addButton(withTitle: "Set")
+        alert.addButton(withTitle: "Cancel")
+        func well(_ color: CGColor?, none: NSButton) -> NSColorWell {
+            let well = NSColorWell(frame: NSRect(x: 0, y: 0, width: 60, height: 24))
+            well.widthAnchor.constraint(equalToConstant: 60).isActive = true
+            well.heightAnchor.constraint(equalToConstant: 24).isActive = true
+            if let color, let nsColor = NSColor(cgColor: color) {
+                well.color = nsColor
+            } else {
+                none.state = .on
+            }
+            return well
+        }
+        let noBackground = NSButton(checkboxWithTitle: "None", target: nil, action: nil)
+        let noText = NSButton(checkboxWithTitle: "None", target: nil, action: nil)
+        let background = well(sheet.tabColor(), none: noBackground)
+        let text = well(sheet.tabTextColor(), none: noText)
+        let grid = NSGridView(views: [
+            [NSTextField(labelWithString: "Background:"), background, noBackground],
+            [NSTextField(labelWithString: "Text:"), text, noText],
+        ])
+        grid.column(at: 0).xPlacement = .trailing
+        grid.rowSpacing = 6
+        grid.frame = NSRect(x: 0, y: 0, width: 260, height: grid.fittingSize.height)
+        alert.accessoryView = grid
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard let self, response == .alertFirstButtonReturn else { return }
+            NSColorPanel.shared.orderOut(nil)
+            let bg = noBackground.state == .on ? nil : background.color.cgColor
+            let fg = noText.state == .on ? nil : text.color.cgColor
+            runSheetCommand { try $0.setTabColor(bg, textColor: fg, of: sheet) }
+        }
+    }
+
+    // MARK: Sort dialog (Data → Sort…)
+
+    private var sortDialog: SortDialog?
+
+    @objc func sortCells(_ sender: Any?) {
+        guard let window, let sheet = gridView.sheet, sortDialog == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let dialog = SortDialog(sheet: sheet, range: sheet.sortableRange)
+        sortDialog = dialog
+        dialog.run(in: window) { [weak self] request in
+            guard let self else { return }
+            sortDialog = nil
+            guard let request else { return }
+            runSizeCommand { sheet in
+                try sheet.sort(request.range, byRows: request.byRows, hasHeader: request.hasHeader, keys: request.keys,
+                               retainFormats: request.retainFormats)
+            }
+        }
+    }
+
+    // MARK: Autofilter dialogs ("(Custom…)" and "(Top 10…)")
+
+    private static let filterOperators: [(label: String, op: FilterOperator)] = [
+        ("(none)", .none), ("equals", .equals), ("does not equal", .doesNotEqual),
+        ("is greater than", .greaterThan), ("is greater than or equal to", .greaterThanOrEqual),
+        ("is less than", .lessThan), ("is less than or equal to", .lessThanOrEqual),
+        ("begins with", .beginsWith), ("does not begin with", .doesNotBeginWith),
+        ("ends with", .endsWith), ("does not end with", .doesNotEndWith),
+        ("contains", .contains), ("does not contain", .doesNotContain),
+    ]
+
+    func promptFilterCondition(for button: FilterButton, choices: FilterChoices, custom: Bool) {
+        guard let window else { return }
+        let current = choices.current
+        let alert = NSAlert()
+        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: "Cancel")
+        let condition: () -> FilterCondition
+        if custom {
+            alert.messageText = "Custom Filter"
+            alert.informativeText = "Show the rows where the column:"
+            func operators(_ selected: FilterOperator) -> NSPopUpButton {
+                let popUp = NSPopUpButton(frame: .zero, pullsDown: false)
+                Self.filterOperators.forEach { popUp.addItem(withTitle: $0.label) }
+                popUp.selectItem(at: Self.filterOperators.firstIndex { $0.op == selected } ?? 0)
+                return popUp
+            }
+            let isCustom = current.kind == .custom
+            let op0 = operators(isCustom ? current.firstOperator : .equals)
+            let op1 = operators(isCustom ? current.secondOperator : .none)
+            let text0 = NSTextField(string: isCustom ? current.firstText : "")
+            let text1 = NSTextField(string: isCustom ? current.secondText : "")
+            let join = NSSegmentedControl(labels: ["And", "Or"], trackingMode: .selectOne, target: nil, action: nil)
+            join.selectedSegment = isCustom && !current.joinedWithAnd ? 1 : 0
+            for field in [text0, text1] {
+                field.widthAnchor.constraint(equalToConstant: 160).isActive = true
+            }
+            let grid = NSGridView(views: [[op0, text0], [join, NSView()], [op1, text1]])
+            grid.rowSpacing = 6
+            grid.frame = NSRect(x: 0, y: 0, width: 400, height: grid.fittingSize.height)
+            alert.accessoryView = grid
+            alert.window.initialFirstResponder = text0
+            condition = {
+                let first = Self.filterOperators[op0.indexOfSelectedItem].op
+                let second = Self.filterOperators[op1.indexOfSelectedItem].op
+                if first == .none { return .showAll() }
+                if second == .none { return .custom(first, text0.stringValue) }
+                return .custom(first, text0.stringValue, joinedWithAnd: join.selectedSegment == 0, second, text1.stringValue)
+            }
+        } else {
+            alert.messageText = "Top 10 AutoFilter"
+            alert.informativeText = "Show the rows with the largest or smallest values of the column."
+            let isBucket = current.kind == .bucket
+            let direction = NSPopUpButton(frame: .zero, pullsDown: false)
+            direction.addItem(withTitle: "Top")
+            direction.addItem(withTitle: "Bottom")
+            direction.selectItem(at: isBucket && !current.isTop ? 1 : 0)
+            let count = NSTextField(frame: NSRect(x: 0, y: 0, width: 60, height: 24))
+            let formatter = NumberFormatter()
+            formatter.minimum = 1
+            formatter.maximumFractionDigits = 0
+            count.formatter = formatter
+            count.doubleValue = isBucket ? current.count : 10
+            count.widthAnchor.constraint(equalToConstant: 60).isActive = true
+            let unit = NSPopUpButton(frame: .zero, pullsDown: false)
+            unit.addItem(withTitle: "Items")
+            unit.addItem(withTitle: "Percent")
+            unit.selectItem(at: isBucket && current.isPercent ? 1 : 0)
+            let grid = NSGridView(views: [[direction, count, unit]])
+            grid.columnSpacing = 8
+            grid.frame = NSRect(x: 0, y: 0, width: 300, height: grid.fittingSize.height)
+            alert.accessoryView = grid
+            alert.window.initialFirstResponder = count
+            condition = {
+                .bucket(top: direction.indexOfSelectedItem == 0, count: max(count.doubleValue, 1), percent: unit.indexOfSelectedItem == 1)
+            }
+        }
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard let self, response == .alertFirstButtonReturn else { return }
+            gridView.applyFilterCondition(condition(), to: button)
         }
     }
 

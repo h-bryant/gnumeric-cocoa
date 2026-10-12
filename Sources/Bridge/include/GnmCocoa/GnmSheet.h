@@ -5,6 +5,7 @@
 #import <CoreGraphics/CoreGraphics.h>
 #import <GnmCocoa/GnmGeometry.h>
 #import <GnmCocoa/GnmCellFormat.h>
+#import <GnmCocoa/GnmFilter.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -17,7 +18,24 @@ typedef NS_OPTIONS(NSUInteger, GnmClearOptions) {
     GnmClearComments = 1 << 2,
     GnmClearMerges = 1 << 6,
     GnmClearObjects = 1 << 7,
+    /// Skip the rows an autofilter hides, so only the rows the filter shows
+    /// are cleared (the GTK "... in Filtered Rows" items).
+    GnmClearFilteredRowsOnly = 1 << 8,
 } NS_SWIFT_NAME(ClearOptions);
+
+/// One key of the Sort dialog: a column (sorting by rows) or a row (sorting
+/// by columns), absolute index.
+NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(SortKey)
+@interface GnmSortKey : NSObject
+- (instancetype)initWithIndex:(NSInteger)index descending:(BOOL)descending caseSensitive:(BOOL)caseSensitive
+                      byValue:(BOOL)byValue NS_DESIGNATED_INITIALIZER NS_SWIFT_NAME(init(index:descending:caseSensitive:byValue:));
+- (instancetype)init NS_UNAVAILABLE;
+@property (nonatomic, readonly) NSInteger index;
+@property (nonatomic, readonly, getter=isDescending) BOOL descending;
+@property (nonatomic, readonly, getter=isCaseSensitive) BOOL caseSensitive;
+/// Compare values (the usual) rather than the formatted text.
+@property (nonatomic, readonly) BOOL byValue;
+@end
 
 /// What and how `pasteWithOptions:` pastes; mirrors the engine's PASTE_*
 /// flags.  `GnmPasteDefault` is the plain paste (everything, with column
@@ -157,6 +175,57 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 /// by that column; a heading row is detected and kept.  Several ranges
 /// are refused.
 - (BOOL)sortSelectionDescending:(BOOL)descending error:(NSError **)error NS_SWIFT_NAME(sortSelection(descending:));
+
+// The Sort dialog (dialogs/dialog-cell-sort.c).
+/// The range the dialog starts from: the selection, or the data region
+/// around a single selected cell.
+@property (nonatomic, readonly) GnmCellRange sortableRange;
+/// Whether the first row (sorting by rows) or column of `range` looks like
+/// a heading (`sheet_range_has_heading`).
+- (BOOL)range:(GnmCellRange)range hasHeadingByRows:(BOOL)byRows NS_SWIFT_NAME(range(_:hasHeadingByRows:));
+/// What the dialog calls a key: "Column B", or "Price (Column B)" when
+/// the heading cell has text.
+- (NSString *)sortKeyNameForIndex:(NSInteger)index inRange:(GnmCellRange)range byRows:(BOOL)byRows
+                        hasHeader:(BOOL)hasHeader NS_SWIFT_NAME(sortKeyName(forIndex:in:byRows:hasHeader:));
+/// Sort `range` by `keys` in order (`cmd_sort`); with `hasHeader` the
+/// heading row (or column) stays.
+- (BOOL)sortRange:(GnmCellRange)range byRows:(BOOL)byRows hasHeader:(BOOL)hasHeader keys:(NSArray<GnmSortKey *> *)keys
+    retainFormats:(BOOL)retainFormats error:(NSError **)error NS_SWIFT_NAME(sort(_:byRows:hasHeader:keys:retainFormats:));
+/// The engine's sort preferences (`core/sort/default/*`).
+@property (class, nonatomic, readonly) BOOL sortDefaultsToCaseSensitive;
+@property (class, nonatomic, readonly) BOOL sortDefaultsToRetainingFormats;
+@property (class, nonatomic, readonly) BOOL sortDefaultsToAscending;
+
+// Autofilter (Data → Filter).  A filter covers a range whose first row
+// holds headings; each heading gets a button (`GnmFilterButton`) that
+// drops down the column's values and the special choices.
+/// Whether the edit position lies in a filter (the menu item then reads
+/// Remove instead of Add).
+@property (nonatomic, readonly) BOOL editPositionIsInFilter;
+/// Whether any row is hidden by a filter.
+@property (nonatomic, readonly) BOOL hasFilteredRows;
+/// Add a filter over the selection, or over the region around a
+/// single-row selection, or remove the filter at the edit position
+/// (`cmd_autofilter_add_remove`); one undoable command.
+- (BOOL)toggleAutofilter:(NSError **)error NS_SWIFT_NAME(toggleAutofilter());
+/// Show every row the filters hide: drops each autofilter condition (an
+/// undoable command each; the GTK item only serves the advanced filter)
+/// and runs `filter_show_all` for rows an advanced filter hid.
+- (void)showAllFilteredRows;
+/// The buttons of every filter on the sheet, for drawing and hit testing.
+@property (nonatomic, readonly) NSArray<GnmFilterButton *> *filterButtons;
+/// The drop-down list of a button: the column's values and the current
+/// condition.
+- (GnmFilterChoices *)choicesForFilterButton:(GnmFilterButton *)button NS_SWIFT_NAME(choices(for:));
+/// Apply a condition to the button's field (`cmd_autofilter_set_condition`).
+- (BOOL)setFilterCondition:(GnmFilterCriterion *)condition forButton:(GnmFilterButton *)button
+                     error:(NSError **)error NS_SWIFT_NAME(setFilterCondition(_:for:));
+
+// Tab colors, as the file stores them; nil when unset.  Set through the
+// workbook (`setTabColor:textColor:ofSheet:`), which makes the change
+// undoable.
+- (nullable CGColorRef)copyTabColor CF_RETURNS_RETAINED NS_SWIFT_NAME(tabColor());
+- (nullable CGColorRef)copyTabTextColor CF_RETURNS_RETAINED NS_SWIFT_NAME(tabTextColor());
 /// Frames (sheet pixels) of the ranges carrying marching ants: the source
 /// of the last copy or cut, until it is pasted or cleared.
 @property (nonatomic, readonly) NSArray<NSValue *> *marchingAntsFrames;
