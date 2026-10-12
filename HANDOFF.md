@@ -303,7 +303,9 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    and their pop-up, the object handles and drags, the chart guru, the
    image open panel, the chart editor) is verified only
    headlessly: ask what he sees before
-   changing UI behavior, and take his report over the captures.
+   changing UI behavior, and take his report over the captures. First
+   thing to ask: does ⌘Q work after ⌘S (`docs/progress.md`, "a quit
+   swallowed after an NSDocument save").
 5. Phase 3 (`docs/mvp-known-gaps.md` says what the MVP lacks). Done on
    2026-10-11 and 2026-10-12: insert/delete rows and columns, hide and
    unhide, clear variants (filtered ones too), fill and autofill (fill

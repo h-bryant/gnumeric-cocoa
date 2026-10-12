@@ -589,6 +589,33 @@
   `Tests/BridgeTests/workbook_io.m` starts its engine at level 0 and
   checks the `.gnumeric` output starts with `<?xml`.
 
+## 2026-10-12: a quit swallowed after an NSDocument save (open)
+
+- Found while checking the compression change: with `GNM_SNAPSHOT_TYPE`
+  (type, undo, redo, paste, then `NSDocument.save(to:for:)` as a Save
+  As), the app no longer quit. Not the compression change: the same at
+  the commit before it. `NSApp.terminate(nil)` returns at once without
+  ever reaching `applicationShouldTerminate`, and so does every later
+  call; the main thread sits idle in the run loop. A save that took
+  about 25 ms (some runs) quit fine; one that took about 300 ms did not,
+  and a terminate one or two seconds after the save's completion handler
+  was swallowed too, so it is not a race the hook can wait out. Some
+  runs also found a second document open at the destination URL at
+  launch (AppKit reopening what a killed run had saved), which the Save
+  As closes through `_closeOtherDocumentWithURL:`; that is not the
+  trigger either. Other hooks, which do not save, quit normally.
+- The hook now falls back: three seconds after the terminate request it
+  logs "terminate was swallowed", runs the delegate's own
+  `applicationWillTerminate` (documents closed, engine shut down) and
+  exits, so captures finish and the engine's leak check still runs. The
+  condition stays visible in the log.
+- Open question for Henry on screen: open a file, edit a cell, ⌘S, then
+  ⌘Q. If Quit does nothing, the swallowed terminate is real for users and
+  needs a fix in the save path (`WorkbookDocument.writeSafely` hands the
+  final URL to libgsf; AppKit's review of documents at quit may wait on
+  the save's file access that never ends); if it quits, the hang is
+  specific to the headless sequence.
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and

@@ -138,6 +138,15 @@ enum Snapshot {
                     document.updateChangeCount(.changeCleared)
                 }
                 DispatchQueue.main.async { NSApp.terminate(nil) }
+                // After a save through NSDocument (the typing hook), AppKit
+                // swallows the terminate on most runs, and every later one
+                // too (2026-10-12, docs/progress.md): fall back to the
+                // delegate's own shutdown and a plain exit, said out loud.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    NSLog("snapshot: terminate was swallowed; shutting the engine down and exiting")
+                    (NSApp.delegate as? AppDelegate)?.applicationWillTerminate(Notification(name: NSApplication.willTerminateNotification))
+                    exit(0)
+                }
             }
             guard let window = NSApp.windows.first(where: { $0.isVisible }),
                   let view = window.contentView else {

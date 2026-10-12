@@ -110,7 +110,10 @@ resize, delete, undo, copy and paste, an inserted image), chart
 insertion (which also writes the guru sheet to `-guru.png`), and the chart
 editor on the sheet's first chart (a title, an inverted axis, a red series,
 the editor written to `-editor.png`, then applied) before the
-capture (`AppDelegate.swift`, `Snapshot`). The three snapshot files should agree. The grid capture draws the grid view
+capture (`AppDelegate.swift`, `Snapshot`). After the typing hook's save
+the normal quit is swallowed (`docs/progress.md`, 2026-10-12); the
+snapshot then logs "terminate was swallowed" and exits through the
+delegate's shutdown itself. The three snapshot files should agree. The grid capture draws the grid view
 alone; the window captures draw the whole hierarchy and are what caught the
 blank grid of 2026-10-11 (`docs/progress.md`). SwiftUI-hosted controls (the
 text fields, the tab control) may come out incomplete in the window
