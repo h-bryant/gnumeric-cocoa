@@ -87,5 +87,6 @@
 - (void)testFillSeries { [self runProgram:@"fill_series"]; }
 - (void)testGoalSeek { [self runProgram:@"goal_seek"]; }
 - (void)testConditional { [self runProgram:@"conditional"]; }
+- (void)testAnalysis { [self runProgram:@"analysis"]; }
 
 @end

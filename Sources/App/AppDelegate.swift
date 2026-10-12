@@ -472,6 +472,57 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_STATS"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // The analysis tools: x and y in A1:B6, a correlation matrix
+                // into D1 through its dialog (captured to `-stats.png`), then
+                // descriptive statistics with a confidence interval to a new
+                // sheet, which the grid capture shows.
+                do {
+                    let xs = ["x", "1", "2", "3", "4", "5"], ys = ["y", "3", "5", "7", "9", "12"]
+                    for r in 0..<6 {
+                        try sheet.setText(xs[r], atColumn: 0, row: r, autocorrect: false)
+                        try sheet.setText(ys[r], atColumn: 1, row: r, autocorrect: false)
+                    }
+                } catch {
+                    NSLog("stats: data failed: %@", error.localizedDescription)
+                }
+                sheet.selectRange(CellRange(start: CellCoordinate(column: 0, row: 0), end: CellCoordinate(column: 1, row: 5)),
+                                  editPosition: CellCoordinate(column: 0, row: 0))
+                AnalysisDialog.headlessDriver = { dialog in
+                    dialog.labels.state = .on
+                    dialog.destination.selectItem(at: 1)
+                    dialog.outputField.stringValue = "D1"
+                    if let content = dialog.alert.accessoryView {
+                        content.layoutSubtreeIfNeeded()
+                        if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                            content.cacheDisplay(in: content.bounds, to: rep)
+                            let statsPath = (path as NSString).deletingPathExtension + "-stats.png"
+                            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: statsPath))
+                            NSLog("stats: captured %@ (%@)", statsPath, NSStringFromRect(content.bounds))
+                        }
+                    }
+                    NSLog("stats: dialog '%@' input '%@'", dialog.alert.messageText, dialog.inputField.stringValue)
+                    return true
+                }
+                controller.correlation(nil)
+                NSLog("stats: D1='%@' E3='%@' undo=%@", sheet.displayTextOfCell(atColumn: 3, row: 0) ?? "nil",
+                      sheet.displayTextOfCell(atColumn: 4, row: 2) ?? "nil", sheet.workbook?.undoLabel ?? "nil")
+                AnalysisDialog.headlessDriver = { dialog in
+                    dialog.labels.state = .on
+                    dialog.confidenceInterval.state = .on
+                    return true
+                }
+                controller.descriptiveStatistics(nil)
+                AnalysisDialog.headlessDriver = nil
+                let shown = controller.gridView.sheet
+                NSLog("stats: now on '%@' of %ld sheets, tabs=%ld; A2='%@' B2='%@' undo=%@", shown?.name ?? "nil",
+                      sheet.workbook?.sheets.count ?? 0, controller.tabCount, shown?.displayTextOfCell(atColumn: 0, row: 1) ?? "nil",
+                      shown?.displayTextOfCell(atColumn: 1, row: 1) ?? "nil", sheet.workbook?.undoLabel ?? "nil")
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_COND"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

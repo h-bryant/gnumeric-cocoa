@@ -980,6 +980,46 @@
   yellow, bold" on B5:B12 through the dialog (captured to `-cond.png`)
   and the grid capture shows the fills.
 
+## 2026-10-12: The analysis tools
+
+- `GnmAnalysis.h`: `GnmAnalysisOutput` (the dialogs' Output page: a new
+  sheet named after the tool, or a range named as the dialogs take it,
+  with autofit, clear, retain formatting and comments, and formulas or
+  values), `GnmAnalysis` and its tools: `GnmDescriptiveStatistics`
+  (summary, SSMEDIAN, a confidence interval for the mean, kth largest and
+  smallest), `GnmCorrelationAnalysis`, `GnmCovarianceAnalysis` (all three
+  over a range list grouped by columns, rows, or areas, with labels), and
+  `GnmRegressionAnalysis` (x and y ranges, labels, confidence level, zero
+  intercept, residuals, one multiple regression or 2-variable ones,
+  several y).  `GnmSheet.runAnalysis:output:` builds the engine's tool
+  object as the dialogs' OK handlers do (`global_range_list_parse` for
+  the input), the output description, and runs `cmd_analysis_tool`,
+  returning the sheet written to; the dialogs' validations and their
+  words come first (vector y, matching sizes, the confidence level, "No
+  statistics are selected.", the equal-size refusal from the tool's
+  error code).  `rangeNamesInList:` names the ranges in a list, which
+  the dialog uses to turn the selection into "A1:B6".
+- Engine facts: `cmd_analysis_tool` takes the output description over
+  and frees it on failure too (its finalize), so the caller never frees
+  it; a new-sheet run attaches and focuses the sheet inside the command
+  (the delegate's didAdd and didFocus follow), and undo removes it;
+  the correlation tool writes the lower triangle; the covariance tool
+  uses COVAR (population); with labels the variable names head the
+  rows and columns.
+- `AnalysisDialog.swift` (Tools → Statistics → Descriptive Statistics…,
+  Correlation…, Covariance…, Regression…): one alert sheet per tool with
+  the Input rows (the selection as the input, grouping, labels), the
+  tool's rows, and the Output rows; a refusal shows the message and
+  re-presents the sheet with its values kept.  The sheet written to is
+  shown.
+- `Tests/BridgeTests/analysis.m` (18 XCTest programs now): descriptive
+  statistics to a new sheet with undo and redo, correlation and
+  covariance (by areas, formulas entered) into ranges, regression
+  coefficients, the range list reader, and the refusals.
+  `GNM_SNAPSHOT_STATS=1` fills A1:B6, runs a correlation into D1 through
+  the dialog (captured to `-stats.png`), then descriptive statistics to
+  a new sheet, which the grid capture shows.
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -992,9 +1032,10 @@
    Insert and Delete Cells, the current date and time, Save As CSV,
    Find and Replace, the Settings window, and Export as Text with
    options, the text import assistant, cell comments, defined names,
-   Fill Series, Text to Columns, Goal Seek, and conditional formatting;
-   next the rest of Phase 5 by usage frequency: the analysis tools, data
-   validation, Solver, hyperlinks) from
+   Fill Series, Text to Columns, Goal Seek, conditional formatting, and
+   the first analysis tools; next the rest of Phase 5 by usage
+   frequency: data validation, more analysis tools (t-tests, ANOVA,
+   sampling, moving averages), Solver, hyperlinks) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -1017,8 +1058,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-12: `main` at the conditional
-   formatting commit (after Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-12: `main` at the analysis tools
+   commit (after conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

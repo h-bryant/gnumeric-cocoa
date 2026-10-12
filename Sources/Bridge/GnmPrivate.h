@@ -54,6 +54,7 @@
 #include <tools/dao.h>
 #include <tools/fill-series.h>
 #include <tools/analysis-tools.h>
+#include <tools/analysis-regression.h>
 #include <tools/goal-seek.h>
 #include <goffice/goffice.h>
 #include <goffice/app/go-cmd-context-impl.h>
@@ -177,6 +178,27 @@ GType gnm_cocoa_sheet_control_get_type (void);
 
 @interface GnmGoalSeekResult ()
 - (instancetype)initWithFound:(BOOL)found solution:(double)solution current:(double)current target:(double)target NS_DESIGNATED_INITIALIZER;
+@end
+
+@interface GnmAnalysisOutput ()
+- (instancetype)initPrivate NS_DESIGNATED_INITIALIZER;
+/// The engine's output description for a run on a sheet; the command
+/// that runs takes it over.  NULL with the dialogs' message.
+- (nullable data_analysis_output_t *)_outputForSheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error;
+@end
+
+@interface GnmAnalysis ()
+- (instancetype)initWithTitle:(NSString *)title NS_DESIGNATED_INITIALIZER;
+/// The engine's tool with the settings and the input read relative to
+/// the sheet; the caller owns it.  NULL with the dialogs' message.
+- (nullable GnmAnalysisTool *)_engineToolForSheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error;
+/// After a failed run, what the tool's error code means, or nil for none.
+- (nullable NSString *)_failureDescriptionForEngineTool:(GnmAnalysisTool *)tool;
+@end
+
+@interface GnmGroupedAnalysis ()
+- (GnmAnalysisTool *)_newEngineTool;
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool engine:(GnmEngine *)engine error:(NSError **)error;
 @end
 
 @interface GnmCellComment ()

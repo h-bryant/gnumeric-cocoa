@@ -455,7 +455,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         case #selector(showFindPanel(_:)), #selector(showReplacePanel(_:)), #selector(findNext(_:)), #selector(findPrevious(_:)):
             return gridView.sheet != nil
         case #selector(defineNames(_:)), #selector(insertName(_:)), #selector(fillSeries(_:)), #selector(textToColumns(_:)),
-             #selector(goalSeek(_:)), #selector(conditionalFormatting(_:)):
+             #selector(goalSeek(_:)), #selector(conditionalFormatting(_:)), #selector(descriptiveStatistics(_:)),
+             #selector(correlation(_:)), #selector(covariance(_:)), #selector(regression(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(removeSheet(_:)):
             return gridView.sheet != nil && workbook.canRemoveSheets
@@ -989,6 +990,34 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
                 report.beginSheetModal(for: window)
             } catch {
                 present(error)
+            }
+        }
+    }
+
+    // MARK: Statistics
+
+    @objc func descriptiveStatistics(_ sender: Any?) { runAnalysisDialog(.descriptiveStatistics) }
+    @objc func correlation(_ sender: Any?) { runAnalysisDialog(.correlation) }
+    @objc func covariance(_ sender: Any?) { runAnalysisDialog(.covariance) }
+    @objc func regression(_ sender: Any?) { runAnalysisDialog(.regression) }
+
+    /// One of the GTK analysis tool dialogs as an alert sheet; the tool
+    /// runs as one undoable command and the sheet written to is shown.  A
+    /// refusal (the dialogs' message) re-presents the sheet with its
+    /// values kept.
+    private func runAnalysisDialog(_ tool: AnalysisDialog.Tool) {
+        guard let window, let sheet = gridView.sheet, window.attachedSheet == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let dialog = AnalysisDialog(tool: tool, sheet: sheet)
+        dialog.present(in: window) { [weak self] analysis, output in
+            guard let self else { return true }
+            do {
+                let written = try sheet.run(analysis, output: output)
+                if written != gridView.sheet { workbook.select(written) }
+                return true
+            } catch {
+                presentMessage(error.localizedDescription)
+                return false
             }
         }
     }

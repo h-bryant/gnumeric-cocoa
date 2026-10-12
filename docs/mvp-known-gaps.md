@@ -98,7 +98,8 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 |---|---|---|
 | ToolsAutoCorrect, ToolsAutoSave, ToolsSolver, ToolsSimulation, ToolsCompare, ToolsPlugins, ToolsScenarios, ToolsScenarioAdd | no | Phase 5 |
 | ToolsGoalSeek | ported | Tools → Goal Seek… (2026-10-12) |
-| All 28 Statistics items (descriptive, frequencies, sampling, time series, one- and two-sample tests, ANOVA, contingency) | no | Phase 5, last; the engine's `src/tools/` is GTK-free |
+| Statistics: Descriptive Statistics, Correlation, Covariance, Regression | ported | Tools → Statistics (2026-10-12): the GTK dialogs' Input, tool, and Output pages as alert sheets over `cmd_analysis_tool` |
+| The other 24 Statistics items (frequencies, sampling, time series, one- and two-sample tests, ANOVA, contingency) | no | Phase 5; the pattern is set in `GnmAnalysis.m` (a tool object, an output description, one command) |
 
 ## Data
 
