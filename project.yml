@@ -90,6 +90,8 @@ targets:
     templates: [BridgeTestProgram]
   printing:
     templates: [BridgeTestProgram]
+  formula_range:
+    templates: [BridgeTestProgram]
   BridgeTests:
     type: bundle.unit-test
     platform: macOS
@@ -118,6 +120,7 @@ targets:
       - target: hyperlink
       - target: solver
       - target: printing
+      - target: formula_range
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.github.h-bryant.gnumeric-cocoa.BridgeTests

@@ -25,6 +25,7 @@
 #import <GnmCocoa/GnmHyperlink.h>
 #import <GnmCocoa/GnmSolver.h>
 #import <GnmCocoa/GnmPrinting.h>
+#import <GnmCocoa/GnmFormulaEditing.h>
 #import <GnmCocoa/GnmSearch.h>
 #import <GnmCocoa/GnmTextExport.h>
 #import <GnmCocoa/GnmTextImport.h>

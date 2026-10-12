@@ -131,7 +131,17 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         addSubview(editor)
         editor.onCommit = { [weak self] text, movement in self?.commitEditing(text: text, movement: movement) }
         editor.onCancel = { [weak self] in self?.cancelEditing() }
-        editor.onTextChange = { [weak self] text in self?.editingTextDidChange?(text) }
+        editor.onTextChange = { [weak self] text in
+            guard let self else { return }
+            if formulaRangeAnchor == nil, formulaRange != nil, let shown = formulaRangeText,
+               (editor.stringValue as NSString).length < shown.location + shown.length
+                || (editor.stringValue as NSString).substring(with: shown) != sheet?.name(of: formulaRange!) {
+                formulaRange = nil
+                formulaRangeText = nil
+                needsDisplay = true
+            }
+            editingTextDidChange?(text)
+        }
     }
 
     @available(*, unavailable)
@@ -255,6 +265,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         drawSelection(of: sheet, dirtyRect: dirtyRect)
         drawValidationDropdown(of: sheet, dirtyRect: dirtyRect)
         drawInputMessage(of: sheet, dirtyRect: dirtyRect)
+        drawFormulaRange(of: sheet, dirtyRect: dirtyRect)
         drawObjectSelection(dirtyRect: dirtyRect)
     }
 
@@ -384,6 +395,12 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
 
     private func endEditingSession() {
         editingCell = nil
+        formulaRangeAnchor = nil
+        formulaRangeText = nil
+        if formulaRange != nil {
+            formulaRange = nil
+            needsDisplay = true
+        }
         editor.isHidden = true
         editor.stringValue = ""
         editingTextDidChange?(nil)
@@ -889,6 +906,61 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     /// The drop-down buttons of the sheet's autofilters: a small rounded
     /// square with a triangle in each heading cell, filled with the accent
     /// color while the field has a condition (the GTK arrow's checked state).
+    // MARK: Formula range selection
+
+    /// While a formula is typed, a click or drag on the grid puts the
+    /// clicked range into the text (scg_rangesel_* and the GTK entry's
+    /// find_range); the range stays outlined until the text changes.
+    private var formulaRangeAnchor: CellCoordinate?
+    private var formulaRangeText: NSRange?
+    private var formulaRange: CellRange?
+
+    /// For the headless checks: the outlined range.
+    var formulaRangeShown: CellRange? { formulaRange }
+
+    /// Whether a click now would put a reference into the editor.
+    private func formulaReplacement() -> NSRange? {
+        guard isEditing, let sheet, let fieldEditor = editor.currentEditor() else { return nil }
+        var replace = NSRange(location: 0, length: 0)
+        let cursor = fieldEditor.selectedRange.location
+        return sheet.formulaText(editor.stringValue, cursorAt: cursor, canTakeRange: &replace) ? replace : nil
+    }
+
+    /// Put a range's reference into the editor at the replacement, and
+    /// keep the editor the first responder with the cursor after it.
+    func takeFormulaRange(_ range: CellRange, replacing replace: NSRange) {
+        guard let sheet else { return }
+        let name = sheet.name(of: range)
+        let text = editor.stringValue as NSString
+        guard replace.location <= text.length, replace.location + replace.length <= text.length else { return }
+        editor.stringValue = text.replacingCharacters(in: replace, with: name)
+        formulaRangeText = NSRange(location: replace.location, length: name.utf16.count)
+        formulaRange = range
+        // Making the editor first responder while its field editor already
+        // is would end editing (and commit) on the way; only take focus
+        // back when it was lost.
+        if let fieldEditor = editor.currentEditor() {
+            if window?.firstResponder !== fieldEditor { window?.makeFirstResponder(editor) }
+        } else {
+            window?.makeFirstResponder(editor)
+        }
+        editor.currentEditor()?.selectedRange = NSRange(location: replace.location + name.utf16.count, length: 0)
+        editingTextDidChange?(editor.stringValue)
+        needsDisplay = true
+    }
+
+    /// The outline of the range being put into the formula.
+    private func drawFormulaRange(of sheet: Sheet, dirtyRect: NSRect) {
+        guard let range = formulaRange else { return }
+        let frame = rect(of: range, in: sheet)
+        guard frame.intersects(dirtyRect) else { return }
+        let path = NSBezierPath(rect: frame.insetBy(dx: 1, dy: 1))
+        path.lineWidth = 2
+        path.setLineDash([4, 3], count: 2, phase: 0)
+        NSColor.systemBlue.setStroke()
+        path.stroke()
+    }
+
     // MARK: Validation
 
     /// The edit position's in-cell list (the GTK validation combo) and
@@ -1250,6 +1322,12 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     override func mouseDown(with event: NSEvent) {
         guard let sheet else { return }
         let point = sheetPoint(forViewPoint: convert(event.locationInWindow, from: nil))
+        if event.clickCount == 1, let replace = formulaReplacement() {
+            let cell = CellCoordinate(column: sheet.column(atX: point.x), row: sheet.row(atY: point.y))
+            formulaRangeAnchor = cell
+            takeFormulaRange(CellRange(start: cell, end: cell), replacing: replace)
+            return
+        }
         if event.clickCount == 1, let arrow = validationDropdownRect(in: sheet), arrow.contains(point) {
             if isEditing { commitEditing(text: editor.stringValue, movement: .none) }
             window?.makeFirstResponder(self)
@@ -1316,6 +1394,16 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
 
     override func mouseDragged(with event: NSEvent) {
         guard let sheet else { return }
+        if let anchor = formulaRangeAnchor, let textRange = formulaRangeText {
+            autoscroll(with: event)
+            let point = sheetPoint(forViewPoint: convert(event.locationInWindow, from: nil))
+            let cell = CellCoordinate(column: sheet.column(atX: point.x), row: sheet.row(atY: point.y))
+            let range = Self.range(from: anchor, to: cell)
+            if formulaRange.map({ $0 != range }) ?? true {
+                takeFormulaRange(range, replacing: textRange)
+            }
+            return
+        }
         if var drag = objectDrag {
             autoscroll(with: event)
             let point = sheetPoint(forViewPoint: convert(event.locationInWindow, from: nil))
@@ -1349,6 +1437,10 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     }
 
     override func mouseUp(with event: NSEvent) {
+        if formulaRangeAnchor != nil {
+            formulaRangeAnchor = nil
+            return
+        }
         if let cell = linkClickCell, let sheet {
             linkClickCell = nil
             let selection = sheet.selectedRange

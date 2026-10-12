@@ -472,6 +472,32 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FORMULA"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // A formula typed in A5 takes B1:B3 from the grid, then Bold
+                // through its shortcut; the grid capture shows the bold sum.
+                do {
+                    for r in 0..<3 { try sheet.setText("\(r + 1)", atColumn: 1, row: r, autocorrect: false) }
+                } catch {
+                    NSLog("formula: data failed: %@", error.localizedDescription)
+                }
+                sheet.selectCell(atColumn: 0, row: 4)
+                controller.gridView.beginEditing(initialText: "=SUM(")
+                var replace = NSRange(location: 0, length: 0)
+                let takes = sheet.formulaText("=SUM(", cursorAt: 5, canTakeRange: &replace)
+                controller.gridView.takeFormulaRange(CellRange(start: CellCoordinate(column: 1, row: 0), end: CellCoordinate(column: 1, row: 2)),
+                                                     replacing: replace)
+                NSLog("formula: takes=%d replace=%@ outlined=%@", takes ? 1 : 0, NSStringFromRange(replace),
+                      controller.gridView.formulaRangeShown.map { "\($0.start.column),\($0.start.row)-\($0.end.column),\($0.end.row)" } ?? "nil")
+                controller.gridView.commitEditing(text: "=SUM(B1:B3)", movement: .none)
+                NSLog("formula: A5='%@' entered '%@'", sheet.displayTextOfCell(atColumn: 0, row: 4) ?? "nil",
+                      sheet.enteredTextOfCell(atColumn: 0, row: 4) ?? "nil")
+                controller.toggleBold(nil)
+                NSLog("formula: bold=%@ undo=%@", sheet.formatOfSelection.bold ?? -1, sheet.workbook?.undoLabel ?? "nil")
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_PRINT"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

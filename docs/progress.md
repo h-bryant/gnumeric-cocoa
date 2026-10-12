@@ -1196,6 +1196,32 @@
   header through the dialog (captured to `-print.png`) and draws the
   first page to `-page1.png`.
 
+## 2026-10-12: Range selection while typing a formula, font shortcuts
+
+- `GnmFormulaEditing.h`: `formulaText:cursorAt:canTakeRange:` is
+  `gnm_expr_entry_find_range` without the entry: the engine's lexer over
+  the whole text (the GTK entry lexes "=" too, so the tokens and the
+  cursor share offsets), the tokens before and after the cursor
+  (`gee_find_lexer_token`), and the GTK's rules for which one a
+  reference replaces; an insertion goes at the cursor, as
+  `gee_rangesel_update_text` puts it (the finder's own start for a
+  trailing operator is the operator's start, which the GTK never uses
+  for an insertion).  Operands are told from operators by their first
+  character, since the parser's token numbers are not public (the
+  probe showed STRING 258, QUOTED_STRING 259, CONSTANT 260, RANGEREF
+  261).  `nameOfRange:` gives "A1" or "A1:C4".
+- `GridView`: while the in-cell editor holds a formula whose cursor can
+  take a reference, a click puts the clicked cell into the text and a
+  drag extends it to a range (`takeFormulaRange`), the editor staying
+  first responder with the cursor after the reference; the range is
+  outlined in blue until the text changes or editing ends.
+- Format → Bold (⌘B), Italic (⌘I), Underline (⌘U): the GTK toggle
+  actions, the selection taking the opposite of its current attribute
+  through `apply`.
+- `Tests/BridgeTests/formula_range.m` (23 XCTest programs now) and
+  `GNM_SNAPSHOT_FORMULA=1` ("=SUM(" in A5 takes B1:B3, committed as
+  "=SUM(B1:B3)", then Bold).
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -1209,10 +1235,10 @@
    Find and Replace, the Settings window, and Export as Text with
    options, the text import assistant, cell comments, defined names,
    Fill Series, Text to Columns, Goal Seek, conditional formatting, and
-   twelve analysis tools, data validation, hyperlinks, the Solver, and
-   printing; next the rest of Phase 5 by usage frequency: the remaining
-   statistics, range selection by mouse while typing a formula, the
-   font shortcuts
+   twelve analysis tools, data validation, hyperlinks, the Solver,
+   printing, formula range selection by mouse, and the font shortcuts;
+   next the rest of Phase 5 by usage frequency: the remaining
+   statistics, autocomplete, the function selector
    (frequencies, histograms, the non-parametric tests, two-factor
    ANOVA, Fourier, Kaplan-Meier, principal components)) from
    `docs/mvp-known-gaps.md`, which also
@@ -1237,8 +1263,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-12: `main` at the printing commit
-   (after the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-12: `main` at the formula range
+   selection commit (after printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

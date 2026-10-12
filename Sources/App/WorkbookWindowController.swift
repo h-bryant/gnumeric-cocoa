@@ -459,7 +459,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
              #selector(correlation(_:)), #selector(covariance(_:)), #selector(regression(_:)), #selector(dataValidation(_:)),
              #selector(meanTest(_:)), #selector(varianceTest(_:)), #selector(anovaSingleFactor(_:)), #selector(ranking(_:)),
              #selector(sampling(_:)), #selector(movingAverage(_:)), #selector(exponentialSmoothing(_:)), #selector(insertHyperlink(_:)),
-             #selector(solver(_:)), #selector(pageSetup(_:)), #selector(printSheet(_:)), #selector(setPrintArea(_:)), #selector(clearPrintArea(_:)):
+             #selector(solver(_:)), #selector(pageSetup(_:)), #selector(printSheet(_:)), #selector(setPrintArea(_:)), #selector(clearPrintArea(_:)),
+             #selector(toggleBold(_:)), #selector(toggleItalic(_:)), #selector(toggleUnderline(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(removeSheet(_:)):
             return gridView.sheet != nil && workbook.canRemoveSheets
@@ -994,6 +995,34 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             } catch {
                 present(error)
             }
+        }
+    }
+
+    // MARK: Font shortcuts
+
+    /// The GTK toggle actions (toggle_font_attr): the selection takes the
+    /// opposite of the edit position's attribute, as one command.
+    private func toggleFont(_ change: (CellFormat, CellFormat) -> Void) {
+        runSizeCommand { sheet in
+            let current = sheet.formatOfSelection
+            let format = CellFormat()
+            change(format, current)
+            try sheet.apply(format)
+        }
+    }
+
+    @objc func toggleBold(_ sender: Any?) {
+        toggleFont { format, current in format.bold = NSNumber(value: !(current.bold?.boolValue ?? false)) }
+    }
+
+    @objc func toggleItalic(_ sender: Any?) {
+        toggleFont { format, current in format.italic = NSNumber(value: !(current.italic?.boolValue ?? false)) }
+    }
+
+    @objc func toggleUnderline(_ sender: Any?) {
+        toggleFont { format, current in
+            let on = (current.underline?.intValue ?? 0) != UnderlineStyle.none.rawValue
+            format.underline = NSNumber(value: on ? UnderlineStyle.none.rawValue : UnderlineStyle.single.rawValue)
         }
     }
 

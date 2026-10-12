@@ -89,7 +89,8 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | FormatMergeCells, FormatUnmergeCells | ported | Format menu, with Merge and Center (`patches/0002` fixes an engine double-unref there) |
 | FormatCellsFitHeight, FormatCellsFitWidth | bridge | `autofitSelectedCells(width:)`; the menu has the whole-column/row Autofit |
 | FormatAuto | no | Phase 5 |
-| FontBold, FontItalic, FontStrikeThrough, FontUnderline*, FontSuperscript, FontSubscript | partial | through the dialog only; no shortcuts, toolbar, or script |
+| FontBold, FontItalic, FontUnderline | ported | Format → Bold ⌘B, Italic ⌘I, Underline ⌘U (2026-10-12) |
+| FontStrikeThrough, FontDoubleUnderline, FontSuperscript, FontSubscript | partial | through the dialog only; no shortcuts or toolbar |
 | ColumnSize, RowSize, ColumnAutoSize, RowAutoSize, ColumnDefaultSize, RowDefaultSize | ported | Format → Column / Row (points); headers drag-resize and autofit on a boundary double-click |
 | ColumnHide, RowHide, ColumnUnhide, RowUnhide | ported | Format → Column / Row |
 | SheetDisplayFormulas, SheetUseR1C1, SheetHideZeros, SheetHideGridlines, SheetHideColHeader, SheetHideRowHeader, SheetDirection | partial | the grid honors the file's settings (except direction, drawn left-to-right); no menu items, Phase 3/7 |
@@ -137,7 +138,8 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | Status bar, auto-expression (sum/average of selection) | partial | auto-expression pull-down 2026-10-11; no progress or zoom fields |
 | Name box navigation (type a reference) | ported | 2026-10-12: a reference, a sheet-qualified reference, or a name; a new word names the selection |
 | Formula bar: multi-line editing, function tooltips | no | Phase 3 |
-| In-cell editor: cell's own font and alignment, autocomplete, range selection by mouse or keyboard while typing a formula, array formulas (Ctrl-Shift-Enter) | no | Phase 3 (`cmd_area_set_array_expr` is not wrapped yet) |
+| In-cell editor: range selection by mouse while typing a formula | ported | 2026-10-12: a click or drag puts the reference where the GTK entry would (`GnmFormulaEditing`) |
+| In-cell editor: cell's own font and alignment, autocomplete, range selection by keyboard while typing a formula, array formulas (Ctrl-Shift-Enter) | no | Phase 3 |
 | Cell comments (display, tooltips) | ported | the red corner marker and a tool tip with author and text (2026-10-12) |
 | Hyperlinks (activation) | ported | a click follows the link (2026-10-12): internal ones through the engine's selection, the others through NSWorkspace; the tip is the tool tip |
 | Sheet objects: selection handles, move, resize, context menus, editing, form widgets | partial | 2026-10-12: click to select, handles, drag to move and resize (Option symmetric, Shift snaps), Delete, arrows nudge, Tab cycles, context menu with Properties… (charts), Save as Image… (charts and images, with the format and resolution), Delete, and the stacking order, cut, copy, and paste (a PNG goes to other applications), the chart editor; no editors for images and widgets, no live preview while dragging, widgets draw but do not act |
