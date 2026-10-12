@@ -105,8 +105,8 @@ GNM_SNAPSHOT=/tmp/grid.png scripts/run-app.sh upstream/gnumeric/samples/format-t
 `GNM_SNAPSHOT_EDITOR=1`, `GNM_SNAPSHOT_EVERYDAY=1`, `GNM_SNAPSHOT_FIND=1`,
 `GNM_SNAPSHOT_PREFS=1`, `GNM_SNAPSHOT_TEXT=1`, `GNM_SNAPSHOT_IMPORT=1`,
 `GNM_SNAPSHOT_COMMENT=1`, `GNM_SNAPSHOT_NAMES=1`, `GNM_SNAPSHOT_FILL=1`,
-`GNM_SNAPSHOT_GOAL=1`, `GNM_SNAPSHOT_COND=1`, `GNM_SNAPSHOT_STATS=1`, and
-`GNM_SNAPSHOT_VALID=1`
+`GNM_SNAPSHOT_GOAL=1`, `GNM_SNAPSHOT_COND=1`, `GNM_SNAPSHOT_STATS=1`,
+`GNM_SNAPSHOT_VALID=1`, and `GNM_SNAPSHOT_LINK=1`
 exercise zoom, editing and saving, the Format Cells model, the Phase 3
 commands, frozen panes, sheet management, the autofilter with the Sort
 command, a sheet resize, and a tab color, the sheet objects (select, move,
@@ -135,8 +135,9 @@ tools (a correlation into D1 through its dialog, captured to
 `-stats.png`, a paired t-test into D6, then descriptive statistics to a
 new sheet), and data
 validation (C1 takes a value from B1:B5 through the dialog, captured to
-`-valid.png`; an entry outside the list refused, one from it taken)
-before the
+`-valid.png`; an entry outside the list refused, one from it taken), and
+hyperlinks (a web link on A1 through the dialog, captured to
+`-link.png`, an internal link on A3 followed to C5) before the
 capture (`AppDelegate.swift`, `Snapshot`). The typing hook saves as a
 Save As next to the snapshot; with `GNM_SNAPSHOT_SAVE_INPLACE=1` it saves
 the opened file in place instead (give it a copy). Should a quit ever go

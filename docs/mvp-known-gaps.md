@@ -39,7 +39,8 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | EditClear*Filtered (4) | ported | Edit → Clear → "… Filtered Rows" (2026-10-12); as in GTK they skip the rows a filter hides |
 | EditDeleteColumns, EditDeleteRows | ported | Edit menu; the selection's columns or rows |
 | EditDeleteCells | ported | Edit → Delete Cells… (2026-10-12): shift left or up, entire rows or columns |
-| EditClearHyperlinks, EditHyperlink | no | Phase 5 |
+| EditHyperlink | ported | Insert → Hyperlink… edits or removes the edit position's link (2026-10-12) |
+| EditClearHyperlinks | no | Phase 5; the dialog's Remove covers one selection |
 | EditNames | ported | Edit → Define Names… (2026-10-12): list, add or update, remove, workbook or sheet scope |
 | EditComment | ported | Insert → Comment… (Edit Comment… over one) and the cell's context menu (2026-10-12) |
 | InsertSheet, InsertSheetAtEnd, EditDuplicateSheet, SheetRemove, SheetChangeName | ported | Edit → Sheet and the tab context menu; rename through a prompt |
@@ -74,7 +75,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | InsertFormula (function selector) | no | Phase 5 |
 | InsertNames | ported | Insert → Name… puts a name into the cell editor (2026-10-12) |
 | InsertComment | ported | Insert → Comment…, an alert sheet with author and text (2026-10-12) |
-| InsertHyperlink | no | Phase 5 |
+| InsertHyperlink | ported | Insert → Hyperlink… (⌘K), 2026-10-12: internal, file, email, and web links with a tip |
 | InsertSortDecreasing, InsertSortIncreasing | ported | Data → Sort Ascending / Descending (the GTK quick sort: by the selection's columns, heading kept) |
 | InsertCurrentDate, InsertCurrentTime, InsertCurrentDateTime | ported | Insert menu, ⌘; and ⇧⌘; (2026-10-12) |
 
@@ -136,7 +137,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | Formula bar: multi-line editing, function tooltips | no | Phase 3 |
 | In-cell editor: cell's own font and alignment, autocomplete, range selection by mouse or keyboard while typing a formula, array formulas (Ctrl-Shift-Enter) | no | Phase 3 (`cmd_area_set_array_expr` is not wrapped yet) |
 | Cell comments (display, tooltips) | ported | the red corner marker and a tool tip with author and text (2026-10-12) |
-| Hyperlinks (activation) | no | Phase 5 (`gnm_hlink_activate` takes `WBCGtk`) |
+| Hyperlinks (activation) | ported | a click follows the link (2026-10-12): internal ones through the engine's selection, the others through NSWorkspace; the tip is the tool tip |
 | Sheet objects: selection handles, move, resize, context menus, editing, form widgets | partial | 2026-10-12: click to select, handles, drag to move and resize (Option symmetric, Shift snaps), Delete, arrows nudge, Tab cycles, context menu with Properties… (charts), Save as Image… (charts and images, with the format and resolution), Delete, and the stacking order, cut, copy, and paste (a PNG goes to other applications), the chart editor; no editors for images and widgets, no live preview while dragging, widgets draw but do not act |
 | Frozen panes | ported | 2026-10-11: frozen strips painted as overlays on one document view, scrolling clamped to the first unfrozen cell |
 | Right-to-left sheets | no | Phase 7; drawn left-to-right |

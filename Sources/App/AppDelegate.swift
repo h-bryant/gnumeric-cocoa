@@ -472,6 +472,54 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_LINK"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // Hyperlinks: a web link on A1 through the dialog (captured to
+                // `-link.png`), an internal link on A3 to C5 followed, the
+                // tool tip over A1; the grid capture shows the blue
+                // underlined cells.
+                sheet.selectCell(atColumn: 0, row: 0)
+                HyperlinkDialog.headlessDriver = { dialog in
+                    dialog.kind.selectItem(at: 3)
+                    dialog.kindChanged(nil)
+                    dialog.webField.stringValue = "https://www.gnumeric.org/"
+                    dialog.defaultTip.state = .off
+                    dialog.kindChanged(nil)
+                    dialog.tipField.stringValue = "The Gnumeric project"
+                    if let content = dialog.alert.accessoryView {
+                        content.layoutSubtreeIfNeeded()
+                        if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                            content.cacheDisplay(in: content.bounds, to: rep)
+                            let linkPath = (path as NSString).deletingPathExtension + "-link.png"
+                            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: linkPath))
+                            NSLog("link: captured %@ (%@)", linkPath, NSStringFromRect(content.bounds))
+                        }
+                    }
+                    return true
+                }
+                controller.insertHyperlink(nil)
+                sheet.selectCell(atColumn: 0, row: 2)
+                HyperlinkDialog.headlessDriver = { dialog in
+                    dialog.kind.selectItem(at: 0)
+                    dialog.kindChanged(nil)
+                    dialog.rangeField.stringValue = "C5"
+                    return true
+                }
+                controller.insertHyperlink(nil)
+                HyperlinkDialog.headlessDriver = nil
+                let a1 = sheet.hyperlink(atColumn: 0, row: 0), a3 = sheet.hyperlink(atColumn: 0, row: 2)
+                NSLog("link: A1='%@' kind=%ld target='%@' tip='%@'; A3 kind=%ld target='%@'; undo=%@",
+                      sheet.displayTextOfCell(atColumn: 0, row: 0) ?? "nil", a1?.kind.rawValue ?? -1, a1?.target ?? "nil", a1?.tip ?? "nil",
+                      a3?.kind.rawValue ?? -1, a3?.target ?? "nil", sheet.workbook?.undoLabel ?? "nil")
+                controller.gridView.followHyperlink(atColumn: 0, row: 2)
+                let selection = sheet.selectedRange
+                NSLog("link: followed A3 -> selection %ld,%ld; tool tip over A1 '%@'; ranges %ld", selection.start.column, selection.start.row,
+                      controller.gridView.commentToolTip(atColumn: 0, row: 0) ?? "nil",
+                      sheet.hyperlinkRanges(in: CellRange(start: CellCoordinate(column: 0, row: 0), end: CellCoordinate(column: 5, row: 10))).count)
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_VALID"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

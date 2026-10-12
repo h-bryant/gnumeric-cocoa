@@ -1094,6 +1094,32 @@
   the F, the ANOVA sum of squares, ranks, every second value, averages
   of pairs, the smoothing chart) and their refusals.
 
+## 2026-10-12: Hyperlinks
+
+- `GnmHyperlink.h`: a link's kind (internal range or name, file, email,
+  web: the dialog's four), target, and tip; `GnmSheet` reads a cell's
+  link (`gnm_sheet_hlink_find`), sets the selection's as `dhl_cb_ok`
+  does (the link on a partial style with a single underline and blue
+  text, `cmd_selection_hyperlink` as "Add Hyperlink" with the target as
+  the text of empty cells, "Edit Hyperlink", or "Remove Hyperlink"),
+  checks an internal target as the dialog does (a range, or a name that
+  denotes a range: `Sheet_Title` names a string and is refused), follows
+  an internal link (`gnm_hlink_cur_wb_activate` without the GTK: select
+  the range, bring it into view, focus its sheet), and lists the linked
+  ranges (`sheet_style_collect_hlinks`).  The mailto builder is
+  `dhl_get_target_email`'s (`go_url_encode`).
+- `HyperlinkDialog.swift` (Insert → Hyperlink…, ⌘K): the type pop-up,
+  the target fields enabled by type (an address and subject for email),
+  the tip or the default, Remove when a link exists.  `GridView` follows
+  a link on a single unmodified click that selects just that cell (the
+  GTK releases it on button release; internal links through the engine,
+  files, mailto, and web targets through NSWorkspace), shows the tip or
+  target as the tool tip, and a pointing hand over linked ranges.
+- `Tests/BridgeTests/hyperlink.m` (20 XCTest programs now) and
+  `GNM_SNAPSHOT_LINK=1` (a web link on A1 through the dialog, captured
+  to `-link.png`, an internal link on A3 to C5 followed; the grid
+  capture shows the blue underlined cells and the selection at C5).
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -1107,8 +1133,8 @@
    Find and Replace, the Settings window, and Export as Text with
    options, the text import assistant, cell comments, defined names,
    Fill Series, Text to Columns, Goal Seek, conditional formatting, and
-   twelve analysis tools, and data validation; next the rest of Phase 5
-   by usage frequency: Solver, hyperlinks, the remaining statistics
+   twelve analysis tools, data validation, and hyperlinks; next the rest
+   of Phase 5 by usage frequency: Solver, the remaining statistics
    (frequencies, histograms, the non-parametric tests, two-factor
    ANOVA, Fourier, Kaplan-Meier, principal components)) from
    `docs/mvp-known-gaps.md`, which also
@@ -1133,8 +1159,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-12: `main` at the second analysis
-   tools commit (after data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-12: `main` at the hyperlinks commit
+   (after the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

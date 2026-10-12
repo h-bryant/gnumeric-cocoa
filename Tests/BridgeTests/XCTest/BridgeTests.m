@@ -89,5 +89,6 @@
 - (void)testConditional { [self runProgram:@"conditional"]; }
 - (void)testAnalysis { [self runProgram:@"analysis"]; }
 - (void)testValidation { [self runProgram:@"validation"]; }
+- (void)testHyperlink { [self runProgram:@"hyperlink"]; }
 
 @end

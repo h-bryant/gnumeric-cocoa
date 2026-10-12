@@ -458,7 +458,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
              #selector(goalSeek(_:)), #selector(conditionalFormatting(_:)), #selector(descriptiveStatistics(_:)),
              #selector(correlation(_:)), #selector(covariance(_:)), #selector(regression(_:)), #selector(dataValidation(_:)),
              #selector(meanTest(_:)), #selector(varianceTest(_:)), #selector(anovaSingleFactor(_:)), #selector(ranking(_:)),
-             #selector(sampling(_:)), #selector(movingAverage(_:)), #selector(exponentialSmoothing(_:)):
+             #selector(sampling(_:)), #selector(movingAverage(_:)), #selector(exponentialSmoothing(_:)), #selector(insertHyperlink(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(removeSheet(_:)):
             return gridView.sheet != nil && workbook.canRemoveSheets
@@ -992,6 +992,30 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
                 report.beginSheetModal(for: window)
             } catch {
                 present(error)
+            }
+        }
+    }
+
+    // MARK: Hyperlinks
+
+    /// Insert → Hyperlink…: the GTK dialog as an alert sheet, applied to
+    /// the selection as one command; Remove takes the link away.
+    @objc func insertHyperlink(_ sender: Any?) {
+        guard let window, let sheet = gridView.sheet, window.attachedSheet == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let dialog = HyperlinkDialog(sheet: sheet)
+        dialog.present(in: window) { [weak self] link in
+            guard let self else { return true }
+            if let link, link.kind == .internal, !sheet.isValidInternalTarget(link.target) {
+                presentMessage("Not a range or name")
+                return false
+            }
+            do {
+                try sheet.setHyperlink(link)
+                return true
+            } catch {
+                presentMessage(error.localizedDescription)
+                return false
             }
         }
     }

@@ -310,6 +310,14 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     override func resetCursorRects() {
         guard let sheet, !isEditing else { return }
         if selectedObjects.isEmpty {
+            let whole = CellRange(start: CellCoordinate(column: 0, row: 0),
+                                  end: CellCoordinate(column: sheet.columnCount - 1, row: sheet.rowCount - 1))
+            for value in sheet.hyperlinkRanges(in: whole) {
+                var range = CellRange()
+                value.getValue(&range)
+                let frame = viewRect(forSheetRect: rect(of: range, in: sheet))
+                if !frame.isEmpty { addCursorRect(frame, cursor: .pointingHand) }
+            }
             addCursorRect(viewRect(forSheetRect: fillHandleRect(for: rect(of: sheet.selectedRange, in: sheet))).insetBy(dx: -2, dy: -2),
                           cursor: .crosshair)
             return
@@ -1001,8 +1009,9 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         }
     }
 
-    /// One tool tip rect per commented cell, so hovering shows the
-    /// comment (the GTK pane shows it when the pointer enters the marker).
+    /// One tool tip rect per commented cell and per linked range, so
+    /// hovering shows the comment or the link's tip (the GTK pane shows
+    /// them when the pointer enters the marker or the cell).
     private func updateCommentToolTips() {
         removeAllToolTips()
         guard let sheet else { return }
@@ -1014,18 +1023,62 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
                 addToolTip(frame, owner: self, userData: nil)
             }
         }
+        for value in sheet.hyperlinkRanges(in: whole) {
+            var range = CellRange()
+            value.getValue(&range)
+            let frame = viewRect(forSheetRect: rect(of: range, in: sheet))
+            if !frame.isEmpty {
+                addToolTip(frame, owner: self, userData: nil)
+            }
+        }
+        window?.invalidateCursorRects(for: self)
     }
 
-    /// What the tool tip over a cell says: the author, then the text.
+    /// What the tool tip over a cell says: the comment's author, then its
+    /// text; else the link's tip, or its target.
     func commentToolTip(atColumn column: Int, row: Int) -> String? {
-        guard let comment = sheet?.comment(atColumn: column, row: row) else { return nil }
-        return comment.author.isEmpty ? comment.text : "\(comment.author):\n\(comment.text)"
+        guard let sheet else { return nil }
+        if let comment = sheet.comment(atColumn: column, row: row) {
+            return comment.author.isEmpty ? comment.text : "\(comment.author):\n\(comment.text)"
+        }
+        if let link = sheet.hyperlink(atColumn: column, row: row) {
+            return link.tip ?? link.target
+        }
+        return nil
     }
 
     @objc func view(_ view: NSView, stringForToolTip tag: NSView.ToolTipTag, point: NSPoint, userData: UnsafeMutableRawPointer?) -> String {
         guard let sheet else { return "" }
         let p = sheetPoint(forViewPoint: point)
         return commentToolTip(atColumn: sheet.column(atX: p.x), row: sheet.row(atY: p.y)) ?? ""
+    }
+
+    // MARK: Hyperlinks
+
+    /// The cell a single unmodified click landed on when it carried a
+    /// link; the link is followed on release when the click selected just
+    /// that cell (item_grid_button_released).
+    private var linkClickCell: CellCoordinate?
+
+    /// Follow a cell's link: an internal one selects its range through the
+    /// engine; a file, mailto, or web target opens with the system.
+    func followHyperlink(atColumn column: Int, row: Int) {
+        guard let sheet, let link = sheet.hyperlink(atColumn: column, row: row) else { return }
+        switch link.kind {
+        case .internal:
+            do {
+                try sheet.followInternalHyperlink(atColumn: column, row: row)
+            } catch {
+                presentError?(error)
+            }
+        case .externalFile:
+            let path = (link.target as NSString).expandingTildeInPath
+            NSWorkspace.shared.open(URL(fileURLWithPath: path))
+        default:
+            if let url = URL(string: link.target) {
+                NSWorkspace.shared.open(url)
+            }
+        }
     }
 
     /// Insert → Comment… and the cell's context menu: the editor for the
@@ -1256,6 +1309,8 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         } else {
             dragAnchor = cell
             sheet.selectCell(atColumn: cell.column, row: cell.row)
+            linkClickCell = event.modifierFlags.isDisjoint(with: [.command, .option, .control])
+                && sheet.hyperlink(atColumn: cell.column, row: cell.row) != nil ? cell : nil
         }
     }
 
@@ -1294,6 +1349,14 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     }
 
     override func mouseUp(with event: NSEvent) {
+        if let cell = linkClickCell, let sheet {
+            linkClickCell = nil
+            let selection = sheet.selectedRange
+            if selection.start == cell && selection.end == cell {
+                followHyperlink(atColumn: cell.column, row: cell.row)
+                return
+            }
+        }
         if let drag = objectDrag {
             objectDrag = nil
             commitObjectDrag(drag)
