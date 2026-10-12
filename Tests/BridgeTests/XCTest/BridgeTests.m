@@ -80,5 +80,6 @@
 - (void)testChart { [self runProgram:@"chart"]; }
 - (void)testSearch { [self runProgram:@"search"]; }
 - (void)testPreferences { [self runProgram:@"preferences"]; }
+- (void)testTextExport { [self runProgram:@"text_export"]; }
 
 @end

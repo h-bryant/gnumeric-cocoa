@@ -96,6 +96,18 @@
 			<key>NSDocumentClass</key>
 			<string>GnumericCocoa.WorkbookDocument</string>
 		</dict>
+		<dict>
+			<!-- Save As only (the engine's configurable text saver); plain
+			     text is not opened here until the import assistant exists. -->
+			<key>CFBundleTypeName</key>
+			<string>Text (configurable)</string>
+			<key>CFBundleTypeRole</key>
+			<string>None</string>
+			<key>LSItemContentTypes</key>
+			<array><string>public.plain-text</string></array>
+			<key>NSDocumentClass</key>
+			<string>GnumericCocoa.WorkbookDocument</string>
+		</dict>
 	</array>
 	<key>UTExportedTypeDeclarations</key>
 	<array>

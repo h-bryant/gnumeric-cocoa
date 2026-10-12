@@ -66,6 +66,8 @@ targets:
     templates: [BridgeTestProgram]
   preferences:
     templates: [BridgeTestProgram]
+  text_export:
+    templates: [BridgeTestProgram]
   BridgeTests:
     type: bundle.unit-test
     platform: macOS
@@ -82,6 +84,7 @@ targets:
       - target: chart
       - target: search
       - target: preferences
+      - target: text_export
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.github.h-bryant.gnumeric-cocoa.BridgeTests

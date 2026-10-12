@@ -120,6 +120,8 @@ GType gnm_cocoa_sheet_control_get_type (void);
 - (void)_dropStaleEngineClipboard;
 /// The wrapper attached to an engine sheet, if any.
 - (nullable GnmSheet *)wrapperForEngineSheet:(Sheet *)sheet;
+/// The save behind the public writes, with the saver already found.
+- (BOOL)writeToURL:(NSURL *)url saver:(GOFileSaver *)fs adoptingURL:(BOOL)adopt error:(NSError **)error;
 /// Run an engine command that returns TRUE on failure, turning messages it
 /// reported into `error`.
 - (BOOL)_runCommand:(gboolean (NS_NOESCAPE ^)(WorkbookControl *wbc))command

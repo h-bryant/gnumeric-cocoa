@@ -326,14 +326,16 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    Find and Replace (`GnmSearch`, `FindPanel.swift`, `search.m`), and
    the Settings window (`GnmPreferences`, `PreferencesWindow.swift`,
    `preferences.m`; the compression level is a preference now, Henry's
-   0 in the app's defaults). Next: the text import and export options;
+   0 in the app's defaults), and Export as Text with the GTK dialog's
+   options (`GnmTextExport`, `TextExportSheet.swift`, `text_export.m`).
+   Next: the text import assistant;
    image and widget editors (`cmd_so_set_*`) later; the smaller Phase 3
    gaps (Insert/Delete Cells,
    Goto and the name box, the formula bar, autocomplete, drag and drop,
    outlines) as filler.
 6. Headless checks for all of it: `GNM_SNAPSHOT=out.png scripts/run-app.sh
    file` plus `GNM_SNAPSHOT_TYPE`, `_FORMAT`, `_PHASE3`, `_FREEZE`,
-   `_SHEETS`, `_FILTER`, `_OBJECTS`, `_CHART`, `_EDITOR`, `_EVERYDAY`, `_FIND`, `_PREFS`, `_ZOOM` (`docs/build.md`); compare `out.png` with
+   `_SHEETS`, `_FILTER`, `_OBJECTS`, `_CHART`, `_EDITOR`, `_EVERYDAY`, `_FIND`, `_PREFS`, `_TEXT`, `_ZOOM` (`docs/build.md`); compare `out.png` with
    `out-window.png`. Engine fixes go to `patches/` (0001 decouplings, 0002
    Merge and Center); `scripts/build-gnumeric.sh` re-applies them and
    takes a few minutes.

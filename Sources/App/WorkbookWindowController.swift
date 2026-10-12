@@ -817,6 +817,26 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     @objc func insertCells(_ sender: Any?) { promptCellShift(insert: true) }
     @objc func deleteCells(_ sender: Any?) { promptCellShift(insert: false) }
 
+    // MARK: Export as Text (the options before a text save)
+
+    private(set) var textExportSheet: TextExportSheet?
+
+    /// The "Export as Text" sheet; the completion gets the options (nil
+    /// when cancelled) and whether to remember them as the defaults.
+    func promptTextExport(options: TextExportOptions, completion: @escaping (TextExportOptions?, Bool) -> Void) {
+        guard let window, textExportSheet == nil, window.attachedSheet == nil else {
+            completion(nil, false)
+            return
+        }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let sheet = TextExportSheet(options: options, workbook: workbook)
+        textExportSheet = sheet
+        sheet.run(in: window) { [weak self] options, remember in
+            self?.textExportSheet = nil
+            completion(options, remember)
+        }
+    }
+
     // MARK: Find and Replace (Edit menu)
 
     private(set) var findPanel: FindPanel?

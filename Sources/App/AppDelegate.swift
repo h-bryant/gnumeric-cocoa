@@ -440,6 +440,37 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_TEXT"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let document = controller.document as? WorkbookDocument {
+                // Export as Text: a Save As to the text type opens the
+                // options sheet, which is captured to `-export.png`, set to
+                // semicolons and quotes always, and confirmed.
+                let textURL = URL(fileURLWithPath: (path as NSString).deletingPathExtension + "-saved.txt")
+                document.save(to: textURL, ofType: WorkbookDocument.textType, for: .saveToOperation) { error in
+                    let head = (try? String(contentsOf: textURL, encoding: .utf8))?.prefix(80) ?? ""
+                    NSLog("text: saved error=%@ head='%@'", error?.localizedDescription ?? "none",
+                          String(head).replacingOccurrences(of: "\n", with: "|"))
+                }
+                if let sheet = controller.textExportSheet {
+                    NSLog("text: sheet open with %ld sheets, %ld selected, separator preset %ld", sheet.model.sheets.count,
+                          sheet.model.selected.count, sheet.model.separatorPreset)
+                    if let content = sheet.window.contentView {
+                        content.layoutSubtreeIfNeeded()
+                        if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                            content.cacheDisplay(in: content.bounds, to: rep)
+                            let exportPath = (path as NSString).deletingPathExtension + "-export.png"
+                            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: exportPath))
+                            NSLog("text: captured %@ (%@)", exportPath, NSStringFromRect(content.bounds))
+                        }
+                    }
+                    sheet.model.separatorPreset = 1   // semicolon
+                    sheet.model.quoting = .always
+                    sheet.finish(true)
+                } else {
+                    NSLog("text: no sheet appeared")
+                }
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_PREFS"] != nil,
                let delegate = NSApp.delegate as? AppDelegate, let engine = Engine.shared {
                 // Settings: the window captured to `-settings.png`, a change

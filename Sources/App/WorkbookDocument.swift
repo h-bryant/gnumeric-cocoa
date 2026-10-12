@@ -19,6 +19,11 @@ final class WorkbookDocument: NSDocument {
     /// guessed options, saved as CSV of the current sheet
     /// (`Gnumeric_stf:stf_csv`), the diffable form of a plain table.
     nonisolated static let csvType = "public.comma-separated-values-text"
+    /// "Text (configurable)": the engine's text saver with the options
+    /// sheet before it (`Gnumeric_stf:stf_assistant`).
+    nonisolated static let textType = "public.plain-text"
+    /// The options the next text write uses, chosen in the sheet.
+    private var pendingTextExport: (options: TextExportOptions, remember: Bool)?
 
     override init() {
         super.init()
@@ -62,7 +67,7 @@ final class WorkbookDocument: NSDocument {
     // MARK: Saving
 
     override func writableTypes(for saveOperation: NSDocument.SaveOperationType) -> [String] {
-        [Self.gnumericType, Self.xmlType, Self.xlsxType, Self.csvType]
+        [Self.gnumericType, Self.xmlType, Self.xlsxType, Self.csvType, Self.textType]
     }
 
     override func fileNameExtension(forType typeName: String, saveOperation: NSDocument.SaveOperationType) -> String? {
@@ -71,6 +76,7 @@ final class WorkbookDocument: NSDocument {
         case Self.xmlType: return "xml"
         case Self.xlsxType: return "xlsx"
         case Self.csvType: return "csv"
+        case Self.textType: return "txt"
         default: return super.fileNameExtension(forType: typeName, saveOperation: saveOperation)
         }
     }
@@ -87,7 +93,11 @@ final class WorkbookDocument: NSDocument {
         // Saves run on the main thread (canAsynchronouslyWrite stays false).
         try MainActor.assumeIsolated {
             guard let workbook else { return }
-            try workbook.write(to: url, saverIdentifier: Self.saverIdentifier(for: typeName), adoptingURL: false)
+            if typeName == Self.textType, let pending = pendingTextExport {
+                try workbook.write(to: url, textExportOptions: pending.options, rememberAsDefault: pending.remember, adoptingURL: false)
+            } else {
+                try workbook.write(to: url, saverIdentifier: Self.saverIdentifier(for: typeName), adoptingURL: false)
+            }
         }
     }
 
@@ -99,6 +109,7 @@ final class WorkbookDocument: NSDocument {
         case gnumericType: return "Gnumeric_XmlIO:sax"
         case xmlType: return "Gnumeric_XmlIO:sax:0"
         case csvType: return "Gnumeric_stf:stf_csv"
+        case textType: return "Gnumeric_stf:stf_assistant"
         default:
             let ext = typeName == xlsxType ? "xlsx" : "gnumeric"
             return MainActor.assumeIsolated { Engine.shared?.saverIdentifier(forFileName: "x." + ext) } ?? "Gnumeric_XmlIO:sax"
@@ -109,9 +120,30 @@ final class WorkbookDocument: NSDocument {
     /// the file is in place, the engine learns where the document lives.
     override func save(to url: URL, ofType typeName: String, for saveOperation: NSDocument.SaveOperationType,
                        completionHandler: @escaping ((any Error)?) -> Void) {
+        // A text save asks for its options first (the GTK saver's dialog),
+        // then comes back through here with them pending.
+        if typeName == Self.textType, pendingTextExport == nil {
+            guard let workbook, let controller = windowControllers.first as? WorkbookWindowController else {
+                completionHandler(NSError(domain: NSCocoaErrorDomain, code: NSUserCancelledError))
+                return
+            }
+            controller.promptTextExport(options: workbook.textExportOptions) { [weak self] options, remember in
+                guard let self else { return }
+                guard let options else {
+                    completionHandler(NSError(domain: NSCocoaErrorDomain, code: NSUserCancelledError))
+                    return
+                }
+                pendingTextExport = (options, remember)
+                save(to: url, ofType: typeName, for: saveOperation, completionHandler: completionHandler)
+            }
+            return
+        }
         super.save(to: url, ofType: typeName, for: saveOperation) { [weak self] error in
-            if error == nil, let self, let fileURL = self.fileURL {
-                self.workbook?.adoptFileURL(fileURL)
+            if let self {
+                pendingTextExport = nil
+                if error == nil, let fileURL = self.fileURL {
+                    workbook?.adoptFileURL(fileURL)
+                }
             }
             completionHandler(error)
         }

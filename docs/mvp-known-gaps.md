@@ -108,7 +108,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | DataFilterAdvancedfilter | no | Phase 5 |
 | DataOutline* (7) | no | Phase 3 |
 | DataSlicer* (3) | no | Phase 5 |
-| DataImportText, DataImportOther, DataExportText, DataExportCSV, DataExport, DataExportRepeat | partial | Save As to CSV writes the current sheet with the exporter's defaults and `.csv` opens with the importer's guessed options (2026-10-12); no options dialogs |
+| DataImportText, DataImportOther, DataExportText, DataExportCSV, DataExport, DataExportRepeat | partial | Save As to CSV writes the current sheet with the exporter's defaults; Save As to "Text (configurable)" asks the GTK export dialog's options first (2026-10-12); `.csv` opens with the importer's guessed options; no import assistant yet |
 
 ## Help
 

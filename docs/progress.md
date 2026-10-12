@@ -784,6 +784,34 @@
   from the defaults even with `GNM_PERSIST_PREFS=0`, which only stops
   writes.
 
+## 2026-10-12: Export as Text with options
+
+- `GnmTextExportOptions` (`GnmTextExport.h`): what the GTK "Export as
+  Text" dialog collects (the sheets in order, line ending, separator,
+  quoting and quote character, encoding, locale, unknown characters,
+  format mode, formulas).  `GnmWorkbook.textExportOptions` reads the
+  workbook's `GnmStfExport` (`gnm_stf_get_stfe`: the preferences'
+  defaults, or the last export's choices); `writeToURL:textExportOptions:
+  rememberAsDefault:adoptingURL:` sets it the way
+  `stf_export_dialog_finish` does (quoting triggers included), fills the
+  sheet list, and saves through `Gnumeric_stf:stf_assistant`, which
+  without a GTK control runs no dialog; `remember` stores the choices in
+  `gnm_conf`'s `stf_export` keys.
+- `TextExportSheet.swift`: a SwiftUI sheet (sheet toggles with Select
+  All and None, then the formatting pickers) over an `ObservableObject`;
+  `WorkbookDocument` gained the "Text (configurable)" writable type
+  (`public.plain-text`, `.txt`, an Info.plist type with role None so
+  the app does not claim to open plain text yet), and its `save(to:…)`
+  asks for the options first, then saves with them pending.
+- Engine facts settled by `Tests/BridgeTests/text_export.m`: the
+  automatic format mode writes raw values except dates (a 50.00% cell
+  exports as 0.5; Preserve keeps the display text); an empty sheet list
+  makes the saver take every sheet and clear the list again; the
+  workbook keeps the options of its last export; the C locale and an
+  ISO-8859-1 encoding reach the file.  `GNM_SNAPSHOT_TEXT=1` saves the
+  sample as text headlessly (the sheet captured to `-export.png`, then
+  semicolons and quotes always).
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -794,8 +822,9 @@
    the chart editor with its plot type change, and Save as Image… are
    done; Phase 5 has begun with File → New, Go To and the name box,
    Insert and Delete Cells, the current date and time, Save As CSV,
-   Find and Replace, and the Settings window; next the text import and
-   export options, then the rest of Phase 5 by usage frequency) from
+   Find and Replace, the Settings window, and Export as Text with
+   options; next the text import assistant, then the rest of Phase 5 by
+   usage frequency) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -818,8 +847,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-12: `main` at the Settings window
-   commit (after Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-12: `main` at the Export as Text
+   commit (after the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in
