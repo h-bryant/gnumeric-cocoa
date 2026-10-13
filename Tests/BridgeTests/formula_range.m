@@ -110,6 +110,57 @@ int main (void)
         GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:5 row:1], @"hello");
         GNM_ASSERT ([s enterArrayFormula:@"-" error:&error], @"a lone minus: %@", error);
         GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:5 row:0], @"-");
+        /* function tooltips: the call around the cursor, the argument marked */
+        GnmFunctionTooltip *tip = [s functionTooltipForText:@"=SUM(1," cursorAt:7];
+        NSLog (@"tooltip '=SUM(1,': '%@' function %@ argument %ld", tip.text, tip.functionName, (long) tip.argumentIndex);
+        GNM_ASSERT (tip && [tip.functionName isEqualToString:@"SUM"] && tip.argumentIndex == 1, @"SUM's second argument: %@", tip);
+        GNM_ASSERT ([tip.text isEqualToString:@"SUM([values],\u25b6\u2026\u25c0)"], @"marked text: %@", tip.text);
+        tip = [s functionTooltipForText:@"=IF(A1,SUM(B1" cursorAt:14];
+        GNM_ASSERT (tip && [tip.functionName isEqualToString:@"SUM"] && tip.argumentIndex == 0, @"the inner call: %@", tip.functionName);
+        tip = [s functionTooltipForText:@"=IF(SUM(1),2" cursorAt:12];
+        NSLog (@"tooltip '=IF(SUM(1),2': '%@'", tip.text);
+        GNM_ASSERT (tip && [tip.functionName isEqualToString:@"IF"] && tip.argumentIndex == 1, @"back in the outer call: %@ %ld", tip.functionName, (long) tip.argumentIndex);
+        GNM_ASSERT ([tip.text hasPrefix:@"IF(cond,\u25b6[trueval]\u25c0,[falseval])\ntrueval: "], @"the argument's description: %@", tip.text);
+        tip = [s functionTooltipForText:@"=PI(1,2,3" cursorAt:9];
+        GNM_ASSERT (tip && [tip.text containsString:@"\u2620"] && [tip.text containsString:@"Too many arguments for PI"], @"too many: %@", tip.text);
+        GNM_ASSERT ([s functionTooltipForText:@"=1+" cursorAt:3] == nil, @"no call");
+        GNM_ASSERT ([s functionTooltipForText:@"hello" cursorAt:5] == nil, @"not a formula");
+        GNM_ASSERT ([s functionTooltipForText:@"=SUM(1)" cursorAt:0] == nil, @"at the start");
+        tip = [s functionTooltipForText:@"=PI(" cursorAt:4];
+        NSLog (@"tooltip '=PI(': '%@'", tip.text);
+        GNM_ASSERT (tip && [tip.text isEqualToString:@"PI()\nPI takes no arguments"], @"PI: %@", tip.text);
+        /* a name being typed: the completions */
+        tip = [s functionTooltipForText:@"=su" cursorAt:3];
+        NSLog (@"tooltip '=su': %@ single %@ range %@", tip.completions, tip.completion, NSStringFromRange (tip.completionRange));
+        GNM_ASSERT (tip && [tip.completions containsObject:@"SUM"] && tip.functionName == nil && tip.completion == nil, @"completions: %@", tip.completions);
+        GNM_ASSERT (tip.completions.count == 9 && [tip.text hasSuffix:@"\u22ee"], @"nine of many and the ellipsis: %@", tip.text);
+        /* as in the GTK, a name no longer than the prefix is ticked and not
+         * counted, so "averageif" completes to the one longer name */
+        tip = [s functionTooltipForText:@"=averageif" cursorAt:10];
+        NSLog (@"tooltip '=averageif': %@ single %@ text '%@'", tip.completions, tip.completion, tip.text);
+        GNM_ASSERT (tip && [tip.completion isEqualToString:@"AVERAGEIFS"] && tip.completionRange.location == 1 && tip.completionRange.length == 9, @"a single match: %@ %@", tip.completion, NSStringFromRange (tip.completionRange));
+        GNM_ASSERT ([tip.text hasPrefix:@"\u2713 AVERAGEIF \t"] && [tip.text hasSuffix:@"\nF4 to complete"], @"ticked and the hint: %@", tip.text);
+        tip = [s functionTooltipForText:@"=averageifs" cursorAt:11];
+        GNM_ASSERT (tip && tip.completion == nil && tip.completions.count == 1, @"only the exact name: %@", tip.text);
+        tip = [s functionTooltipForText:@"=1+su" cursorAt:5];
+        GNM_ASSERT (tip && [tip.completions containsObject:@"SUM"], @"after an operator: %@", tip.completions);
+        /* F4's other job: the reference at the cursor cycles abs/rel */
+        NSRange cyc = NSMakeRange (0, 0);
+        NSString *cycled = [s formulaText:@"=SUM(B1:B3" cursorAt:10 cycleReferenceIn:&cyc];
+        GNM_ASSERT ([cycled isEqualToString:@"$B$1:$B$3"] && cyc.location == 5 && cyc.length == 5, @"relative to absolute: %@ %@", cycled, NSStringFromRange (cyc));
+        cycled = [s formulaText:@"=SUM($B$1:$B$3)" cursorAt:8 cycleReferenceIn:&cyc];
+        GNM_ASSERT ([cycled isEqualToString:@"B$1:B$3"] && cyc.length == 9, @"absolute to absolute row: %@", cycled);
+        cycled = [s formulaText:@"=B$1" cursorAt:4 cycleReferenceIn:&cyc];
+        GNM_ASSERT ([cycled isEqualToString:@"$B1"], @"absolute row to absolute column: %@", cycled);
+        cycled = [s formulaText:@"=$B1+1" cursorAt:4 cycleReferenceIn:&cyc];
+        GNM_ASSERT ([cycled isEqualToString:@"B1"] && cyc.location == 1 && cyc.length == 3, @"and back: %@ %@", cycled, NSStringFromRange (cyc));
+        GNM_ASSERT ([s formulaText:@"=SUM(1," cursorAt:7 cycleReferenceIn:&cyc] == nil, @"nothing to cycle at a separator");
+        GNM_ASSERT ([s formulaText:@"=SUM(1" cursorAt:6 cycleReferenceIn:&cyc] == nil, @"a constant is not a reference");
+        GNM_ASSERT ([s formulaText:@"B1" cursorAt:2 cycleReferenceIn:&cyc] == nil, @"not a formula");
+        tip = [s functionTooltipForText:@"=SUMI" cursorAt:5];
+        GNM_ASSERT (tip && [tip.completions containsObject:@"SUMIF"] && [tip.completions containsObject:@"SUMIFS"], @"typed in capitals: %@", tip.completions);
+        GNM_ASSERT ([s functionTooltipForText:@"=SUM(xyzzy" cursorAt:10] != nil, @"an unknown name inside a call still tips the call");
+
         /* the editor's style: a cell's whole format, and the font family
          * the engine draws */
         GnmCellFormat *f = [s formatOfCellAtColumn:0 row:0];

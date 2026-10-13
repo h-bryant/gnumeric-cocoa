@@ -9,13 +9,47 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+/// What the GTK entry's tooltip shows while a formula is typed
+/// (gee_check_tooltip): the call around the cursor with its argument
+/// marked ("SUM(▶number1◀,number2,…)" and the argument's description),
+/// or, for a function name being typed, the names it could complete to.
+NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(FunctionTooltip)
+@interface GnmFunctionTooltip : NSObject
+- (instancetype)init NS_UNAVAILABLE;
++ (instancetype)new NS_UNAVAILABLE;
+/// The lines to show.
+@property (nonatomic, readonly, copy) NSString *text;
+/// The function's name for an argument tooltip, nil for completions.
+@property (nonatomic, readonly, copy, nullable) NSString *functionName;
+/// The argument the cursor is in, for an argument tooltip.
+@property (nonatomic, readonly) NSInteger argumentIndex;
+/// The names a typed prefix could complete to (the first ten), empty
+/// for an argument tooltip.
+@property (nonatomic, readonly, copy) NSArray<NSString *> *completions;
+/// With one completion, the name F4 puts in place of the prefix, whose
+/// UTF-16 range is `completionRange`.
+@property (nonatomic, readonly, copy, nullable) NSString *completion;
+@property (nonatomic, readonly) NSRange completionRange;
+@end
+
 @interface GnmSheet (FormulaEditing)
+/// The tooltip for text being edited with the insertion point at
+/// `cursor`, or nil when there is none: not a formula, the cursor at
+/// the start, no call around it, or the preferences (`function-
+/// argument-tooltips`, `function-name-tooltips`) off.
+- (nullable GnmFunctionTooltip *)functionTooltipForText:(NSString *)text cursorAt:(NSInteger)cursor NS_SWIFT_NAME(functionTooltip(for:cursorAt:));
 /// Whether text being edited, with the insertion point at `cursor`
 /// (UTF-16 offset), can take a cell reference from a click: it must be
 /// a formula, and the cursor must sit where an operand may go.  On YES,
 /// `replace` is the UTF-16 range the reference replaces: empty to
 /// insert, or the operand under or before the cursor.
 - (BOOL)formulaText:(NSString *)text cursorAt:(NSInteger)cursor canTakeRange:(NSRange *)replace NS_SWIFT_NAME(formulaText(_:cursorAt:canTakeRange:));
+/// The GTK's F4 (cb_gee_key_press_event): the reference the cursor is
+/// in or just after, with its corners cycled relative → absolute →
+/// absolute column → absolute row → relative ("A1", "$A$1", "A$1",
+/// "$A1"); nil when no reference is there.  On a result, `range` is the
+/// UTF-16 range of the text it replaces.
+- (nullable NSString *)formulaText:(NSString *)text cursorAt:(NSInteger)cursor cycleReferenceIn:(NSRange *)range NS_SWIFT_NAME(formulaText(_:cursorAt:cycleReferenceIn:));
 /// A range as a reference in this sheet's syntax ("A1", "A1:C4").
 - (NSString *)nameOfRange:(GnmCellRange)range NS_SWIFT_NAME(name(of:));
 /// Where an arrow key moves `from`: `columns` or `rows` steps (one of

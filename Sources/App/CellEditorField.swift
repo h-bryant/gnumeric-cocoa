@@ -19,6 +19,10 @@ final class CellEditorField: NSTextField, NSTextFieldDelegate {
     /// Return with Shift and Control or Command: the text as an array
     /// formula over the selection.
     var onArrayCommit: ((String) -> Void)?
+    /// The insertion point moved (the function tooltip follows it).
+    var onSelectionChange: (() -> Void)?
+    /// F4: complete the function name being typed (the GTK's F4).
+    var onCompleteFunction: (() -> Void)?
 
     override class var cellClass: AnyClass? {
         get { CellEditorCell.self }
@@ -60,6 +64,10 @@ final class CellEditorField: NSTextField, NSTextFieldDelegate {
     /// Return with Shift and Control or Command enters an array formula.
     func handleKeyDown(_ event: NSEvent) -> Bool {
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        if event.keyCode == 118, flags.isDisjoint(with: [.shift, .control, .command]), let onCompleteFunction {   // F4
+            onCompleteFunction()
+            return true
+        }
         guard event.keyCode == 36 || event.keyCode == 76,   // Return, Enter
               flags.contains(.shift), !flags.isDisjoint(with: [.control, .command]),
               let onArrayCommit else { return false }
@@ -144,5 +152,9 @@ final class CellFieldEditor: NSTextView {
     override func keyDown(with event: NSEvent) {
         if let owner, owner.handleKeyDown(event) { return }
         super.keyDown(with: event)
+    }
+    override func setSelectedRange(_ charRange: NSRange, affinity: NSSelectionAffinity, stillSelecting: Bool) {
+        super.setSelectedRange(charRange, affinity: affinity, stillSelecting: stillSelecting)
+        if !stillSelecting { owner?.onSelectionChange?() }
     }
 }

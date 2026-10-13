@@ -564,6 +564,7 @@ enum Snapshot {
                 controller.gridView.beginEditing(initialText: "=MAX(")
                 NSLog("formula: editor style %@ (Sans is %@)", controller.gridView.editorStyleForTesting,
                       Engine.shared?.resolvedFontFamily(forName: "Sans") ?? "nil")
+                NSLog("formula: tooltip for '=MAX(' is '%@'", controller.gridView.functionTooltip?.text ?? "nil")
                 key(124, right, [])
                 NSLog("formula: Right -> '%@'", controller.gridView.editorTextForTesting)
                 key(126, up, [.command])
@@ -571,6 +572,14 @@ enum Snapshot {
                 key(126, up, [.command, .shift])
                 NSLog("formula: ⇧⌘Up -> '%@' outlined=%@", controller.gridView.editorTextForTesting,
                       controller.gridView.formulaRangeShown.map { "\($0.start.column),\($0.start.row)-\($0.end.column),\($0.end.row)" } ?? "nil")
+                key(118, "", [])   // F4 on the taken range: absolute
+                NSLog("formula: F4 -> '%@'", controller.gridView.editorTextForTesting)
+                key(118, "", [])   // F4 again: absolute row
+                NSLog("formula: F4 F4 -> '%@' outlined=%@", controller.gridView.editorTextForTesting,
+                      controller.gridView.formulaRangeShown.map { "\($0.start.column),\($0.start.row)-\($0.end.column),\($0.end.row)" } ?? "nil")
+                key(118, "", [])   // absolute column
+                key(118, "", [])   // back to relative
+                NSLog("formula: F4 x4 -> '%@'", controller.gridView.editorTextForTesting)
                 key(29, ")", [])
                 NSLog("formula: ) -> '%@' outlined=%@ fieldEditor=%@", controller.gridView.editorTextForTesting,
                       controller.gridView.formulaRangeShown.map { "\($0.start.column),\($0.start.row)-\($0.end.column),\($0.end.row)" } ?? "nil",
@@ -580,6 +589,28 @@ enum Snapshot {
                       sheet.displayTextOfCell(atColumn: 0, row: 5) ?? "nil",
                       sheet.enteredTextOfCell(atColumn: 0, row: 5) ?? "nil", controller.gridView.isEditing ? 1 : 0,
                       sheet.editPosition.column, sheet.editPosition.row)
+                // "=avera" typed in A10 lists AVERAGE and friends under the
+                // editor (captured); "=averageif" is itself a name, so F4
+                // completes to the one longer name, AVERAGEIFS, as in the GTK.
+                sheet.selectCell(atColumn: 0, row: 9)
+                controller.gridView.beginEditing(initialText: "=avera")
+                NSLog("formula: completions for '=avera': %@ single=%@", controller.gridView.functionTooltip?.completions.joined(separator: ",") ?? "nil",
+                      controller.gridView.functionTooltip?.completion ?? "nil")
+                let grid = controller.gridView
+                grid.layoutSubtreeIfNeeded()
+                grid.displayIfNeeded()
+                if let rep = grid.bitmapImageRepForCachingDisplay(in: grid.bounds) {
+                    grid.cacheDisplay(in: grid.bounds, to: rep)
+                    let tipPath = (path as NSString).deletingPathExtension + "-tooltip.png"
+                    try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: tipPath))
+                    NSLog("formula: captured %@", tipPath)
+                }
+                controller.gridView.cancelEditing()
+                controller.gridView.beginEditing(initialText: "=averageif")
+                key(118, "", [])   // F4
+                NSLog("formula: F4 on '=averageif' -> '%@' tooltip '%@'", controller.gridView.editorTextForTesting,
+                      controller.gridView.functionTooltip?.text ?? "nil")
+                controller.gridView.cancelEditing()
                 sheet.selectRange(CellRange(start: CellCoordinate(column: 0, row: 6), end: CellCoordinate(column: 0, row: 8)),
                                   editPosition: CellCoordinate(column: 0, row: 6))
                 controller.gridView.beginEditing(initialText: "=B1:B3*2")

@@ -149,8 +149,11 @@ header through the Page Setup dialog, captured to `-print.png`, the
 first page drawn to `-page1.png`), formula range selection ("=SUM(" in
 A5 takes B1:B3 from the grid, then Bold; A6 styled bold Georgia 14
 right-aligned so the editor shows the cell's style; "=MAX(" in A6 takes B1:B3 by
-Right, ⌘Up, and ⇧⌘Up sent as key events, ")" ends the selection, Up
-commits; "=B1:B3*2" over A7:A9 by ⇧⌘Return), and autocompletion with the
+Right, ⌘Up, and ⇧⌘Up sent as key events, F4 four times cycles the
+reference's absolute forms, ")" ends the selection, Up commits; "=avera"
+in A10 shows the completion list under the editor, written to
+`-tooltip.png`, and F4 on "=averageif" completes it; "=B1:B3*2" over
+A7:A9 by ⇧⌘Return), and autocompletion with the
 function selector ("app" under "apple" completes; SUM inserted through
 the dialog, captured to `-func.png`), and the sheet display toggles
 (A1 a formula and B1 a zero, then Display Formulæ, Hide Zeros, Hide

@@ -139,7 +139,8 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | Toolbars (standard, format, object) | no | Phase 3 |
 | Status bar, auto-expression (sum/average of selection) | partial | auto-expression pull-down 2026-10-11; no progress or zoom fields |
 | Name box navigation (type a reference) | ported | 2026-10-12: a reference, a sheet-qualified reference, or a name; a new word names the selection |
-| Formula bar: multi-line editing, function tooltips | no | Phase 3 |
+| Formula bar: multi-line editing | no | Phase 3 |
+| In-cell editor: function tooltips and F4 | ported | 2026-10-12: the call around the cursor with its argument marked, or the names a prefix completes to, drawn under the editor (`gee_check_tooltip`; `GnmSheet.functionTooltip`); F4 completes a single name or cycles the reference at the cursor relative → absolute → row → column (`formulaText:cursorAt:cycleReferenceIn:`) |
 | In-cell editor: range selection by mouse while typing a formula | ported | 2026-10-12: a click or drag puts the reference where the GTK entry would (`GnmFormulaEditing`) |
 | In-cell editor: autocomplete | ported | 2026-10-12: the column's nearest text above fills in with the tail selected |
 | In-cell editor: range selection by keyboard while typing a formula | ported | 2026-10-12: arrows move the reference from the edited cell, Shift extends it, ⌘ jumps to the data's edge (`scg_rangesel_move/extend`); typing that leaves no place for a range ends it (`gee_update_env`) |

@@ -6,6 +6,20 @@
 #import "GnmPrivate.h"
 #include <complete-sheet.h>
 #include <expr.h>
+#include <func.h>
+#include <gnumeric-conf.h>
+#include <goffice/goffice.h>
+
+/* parser.y's token numbers, in declaration order from 258 (parser.h is
+ * not installed): STRING 258, QUOTED_STRING 259, CONSTANT 260, RANGEREF
+ * 261, the comparison and logic tokens, INTERSECT 268, then ARG_SEP and
+ * INVALID_TOKEN (the GTK entry's unmatched apostrophe). */
+enum { LEX_STRING = 258, LEX_CONSTANT = 260, LEX_ARG_SEP = 269, LEX_INVALID = 273 };
+
+#define UNICODE_LEFT_TRIANGLE "\xe2\x97\x80"
+#define UNICODE_RIGHT_TRIANGLE "\xe2\x96\xb6"
+#define UNICODE_CROSS_AND_SKULLBONES "\xe2\x98\xa0"
+#define UNICODE_ELLIPSIS "\xe2\x80\xa6"
 
 static gboolean
 is_operand (char const *text, GnmLexerItem const *gli)
@@ -157,6 +171,39 @@ find_lexer_token (GnmLexerItem const *gli, gsize token_pos, GnmLexerItem const *
     return YES;
 }
 
+- (NSString *)formulaText:(NSString *)text cursorAt:(NSInteger)cursor cycleReferenceIn:(NSRange *)range
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    Sheet *sheet = self.engineSheet;
+    NSRange replace = NSMakeRange (0, 0);
+    if (!sheet || ![self formulaText:text cursorAt:cursor canTakeRange:&replace] || replace.length == 0)
+        return nil;
+    GnmParsePos pp;
+    GnmCellCoordinate edit = self.editPosition;
+    parse_pos_init (&pp, sheet->workbook, sheet, (int) edit.column, (int) edit.row);
+    GnmConventions const *convs = sheet_get_conventions (sheet);
+    const char *operand = [text substringWithRange:replace].UTF8String;
+    GnmRangeRef ref;
+    const char *after = rangeref_parse (&ref, operand, &pp, convs);
+    if (!after || after == operand || *after != '\0')
+        return nil;
+    gboolean c = ref.a.col_relative, r = ref.a.row_relative;
+    gnm_cellref_set_col_ar (&ref.a, &pp, !c);
+    gnm_cellref_set_col_ar (&ref.b, &pp, !c);
+    gnm_cellref_set_row_ar (&ref.a, &pp, c ^ r);
+    gnm_cellref_set_row_ar (&ref.b, &pp, c ^ r);
+    GnmConventionsOut out;
+    out.accum = g_string_new (NULL);
+    out.pp = &pp;
+    out.convs = convs;
+    rangeref_as_string (&out, &ref);
+    NSString *result = [NSString stringWithUTF8String:out.accum->str] ?: @"";
+    g_string_free (out.accum, TRUE);
+    if (range)
+        *range = replace;
+    return result;
+}
+
 static void
 cb_complete_match (GnmComplete *complete, char const *text, gpointer closure)
 {
@@ -266,6 +313,262 @@ cb_complete_match (GnmComplete *complete, char const *text, gpointer closure)
             failed = cmd_area_set_text (wbc, sv, txt, NULL);
         return failed;
     } description:@"Could not enter the array formula." error:error];
+}
+
+@end
+
+#pragma mark - Function tooltips
+
+@implementation GnmFunctionTooltip
+
+- (instancetype)initWithText:(NSString *)text functionName:(NSString *)name argumentIndex:(NSInteger)index
+                 completions:(NSArray<NSString *> *)completions completion:(NSString *)completion range:(NSRange)range
+{
+    if (!(self = [super init]))
+        return nil;
+    _text = [text copy];
+    _functionName = [name copy];
+    _argumentIndex = index;
+    _completions = [completions copy];
+    _completion = [completion copy];
+    _completionRange = range;
+    return self;
+}
+
+@end
+
+/* A help text without its argument markup ("@{criteria}" → "criteria"). */
+static NSString *
+plain_help (const char *text)
+{
+    NSString *s = text ? [NSString stringWithUTF8String:text] : nil;
+    if (!s)
+        return @"";
+    NSMutableString *m = [s mutableCopy];
+    [m replaceOccurrencesOfString:@"@{" withString:@"" options:0 range:NSMakeRange (0, m.length)];
+    [m replaceOccurrencesOfString:@"}" withString:@"" options:0 range:NSMakeRange (0, m.length)];
+    return m;
+}
+
+/* gee_set_tooltip's text */
+static NSString *
+argument_tooltip_text (GnmFunc *fd, int args, gboolean had_stuff)
+{
+    gnm_func_load_if_stub (fd);
+    int min, max;
+    gnm_func_count_args (fd, &min, &max);
+    /* the registered names are lower case; formulas show them upper */
+    NSString *fdname = [[NSString stringWithUTF8String:gnm_func_get_name (fd, FALSE)] uppercaseString];
+    GString *str = g_string_new (fdname.UTF8String);
+    char sep = go_locale_get_arg_sep ();
+    gboolean first = TRUE;
+    char *extra = NULL;
+    g_string_append_c (str, '(');
+    int i;
+    for (i = 0; i < max; i++) {
+        const char *arg_name = gnm_func_get_arg_name (fd, i);
+        if (arg_name == NULL)
+            break;
+        if (first)
+            first = FALSE;
+        else
+            g_string_append_c (str, sep);
+        if (i == args) {
+            extra = g_strdup_printf ("%s: %s", arg_name, plain_help (gnm_func_get_arg_description (fd, i)).UTF8String);
+            g_string_append (str, UNICODE_RIGHT_TRIANGLE);
+        }
+        if (i >= min)
+            g_string_append_c (str, '[');
+        g_string_append (str, arg_name);
+        if (i >= min)
+            g_string_append_c (str, ']');
+        if (i == args)
+            g_string_append (str, UNICODE_LEFT_TRIANGLE);
+    }
+    if (i < max) {
+        if (!first)
+            g_string_append_c (str, sep);
+        g_string_append (str, (args >= i && args < max) ? UNICODE_RIGHT_TRIANGLE UNICODE_ELLIPSIS UNICODE_LEFT_TRIANGLE : UNICODE_ELLIPSIS);
+    }
+    if (max == 0 && args == 0 && !had_stuff) {
+        extra = g_strdup_printf ("%s takes no arguments", fdname.UTF8String);
+    } else if (args >= max) {
+        g_string_append (str, UNICODE_RIGHT_TRIANGLE UNICODE_CROSS_AND_SKULLBONES UNICODE_LEFT_TRIANGLE);
+        extra = g_strdup_printf ("Too many arguments for %s", fdname.UTF8String);
+    }
+    g_string_append_c (str, ')');
+    if (extra) {
+        g_string_append_c (str, '\n');
+        g_string_append (str, extra);
+        g_free (extra);
+    }
+    NSString *result = [NSString stringWithUTF8String:str->str] ?: @"";
+    g_string_free (str, TRUE);
+    return result;
+}
+
+static gint
+func_name_cmp (gconstpointer a, gconstpointer b)
+{
+    return g_ascii_strcasecmp (gnm_func_get_name ((GnmFunc *) a, FALSE), gnm_func_get_name ((GnmFunc *) b, FALSE));
+}
+
+@implementation GnmSheet (FunctionTooltips)
+
+- (GnmFunctionTooltip *)functionTooltipForText:(NSString *)text cursorAt:(NSInteger)cursor
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    Sheet *sheet = self.engineSheet;
+    if (!sheet || text.length == 0 || cursor <= 0)
+        return nil;
+    const char *utf8 = text.UTF8String;
+    if (!gnm_expr_char_start_p (utf8))
+        return nil;
+    NSInteger clamped = MIN (cursor, (NSInteger) text.length);
+    gsize end_t = strlen ([text substringToIndex:(NSUInteger) clamped].UTF8String);
+    GnmParsePos pp;
+    GnmCellCoordinate edit = self.editPosition;
+    parse_pos_init (&pp, sheet->workbook, sheet, (int) edit.column, (int) edit.row);
+    GnmLexerItem *items = gnm_expr_lex_all (utf8, &pp, GNM_EXPR_PARSE_UNKNOWN_NAMES_ARE_STRINGS, NULL);
+    if (!items)
+        return nil;
+    /* gee_check_tooltip */
+    GnmLexerItem *gli = items;
+    gboolean stuff = FALSE;
+    int args = 0, last_token = 0;
+    GnmFunctionTooltip *result = nil;
+    for (; gli->token != 0; gli++) {
+        if (gli->start >= end_t) {
+            gli->token = 0;
+            break;
+        }
+        if (gli->token != LEX_INVALID)
+            continue;
+        if (gli->start == 0)
+            goto not_found;
+        gli->token = 0;
+        stuff = TRUE;
+        break;
+    }
+    if (gli > items)
+        gli--;
+    if (gli > items)
+        last_token = (gli - 1)->token;
+    /* a function name being typed: the names it could complete to */
+    if (!stuff && gli->token == LEX_STRING && last_token != LEX_CONSTANT && last_token != '$') {
+        gsize start_t = gli->start, stop_t = gli->end;
+        /* the lookup is case-sensitive against the lower-case names, so
+         * unlike the GTK a name typed in capitals completes too */
+        char *prefix = g_ascii_strdown (utf8 + start_t, (gssize) (stop_t - start_t));
+        GSList *list = gnm_func_lookup_prefix (prefix, sheet->workbook, FALSE);
+        if (list) {
+            list = g_slist_sort (list, func_name_cmp);
+            /* gee_set_tooltip_completion: up to nine names longer than the
+             * prefix, a name no longer than it ticked and not counted; one
+             * counted name is what F4 completes to (the last listed) */
+            NSMutableString *lines = [NSMutableString string];
+            NSMutableArray *names = [NSMutableArray array];
+            NSString *last = nil;
+            int i = 0;
+            glong typed = g_utf8_strlen (prefix, -1);
+            for (GSList *l = list; l && ++i < 10; l = l->next) {
+                GnmFunc *fd = l->data;
+                gnm_func_load_if_stub (fd);
+                const char *raw = gnm_func_get_name (fd, FALSE);
+                NSString *name = [[NSString stringWithUTF8String:raw] uppercaseString];
+                BOOL exact = typed >= g_utf8_strlen (raw, -1);
+                [lines appendFormat:@"%@%@ \t%@\n", exact ? @"\u2713 " : @"", name, plain_help (gnm_func_get_description (fd))];
+                [names addObject:name];
+                last = name;
+                if (exact)
+                    i--;
+            }
+            if (i == 10)
+                [lines appendString:@"\u22ee\n"];
+            if (i == 1)
+                [lines appendString:@"F4 to complete"];
+            else if (lines.length)
+                [lines deleteCharactersInRange:NSMakeRange (lines.length - 1, 1)];
+            NSString *head = [[NSString alloc] initWithBytes:utf8 length:start_t encoding:NSUTF8StringEncoding];
+            NSString *word = [[NSString alloc] initWithBytes:utf8 + start_t length:stop_t - start_t encoding:NSUTF8StringEncoding];
+            NSRange range = NSMakeRange (head.length, word.length);
+            g_slist_free_full (list, (GDestroyNotify) gnm_func_dec_usage);
+            g_free (prefix);
+            if (!gnm_conf_get_core_gui_editing_function_name_tooltips ())
+                goto not_found;
+            result = [[GnmFunctionTooltip alloc] initWithText:lines functionName:nil argumentIndex:-1 completions:names
+                                                   completion:i == 1 ? last : nil range:range];
+            g_free (items);
+            return result;
+        }
+        g_free (prefix);
+    }
+    if (!gnm_conf_get_core_gui_editing_function_argument_tooltips ())
+        goto not_found;
+    while (gli->start > 1) {
+        switch (gli->token) {
+        case '(':
+            if ((gli - 1)->token == LEX_STRING) {
+                gsize start_t = (gli - 1)->start, stop_t = (gli - 1)->end;
+                char *name = g_strndup (utf8 + start_t, stop_t - start_t);
+                GnmFunc *fd = gnm_func_lookup (name, NULL);
+                g_free (name);
+                if (fd != NULL) {
+                    result = [[GnmFunctionTooltip alloc] initWithText:argument_tooltip_text (fd, args, stuff)
+                                                          functionName:[[NSString stringWithUTF8String:gnm_func_get_name (fd, FALSE)] uppercaseString]
+                                                         argumentIndex:args completions:@[] completion:nil range:NSMakeRange (0, 0)];
+                    g_free (items);
+                    return result;
+                }
+            }
+            stuff = TRUE;
+            args = 0;
+            break;
+        case '{':
+            stuff = (args == 0);
+            args = 0;
+            break;
+        case ')': {
+            int para = 1;
+            gli--;
+            while (gli->start > 1 && para > 0) {
+                if (gli->token == ')')
+                    para++;
+                else if (gli->token == '(')
+                    para--;
+                gli--;
+            }
+            gli++;
+            stuff = (args == 0);
+            break;
+        }
+        case '}': {
+            int para = 1;
+            gli--;
+            while (gli->start > 1 && para > 0) {
+                if (gli->token == '}')
+                    para++;
+                else if (gli->token == '{')
+                    para--;
+                gli--;
+            }
+            gli++;
+            stuff = (args == 0);
+            break;
+        }
+        case LEX_ARG_SEP:
+            args++;
+            break;
+        default:
+            stuff = (args == 0);
+            break;
+        }
+        if (gli->start > 1)
+            gli--;
+    }
+not_found:
+    g_free (items);
+    return nil;
 }
 
 @end

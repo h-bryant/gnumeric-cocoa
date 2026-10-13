@@ -223,6 +223,11 @@ GType gnm_cocoa_sheet_control_get_type (void);
 - (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool sheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error;
 @end
 
+@interface GnmFunctionTooltip ()
+- (instancetype)initWithText:(NSString *)text functionName:(nullable NSString *)name argumentIndex:(NSInteger)index
+                 completions:(NSArray<NSString *> *)completions completion:(nullable NSString *)completion range:(NSRange)range NS_DESIGNATED_INITIALIZER;
+@end
+
 @interface GnmSolverAlgorithm ()
 - (instancetype)initWithFactory:(GnmSolverFactory *)factory NS_DESIGNATED_INITIALIZER;
 @end

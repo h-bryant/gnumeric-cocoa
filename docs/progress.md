@@ -1482,6 +1482,40 @@
   logged a CRITICAL assertion for every such pair, twice with the
   undo; the swap is skipped now.  The GTK front end has the same.
 
+## 2026-10-12: Function tooltips and F4
+
+- `GnmSheet.functionTooltipForText:cursorAt:` is `gee_check_tooltip`
+  over `gnm_expr_lex_all`: the lexer items are cut at the cursor (an
+  unmatched apostrophe counts as "stuff"), a trailing STRING token not
+  after a constant or `$` asks `gnm_func_lookup_prefix` for completions
+  (`gee_set_tooltip_completion`: up to nine names longer than the
+  prefix, a name no longer than it ticked and not counted, one counted
+  name is what F4 completes to, so "=averageif" completes to AVERAGEIFS
+  as in the GTK); otherwise the scan back over matched parentheses and
+  braces finds the call and counts argument separators, and
+  `gee_set_tooltip`'s text marks the argument with ▶◀, brackets the
+  optional ones, ends with … or ☠, and adds the argument's description
+  or "takes no arguments" / "Too many arguments".  Unlike the GTK the
+  lookup prefix is lower-cased (the names are lower case and the lookup
+  is case-sensitive), and the help markup `@{x}` is stripped.  The
+  token numbers come from `parser.y`'s declaration order (`parser.h`
+  is not installed): STRING 258, CONSTANT 260, ARG_SEP 269,
+  INVALID_TOKEN 273; the tests confirm them.
+- `formulaText:cursorAt:cycleReferenceIn:` is the GTK's F4 without a
+  completion: the operand the range finder gives, parsed with
+  `rangeref_parse`, its corners toggled with `gnm_cellref_set_col_ar` /
+  `_row_ar` in the GTK's order (relative, absolute, absolute row,
+  absolute column), rendered with `rangeref_as_string`.
+- `GridView` keeps the tooltip (`functionTooltip`) current from the
+  editor's text changes and from the field editor's selection changes
+  (`CellFieldEditor` overrides `setSelectedRange:affinity:
+  stillSelecting:`) and draws it in a pale yellow box under the editor
+  with a tab stop between name and description; F4 (key code 118)
+  reaches `completeFunctionName` through `CellEditorField.handleKeyDown`
+  and keeps the keyboard range selection's text range in step.
+  `formula_range.m` and the `GNM_SNAPSHOT_FORMULA` hook (the grid with
+  the "=avera" list is written to `-tooltip.png`) cover both.
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -1523,8 +1557,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-12: `main` at the autocompletion and
-   consolidate commit (after sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-12: `main` at the function tooltips
+   commit (after consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

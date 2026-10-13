@@ -135,6 +135,8 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
             self?.moveFormulaRange(columns: columns, rows: rows, extend: extend, jump: jump) ?? false
         }
         editor.onArrayCommit = { [weak self] text in self?.commitArrayFormula(text: text) }
+        editor.onSelectionChange = { [weak self] in self?.updateFunctionTooltip() }
+        editor.onCompleteFunction = { [weak self] in self?.completeFunctionName() }
         editor.onTextChange = { [weak self] text in
             guard let self else { return }
             handleAutocomplete(text)
@@ -152,6 +154,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
                 }
             }
             editingTextDidChange?(text)
+            updateFunctionTooltip()
         }
     }
 
@@ -276,6 +279,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         drawSelection(of: sheet, dirtyRect: dirtyRect)
         drawValidationDropdown(of: sheet, dirtyRect: dirtyRect)
         drawInputMessage(of: sheet, dirtyRect: dirtyRect)
+        drawFunctionTooltip(of: sheet, dirtyRect: dirtyRect)
         drawFormulaRange(of: sheet, dirtyRect: dirtyRect)
         drawObjectSelection(dirtyRect: dirtyRect)
     }
@@ -439,6 +443,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
 
     private func endEditingSession() {
         editingCell = nil
+        functionTooltip = nil
         autocompleting = false
         formulaRangeAnchor = nil
         formulaRangeText = nil
@@ -1105,6 +1110,72 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         takeFormulaRange(range, replacing: replace)
         scrollToVisible(sheet.frameOfCell(atColumn: target.column, row: target.row).insetBy(dx: -2, dy: -2))
         return true
+    }
+
+    // MARK: Function tooltips
+
+    /// The GTK entry's tooltip under the editor: the call around the
+    /// cursor with its argument marked, or the names a typed prefix could
+    /// complete to (gee_check_tooltip); nil when there is none.
+    private(set) var functionTooltip: FunctionTooltip? {
+        didSet {
+            if oldValue?.text != functionTooltip?.text { needsDisplay = true }
+        }
+    }
+
+    private func updateFunctionTooltip() {
+        guard isEditing, let sheet, let fieldEditor = editor.currentEditor() else {
+            functionTooltip = nil
+            return
+        }
+        functionTooltip = sheet.functionTooltip(for: editor.stringValue, cursorAt: fieldEditor.selectedRange.location)
+    }
+
+    /// F4 (cb_gee_key_press_event): a single completion replaces the
+    /// prefix, else the reference at the cursor cycles between relative
+    /// and absolute; the cursor ends after the new text.
+    func completeFunctionName() {
+        guard let sheet, let fieldEditor = editor.currentEditor() else { return }
+        let text = editor.stringValue as NSString
+        var range = NSRange(location: 0, length: 0)
+        let replacement: String
+        if let tooltip = functionTooltip, let completion = tooltip.completion {
+            range = tooltip.completionRange
+            replacement = completion
+        } else if let cycled = sheet.formulaText(editor.stringValue, cursorAt: fieldEditor.selectedRange.location, cycleReferenceIn: &range) {
+            replacement = cycled
+        } else {
+            return
+        }
+        guard range.location + range.length <= text.length else { return }
+        editor.stringValue = text.replacingCharacters(in: range, with: replacement)
+        if let shown = formulaRangeText, shown == range {
+            formulaRangeText = NSRange(location: range.location, length: replacement.utf16.count)
+        }
+        editor.currentEditor()?.selectedRange = NSRange(location: range.location + replacement.utf16.count, length: 0)
+        editingTextDidChange?(editor.stringValue)
+        updateFunctionTooltip()
+    }
+
+    private func drawFunctionTooltip(of sheet: Sheet, dirtyRect: NSRect) {
+        guard let tooltip = functionTooltip, let cell = editingCell else { return }
+        let frame = sheet.frameOfCell(atColumn: cell.column, row: cell.row)
+        guard !frame.isEmpty else { return }
+        let style = NSMutableParagraphStyle()
+        style.tabStops = [NSTextTab(textAlignment: .left, location: 110)]
+        style.defaultTabInterval = 110
+        let text = NSAttributedString(string: tooltip.text.replacingOccurrences(of: " \t", with: "\t"),
+                                      attributes: [.font: NSFont.systemFont(ofSize: 11), .paragraphStyle: style])
+        let size = text.boundingRect(with: NSSize(width: 420, height: 300), options: [.usesLineFragmentOrigin]).size
+        let box = NSRect(x: frame.minX, y: editor.frame.maxY + 2, width: ceil(size.width) + 12, height: ceil(size.height) + 8)
+        guard box.intersects(dirtyRect) else { return }
+        let path = NSBezierPath(roundedRect: box, xRadius: 4, yRadius: 4)
+        NSColor(red: 1, green: 1, blue: 0.86, alpha: 1).setFill()
+        path.fill()
+        NSColor.gray.setStroke()
+        path.lineWidth = 0.5
+        path.stroke()
+        text.draw(with: box.insetBy(dx: 6, dy: 4), options: [.usesLineFragmentOrigin])
     }
 
     /// The outline of the range being put into the formula.

@@ -371,7 +371,10 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    sheet Hide / Unhide, and full screen (`GnmAdvancedFilter`,
    `setSheet:visible:`, `filter_visibility.m`), and the Sort dialog's
    six key rows and locale, and Data → Consolidate… and Shuffle…
-   (`GnmConsolidateAnalysis`, `shuffleRange:by:`).  Next, by usage: a
+   (`GnmConsolidateAnalysis`, `shuffleRange:by:`), and the function
+   tooltips under the in-cell editor with F4's completion and reference
+   cycling (`functionTooltipForText:cursorAt:`,
+   `formulaText:cursorAt:cycleReferenceIn:`).  Next, by usage: a
    Manage Sheets dialog, a plugin manager, the scenarios and simulation
    tools, Format → AutoFormat;
    image and widget editors (`cmd_so_set_*`) later; the smaller Phase 3
