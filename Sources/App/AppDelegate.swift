@@ -204,7 +204,27 @@ enum EngineLocator {
 
     static var isBundled: Bool { bundledEngineDirectory != nil }
 
+    /// The engine's messages (and its number parsing) follow the process
+    /// locale, which a Finder launch leaves at "C": take macOS's preferred
+    /// languages, unless the environment names a locale already (a
+    /// Terminal launch, the headless runs).  LANGUAGE lists the languages
+    /// for the catalogs (gettext's fallback chain); LANG must name a
+    /// locale macOS has.
+    static func exportLocale() {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["LC_ALL"] == nil, environment["LANG"] == nil, environment["LC_MESSAGES"] == nil else { return }
+        let languages = Locale.preferredLanguages.map { Locale(identifier: $0) }
+        let codes: [String] = languages.compactMap { $0.language.languageCode?.identifier }
+        guard let first = languages.first, let code = codes.first else { return }
+        let region = first.region?.identifier ?? Locale.current.region?.identifier ?? ""
+        let candidates = ["\(code)_\(region).UTF-8", "\(code).UTF-8"]
+        guard let name = candidates.first(where: { FileManager.default.fileExists(atPath: "/usr/share/locale/\($0)") }) else { return }
+        setenv("LANG", name, 1)
+        setenv("LANGUAGE", codes.joined(separator: ":"), 1)
+    }
+
     static func configuration() -> EngineConfiguration {
+        exportLocale()
         let configuration = EngineConfiguration()
         configuration.programName = "gnumeric-cocoa"
         // GSettings persists through NSUserDefaults under the bundle
@@ -2622,6 +2642,12 @@ enum Snapshot {
                 let licenseFolders: Int = licenseEntries.filter { !$0.hasSuffix(".txt") }.count
                 let indexState: String = AppDelegate.licensesIndexURL != nil ? "yes" : "no"
                 NSLog("bundle: licenses=%ld index=%@", licenseFolders, indexState)
+                // The translations: the catalogs per language beside the
+                // engine, and the engine's messages following LANG (the
+                // verify script runs under German: "Blatt1").
+                let localeEntries: [String] = (try? FileManager.default.contentsOfDirectory(atPath: engine.localeDirectory)) ?? []
+                let localeState: String = "locale=\(engine.localeDirectory) catalogs=\(localeEntries.count) messages=\(engine.messagesLocale) sheet=\(sheet.name) translated=\(engine.localizedString("Sheet%d"))"
+                NSLog("bundle: %@", localeState)
                 (NSApp.delegate as? AppDelegate)?.helpLicenses(nil)
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
@@ -2664,6 +2690,21 @@ enum Snapshot {
                 let backState: String = "rtl=\(sheet.isRightToLeft) a1=\(NSStringFromRect(back)) headerXs=\(backHeaderXs)"
                 NSLog("rtl: back %@", backState)
                 controller.toggleDirection(nil)
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_LOCALE"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet, let engine = Engine.shared {
+                // Run under LANG=de_DE.UTF-8 LANGUAGE=de: the engine's
+                // messages are German (the sheet "Blatt1", the undo label,
+                // a catalog lookup) and its number parsing takes the comma.
+                try? sheet.setText("1,5", atColumn: 0, row: 0, autocorrect: false)
+                try? sheet.setText("=A1*2", atColumn: 1, row: 0, autocorrect: false)
+                let undo: String = sheet.workbook?.undoLabel ?? "nil"
+                let b1: String = sheet.displayTextOfCell(atColumn: 1, row: 0) ?? "nil"
+                let state: String = "messages=\(engine.messagesLocale) dir=\(engine.localeDirectory) sheet=\(sheet.name) translated=\(engine.localizedString("Sheet%d")) undo=\(undo) b1=\(b1)"
+                NSLog("locale: %@", state)
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }

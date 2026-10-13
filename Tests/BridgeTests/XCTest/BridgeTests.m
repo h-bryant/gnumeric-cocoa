@@ -104,5 +104,6 @@
 - (void)testProperties { [self runProgram:@"properties"]; }
 - (void)testMerge { [self runProgram:@"merge"]; }
 - (void)testCompare { [self runProgram:@"compare"]; }
+- (void)testLocale { [self runProgram:@"locale"]; }
 
 @end

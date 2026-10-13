@@ -114,6 +114,8 @@ targets:
     templates: [BridgeTestProgram]
   compare:
     templates: [BridgeTestProgram]
+  locale:
+    templates: [BridgeTestProgram]
   BridgeTests:
     type: bundle.unit-test
     platform: macOS
@@ -154,6 +156,7 @@ targets:
       - target: properties
       - target: merge
       - target: compare
+      - target: locale
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.github.h-bryant.gnumeric-cocoa.BridgeTests

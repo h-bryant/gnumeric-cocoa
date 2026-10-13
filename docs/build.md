@@ -73,7 +73,9 @@ Configure flags used by `build-gnumeric.sh`: Homebrew's
 --disable-dependency-tracking`) plus `--disable-component` (the goffice
 embedding component would otherwise install into Homebrew's goffice plugin
 directory), `--disable-introspection`, `--disable-gtk-doc`,
-`--without-python`, `--without-perl`.
+`--without-python`, `--without-perl`, and, for the translations,
+`gt_cv_func_gnugettext1_libintl=yes` with `--with-libintl-prefix` plus a
+fix of the functions' catalog domain after `autogen.sh` (see "Bundling").
 
 ## Engine build result (2026-10-10)
 
@@ -119,7 +121,7 @@ GNM_SNAPSHOT=/tmp/grid.png scripts/run-app.sh upstream/gnumeric/samples/format-t
 `GNM_SNAPSHOT_MERGE=1`, `GNM_SNAPSHOT_COMPARE=1`, `GNM_SNAPSHOT_PROTECT=1`,
 `GNM_SNAPSHOT_SHAPES=1`, `GNM_SNAPSHOT_PREVIEW=1`, `GNM_SNAPSHOT_SORTSETUP=1`,
 `GNM_SNAPSHOT_REPEAT=1`, `GNM_SNAPSHOT_XMLOPEN=1`, `GNM_SNAPSHOT_BUNDLE=1`, and
-`GNM_SNAPSHOT_RTL=1` (a right-to-left sheet: column A at the right, the row header on the right, Left moving to B, and back)
+`GNM_SNAPSHOT_RTL=1` (a right-to-left sheet: column A at the right, the row header on the right, Left moving to B, and back), and `GNM_SNAPSHOT_LOCALE=1` (run under `LANG=de_DE.UTF-8 LANGUAGE=de`: the engine's messages in German, "1,5" a number)
 exercise zoom, editing and saving, the Format Cells model, the Phase 3
 commands, frozen panes, sheet management, the autofilter with the Sort
 command, a sheet resize, and a tab color, the sheet objects (select, move,
@@ -313,19 +315,35 @@ follows Homebrew's oldest supported release (ADR-009).
   license text, or a copied file from no keg, fails the script.  Help →
   Third-Party Licenses opens the index (`AppDelegate.helpLicenses`); the
   item is disabled in a development build, which has no `licenses/`.
-- Everything is ad-hoc signed, inner files first.  The result is about 62
-  MB: 48 dylibs (38 MB), 59 plugins, and 1 MB of license texts.
+- The translations (since 2026-10-13): the engine build installs the 62
+  languages' catalogs, `gnumeric-<version>.mo` and
+  `gnumeric-<version>-functions.mo` per language (`build-gnumeric.sh`
+  keeps native language support on: upstream's gettext test fails under
+  the C23 mode autoconf picks, and its `autogen.sh` derives the functions'
+  makefile with a GNU-only sed alternation that BSD sed matches nothing
+  with, so the script states the cache variable and restores the
+  `-functions` domain).  The bundle copies them to
+  `Resources/gnumeric/locale` with goffice's `goffice-<version>.mo` beside
+  them, which the engine rebinds to that directory (`bindtextdomain` after
+  `gnm_pre_parse_init`); `GNM_BUNDLE_LANGUAGES="de fr"` keeps only those
+  languages.  The engine follows LANG, LC_ALL, and LANGUAGE; a Finder
+  launch sets none, so the app exports macOS's preferred languages first
+  (`EngineLocator.exportLocale`).
+- Everything is ad-hoc signed, inner files first.  The result is about 86
+  MB: 48 dylibs (38 MB), 59 plugins, 24 MB of catalogs, and 1 MB of
+  license texts.
 
-`scripts/verify-bundle.sh` runs it with `build/prefix` renamed away and
-`GNM_SNAPSHOT_BUNDLE=1`, which logs the engine's directories, the plugin
-counts, a chart (a goffice plugin), the autoformat categories (the data
-directory), a PNG and a GIF (gdk-pixbuf's built-in and loaded codecs),
-the license directories and index (`licenses=36 index=yes`), and the
-path Help → Third-Party Licenses would open.
+`scripts/verify-bundle.sh` runs it with `build/prefix` renamed away,
+under German, and `GNM_SNAPSHOT_BUNDLE=1`, which logs the engine's
+directories, the plugin counts, a chart (a goffice plugin), the
+autoformat categories (the data directory), a PNG and a GIF (gdk-pixbuf's
+built-in and loaded codecs), the license directories and index
+(`licenses=36 index=yes`), the catalogs and the German sheet name
+(`catalogs=62 … sheet=Blatt1 translated=Blatt%d`), and the path Help →
+Third-Party Licenses would open.
 Not yet done: running on a machine without Homebrew (fontconfig,
 GIO modules, and goffice's own compiled-in plugin directory are untested
-without it), locale data (the engine build makes none), and a real
-signature (HANDOFF.md Phase 6).
+without it) and a real signature (HANDOFF.md Phase 6).
 
 ## Xcode build
 

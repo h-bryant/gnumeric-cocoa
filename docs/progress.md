@@ -2186,6 +2186,42 @@
   left of its mirrored cell (the bridge's port of item-grid does what
   the GTK's does); Henry's eyes decide whether that reads right.
 
+### 2026-10-13 (later): the engine's messages follow the macOS language
+
+- The last Phase 7 row, localization, begun: the engine's messages,
+  command names, function help, and number parsing follow the process
+  locale (`gnm_pre_parse_init`'s `setlocale (LC_ALL, "")` and the
+  catalogs under `gnm_locale_dir ()`).  A Finder launch sets no LANG, so
+  `EngineLocator.exportLocale` exports macOS's preferred languages
+  before the engine starts: LANG as a locale macOS has
+  (`/usr/share/locale/de_DE.UTF-8`), LANGUAGE as gettext's chain
+  ("de:en"); a Terminal launch or a headless run keeps its own.
+- The engine build made no catalogs: upstream's gettext test program
+  (`m4/gettext.m4`, 2004 vintage) declares `_nl_expand_alias ()` K&R
+  style and calls it with an argument, which the C23 mode autoconf 2.72
+  picks rejects, so configure set USE_NLS=no.  `scripts/build-gnumeric.sh`
+  now states `gt_cv_func_gnugettext1_libintl=yes` with
+  `--with-libintl-prefix` (the engine linked Homebrew's libintl through
+  glib all along).  Then both catalogs installed under one name: upstream's
+  `autogen.sh` derives `po-functions/Makefile.in.in` with a sed whose
+  `\(GETTEXT_PACKAGE\|subdir\)` alternation is GNU-only, so BSD sed left
+  the functions' domain plain and their catalogs overwrote the engine's.
+  The script restores the `-functions` domain after autogen.  Result: 62
+  languages, `gnumeric-1.12.62.mo` and `gnumeric-1.12.62-functions.mo`
+  each, 19 MB under `build/prefix/share/locale`.
+- The bundle carries them (24 MB with goffice's `goffice-0.10.62.mo`
+  beside them, which the bridge rebinds to the bundle's directory after
+  `gnm_pre_parse_init`; `GNM_BUNDLE_LANGUAGES` trims); the bundle is
+  86 MB now.  `Engine.messagesLocale` and `Engine.localizedString(_:)`
+  (`dgettext` in the gnumeric domain) are the hooks for the app's own
+  titles, the next step.
+- Checks: `locale.m` starts the engine under German and finds the
+  catalogs, "Sheet%d" as "Blatt%d", a new sheet "Blatt1", a German undo
+  label, and "1,5" doubled to 3; `GNM_SNAPSHOT_LOCALE=1` under
+  `LANG=de_DE.UTF-8 LANGUAGE=de` logs the same through the app
+  (`undo=Ausdruck wird in B1 eingefügt`); `scripts/verify-bundle.sh` runs
+  the bundle under German and logs `catalogs=62 sheet=Blatt1`.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -2226,8 +2262,9 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-13: `main` at the right-to-left
-   commit (after the bundled licenses, the relocatable bundle, the workbook properties, multi-line editing, drag and drop, the toolbar, the widget editors, AutoFormat, scenarios and simulation, the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-13: `main` at the engine-messages-
+   follow-the-language commit (after right-to-left sheets, the bundled
+   licenses, the relocatable bundle, the workbook properties, multi-line editing, drag and drop, the toolbar, the widget editors, AutoFormat, scenarios and simulation, the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

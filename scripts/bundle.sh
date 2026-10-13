@@ -27,7 +27,26 @@ mkdir -p "$RES/gnumeric/lib" "$RES/gnumeric/share" "$RES/glib-2.0"
 cp -RL "$GNM_PREFIX/lib/gnumeric/$version/plugins" "$RES/gnumeric/lib/plugins"
 cp -R "$GNM_PREFIX/share/gnumeric/$version/." "$RES/gnumeric/share/"
 cp -R "$GNM_PREFIX/share/glib-2.0/schemas" "$RES/glib-2.0/schemas"
-[ -d "$GNM_PREFIX/share/locale" ] && cp -R "$GNM_PREFIX/share/locale" "$RES/gnumeric/locale"
+# The translations: the engine's catalogs (gnumeric-<version>.mo and the
+# functions' per language) and goffice's beside them, which the engine
+# rebinds to this directory.  GNM_BUNDLE_LANGUAGES="de fr" keeps only those
+# languages; all of them otherwise.
+if [ -d "$GNM_PREFIX/share/locale" ]; then
+	cp -R "$GNM_PREFIX/share/locale" "$RES/gnumeric/locale"
+	goffice_locale="$(pkg-config --variable=prefix libgoffice-0.10)/share/locale"
+	for mo in "$goffice_locale"/*/LC_MESSAGES/goffice-*.mo; do
+		[ -f "$mo" ] || continue
+		lang="$(basename "$(dirname "$(dirname "$mo")")")"
+		[ -d "$RES/gnumeric/locale/$lang/LC_MESSAGES" ] || continue   # only the engine's languages
+		cp "$mo" "$RES/gnumeric/locale/$lang/LC_MESSAGES/"
+	done
+	if [ -n "${GNM_BUNDLE_LANGUAGES:-}" ]; then
+		for dir in "$RES"/gnumeric/locale/*/; do
+			lang="$(basename "$dir")"
+			case " $GNM_BUNDLE_LANGUAGES " in *" $lang "*) ;; *) rm -rf "$dir" ;; esac
+		done
+	fi
+fi
 goffice_plugins="$(pkg-config --variable=libdir libgoffice-0.10)/goffice/$(pkg-config --modversion libgoffice-0.10)/plugins"
 mkdir -p "$RES/goffice"
 cp -RL "$goffice_plugins" "$RES/goffice/plugins"   # Homebrew links into the Cellar

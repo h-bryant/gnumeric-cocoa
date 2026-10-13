@@ -200,7 +200,7 @@ The MVP is Phases 1, 2, and this one. It must be usable for daily spreadsheet wo
 
 ### Phase 6 — Packaging
 
-- Bundle dylibs and plugins inside the `.app` with rewritten install names (`dylibbundler` 1.0.5 is in Homebrew; `gtk-mac-bundler` is not a Homebrew formula, so plan on `dylibbundler` plus a script; **verified**). Also ship compiled GSettings schemas and set `GSETTINGS_SCHEMA_DIR`, and settle how lib/data/locale paths are found (`docs/architecture.md` §10). **Done 2026-10-13** without `dylibbundler`: `scripts/bundle.sh` (its own closure walk over `otool -L` and `install_name_tool`), engine patch 0010 for the directories, `scripts/verify-bundle.sh` running the bundle with `build/prefix` hidden (`docs/build.md` "Bundling"). Not yet: a machine without Homebrew, locale data, a real signature.
+- Bundle dylibs and plugins inside the `.app` with rewritten install names (`dylibbundler` 1.0.5 is in Homebrew; `gtk-mac-bundler` is not a Homebrew formula, so plan on `dylibbundler` plus a script; **verified**). Also ship compiled GSettings schemas and set `GSETTINGS_SCHEMA_DIR`, and settle how lib/data/locale paths are found (`docs/architecture.md` §10). **Done 2026-10-13** without `dylibbundler`: `scripts/bundle.sh` (its own closure walk over `otool -L` and `install_name_tool`), engine patch 0010 for the directories, `scripts/verify-bundle.sh` running the bundle with `build/prefix` hidden (`docs/build.md` "Bundling"). Locale data since 2026-10-13: the engine build makes the 62 languages' catalogs and the bundle carries them with goffice's. Not yet: a machine without Homebrew, a real signature.
 - Ad-hoc signing for development; Developer ID signing and notarization for releases.
 - Include the sources/licenses of all bundled third-party libraries (GLib, cairo, Pango, libxml2, …). These are not covered by the system-library exception. **Done 2026-10-13**: `scripts/bundle.sh` copies each keg's license texts into `Contents/Resources/licenses/<formula>-<version>/` and writes `licenses/THIRD-PARTY.txt` (version, SPDX license, homepage, source URL, bundled files, for all 35 libraries), with the engine's `patches/` and the application's own `COPYING`; Help → Third-Party Licenses opens the index (`docs/build.md` "Bundling"). The libraries link dynamically, so the LGPL's relinking condition is met by replacing a dylib; the index says so.
 
@@ -408,10 +408,13 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    are installed, so the GTK greys them out here too); the gap table
    has the reasoning for all three.  Custom document properties came
    last (the Properties dialog's fourth tab).  Right-to-left sheets (Phase 7) came
-   the same day.  Next: localization (the last Phase 7 row of
-   `docs/mvp-known-gaps.md`), Phase 6's remaining items (a run on a Mac
-   without Homebrew, locale data, a real signature; the relocatable
-   bundle and the bundled licenses are done since 2026-10-13), and Henry's
+   the same day, and the engine's messages now follow the macOS language
+   (the catalogs are built and bundled; `Engine.localizedString`).  Next:
+   the app's own titles through the GTK catalog (the rest of the
+   localization row of `docs/mvp-known-gaps.md`), Phase 6's remaining
+   items (a run on a Mac without Homebrew, a real signature; the
+   relocatable bundle, the licenses, and the locale data are done since
+   2026-10-13), and Henry's
    on-screen checks (his first report on 2026-10-13 found four faults,
    all fixed the same day: `docs/progress.md`).
 6. Headless checks for all of it: `GNM_SNAPSHOT=out.png scripts/run-app.sh

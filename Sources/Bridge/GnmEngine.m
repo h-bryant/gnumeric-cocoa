@@ -1,5 +1,7 @@
 // Engine lifecycle and the bridge's GOCmdContext (docs/architecture.md §2).
 #import "GnmPrivate.h"
+#include <libintl.h>
+#include <locale.h>
 #import <GnmCocoa/GnmRunLoopBridge.h>
 #include <stdlib.h>
 #include <pango/pangocairo.h>
@@ -192,6 +194,10 @@ static BOOL engineWasStarted;   /* gnm_init cannot be repeated in one process */
     _argv0 = strdup (_configuration.programName.UTF8String);
     char const *argv[] = { _argv0, NULL };
     gnm_pre_parse_init (1, argv);
+    /* goffice binds its catalogs to its build-time directory; a bundle
+     * carries them beside the engine's (scripts/bundle.sh), so rebind. */
+    if (_configuration.localeDirectory.length)
+        bindtextdomain ("goffice-" GOFFICE_VERSION, _configuration.localeDirectory.fileSystemRepresentation);
     gnm_conf_set_persistence (_configuration.persistsPreferences);
     gnm_init ();
     if (_configuration.xmlCompressionLevel != nil)
@@ -296,6 +302,11 @@ static BOOL engineWasStarted;   /* gnm_init cannot be repeated in one process */
 - (NSString *)libraryDirectory { return GnmString (gnm_sys_lib_dir ()); }
 - (NSString *)dataDirectory { return GnmString (gnm_sys_data_dir ()); }
 - (NSString *)localeDirectory { return GnmString (gnm_locale_dir ()); }
+- (NSString *)messagesLocale { return GnmString (setlocale (LC_MESSAGES, NULL)); }
+- (NSString *)localizedString:(NSString *)message
+{
+    return GnmString (dgettext ("gnumeric-" GNM_VERSION_FULL, message.UTF8String));
+}
 
 #pragma mark - Messages
 

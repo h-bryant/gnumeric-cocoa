@@ -82,6 +82,14 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Engine)
 @property (nonatomic, readonly, copy) NSString *libraryDirectory;
 @property (nonatomic, readonly, copy) NSString *dataDirectory;
 @property (nonatomic, readonly, copy) NSString *localeDirectory;
+/// The locale the engine's messages follow (`setlocale (LC_MESSAGES)`):
+/// what LANG, LC_ALL, or LANGUAGE named when the engine started, else "C".
+@property (nonatomic, readonly, copy) NSString *messagesLocale;
+/// The engine's translation of one of its own messages (`dgettext` in the
+/// gnumeric domain, so the GTK's catalogs under `localeDirectory`), for
+/// the app's titles and labels that are the GTK's; the message itself
+/// comes back without a catalog or a translation.
+- (NSString *)localizedString:(NSString *)message NS_SWIFT_NAME(localizedString(_:));
 
 @property (nonatomic, copy, nullable) GnmEngineMessageHandler messageHandler;
 @property (nonatomic, copy, nullable) GnmEngineProgressHandler progressHandler;

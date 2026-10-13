@@ -23,13 +23,29 @@ rsync -a --delete --exclude .git "$ROOT/upstream/gnumeric/" "$SRC/"
 scripts/apply-patches.sh "$SRC"
 
 ( cd "$SRC" && NOCONFIGURE=1 ./autogen.sh )
+# autogen.sh derives po-functions/Makefile.in.in from po/Makefile.in.in.own
+# with a sed script whose alternation `\(GETTEXT_PACKAGE\|subdir\)` is a GNU
+# extension: BSD sed matches nothing, the functions' domain stays plain
+# @GETTEXT_PACKAGE@, and their catalogs install over the engine's (same
+# file name).  Name the domain the engine binds, GETTEXT_PACKAGE
+# "-functions" (libgnumeric.c), and the subdir, as upstream's sed meant to.
+sed -i '' -e 's/^GETTEXT_PACKAGE = @GETTEXT_PACKAGE@$/GETTEXT_PACKAGE = @GETTEXT_PACKAGE@-functions/' \
+	-e 's/^subdir = po$/subdir = po-functions/' "$SRC/po-functions/Makefile.in.in"
 
 # Flags mirror Homebrew's gnumeric formula (--disable-schemas-compile,
 # --disable-silent-rules, --disable-dependency-tracking) plus what the app
 # does not need: the goffice embedding component, GObject introspection,
 # API docs, and the Perl and Python plugin loaders.
-( cd "$OBJ" && "$SRC/configure" \
+#
+# The translations: the gettext test program in upstream's m4/ declares
+# `_nl_expand_alias ()` K&R style and calls it with an argument, which the
+# C23 mode autoconf 2.72 picks rejects, so configure concludes "no GNU
+# gettext in libintl" and leaves USE_NLS=no (no catalogs built or
+# installed).  The engine links Homebrew's libintl anyway, through glib;
+# the cache variable states the fact and the prefix names the library.
+( cd "$OBJ" && gt_cv_func_gnugettext1_libintl=yes "$SRC/configure" \
 	--prefix="$GNM_PREFIX" \
+	--with-libintl-prefix="$HOMEBREW_PREFIX/opt/gettext" \
 	--disable-dependency-tracking \
 	--disable-silent-rules \
 	--disable-schemas-compile \
