@@ -241,6 +241,9 @@ enum MainMenu {
         menuBar.addItem(submenu(dataMenu, title: "Data"))
 
         let toolsMenu = NSMenu(title: "Tools")
+        toolsMenu.addItem(withTitle: "Auto Correct…", action: Selector(("autoCorrectSettings:")), keyEquivalent: "")
+        toolsMenu.addItem(withTitle: "Auto Save…", action: Selector(("autoSave:")), keyEquivalent: "")
+        toolsMenu.addItem(.separator())
         toolsMenu.addItem(withTitle: "Goal Seek…", action: Selector(("goalSeek:")), keyEquivalent: "")
         toolsMenu.addItem(withTitle: "Solver…", action: Selector(("solver:")), keyEquivalent: "")
         // The GTK Statistics menu's groups (GNOME_Gnumeric-gtk.xml).

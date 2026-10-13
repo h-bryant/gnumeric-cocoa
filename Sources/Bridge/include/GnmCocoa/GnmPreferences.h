@@ -34,6 +34,10 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Preferences)
 @property (nonatomic) NSInteger newWorkbookColumnCount;
 /// 1.0 is 100%.
 @property (nonatomic) double defaultZoom;
+/// `core/workbook/autosave_time`: seconds between automatic saves of an
+/// edited workbook, 0 for none (the GTK's Tools → Auto Save starts from
+/// it; the setting is per window there and here).
+@property (nonatomic) NSInteger autosaveTime;
 
 // The default font of new workbooks (`core/defaultfont`).
 @property (nonatomic, copy) NSString *defaultFontName;

@@ -40,12 +40,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Gnumeric → Settings… (⌘,): the engine's preferences the app honors.
-    @objc func showSettings(_ sender: Any?) {
+    @objc func showSettings(_ sender: Any?) { showSettings(tab: nil) }
+
+    /// Tools → Auto Correct… (cb_tools_autocorrect): the Settings window
+    /// on the tab with the Auto Correct section.
+    @objc func autoCorrectSettings(_ sender: Any?) { showSettings(tab: "Editing") }
+
+    func showSettings(tab: String?) {
         guard let engine else { return }
         if settings == nil {
             settings = PreferencesWindowController(preferences: engine.preferences)
         }
-        settings?.show()
+        settings?.show(tab: tab)
     }
 
     // MARK: Help
@@ -2151,6 +2157,52 @@ enum Snapshot {
                 let state = "edited=\(document.isDocumentEdited) modified=\(sheet.workbook?.isModified ?? false)"
                 let location = "fileURL=" + (document.fileURL?.lastPathComponent ?? "nil") + " engine=" + (sheet.workbook?.fileURL?.lastPathComponent ?? "nil")
                 NSLog("sendto: copy=%@ size=%ld %@ %@", copy?.lastPathComponent ?? "nil", size, state, location)
+            }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_AUTOSAVE"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet, let document = controller.document as? WorkbookDocument {
+                // Tools → Auto Save…: two minutes without a prompt through
+                // the dialog, the workbook saved beside the capture, an
+                // edit, then the timer's work run at once; with the prompt
+                // on, the headless run logs instead of asking.  Tools →
+                // Auto Correct… opens Settings on the Editing tab.
+                AutoSaveDialog.headlessDriver = { dialog in
+                    dialog.enabled.state = .on
+                    dialog.minutesField.stringValue = "2"
+                    dialog.prompt.state = .off
+                    return true
+                }
+                controller.autoSave(nil)
+                AutoSaveDialog.headlessDriver = nil
+                NSLog("autosave: time=%ld prompt=%d scheduled=%d", controller.autosaveTime, controller.autosavePrompt ? 1 : 0,
+                      controller.autosaveTimerIsScheduledForTesting ? 1 : 0)
+                let saveURL = URL(fileURLWithPath: (path as NSString).deletingPathExtension + "-autosaved.gnumeric")
+                try? FileManager.default.removeItem(at: saveURL)
+                do {
+                    try document.write(to: saveURL, ofType: WorkbookDocument.gnumericType)
+                    document.fileURL = saveURL
+                    document.fileType = WorkbookDocument.gnumericType
+                    sheet.workbook?.adoptFileURL(saveURL)
+                } catch {
+                    NSLog("autosave: first write failed: %@", error.localizedDescription)
+                }
+                let before = (try? FileManager.default.attributesOfItem(atPath: saveURL.path)[.size] as? Int) ?? -1
+                try? sheet.setText("autosaved text", atColumn: 0, row: 0, autocorrect: false)
+                let edited = document.isDocumentEdited
+                controller.autosaveNow { error in
+                    let after = (try? FileManager.default.attributesOfItem(atPath: saveURL.path)[.size] as? Int) ?? -1
+                    let holds = (try? String(contentsOf: saveURL, encoding: .utf8))?.contains("autosaved text") ?? false
+                    NSLog("autosave: save error=%@ before=%ld edited=%d after=%ld holds=%d editedNow=%d",
+                          error?.localizedDescription ?? "none", before, edited ? 1 : 0, after, holds ? 1 : 0, document.isDocumentEdited ? 1 : 0)
+                }
+                controller.autosavePrompt = true
+                try? sheet.setText("second edit", atColumn: 0, row: 1, autocorrect: false)
+                controller.autosaveNow()
+                NSLog("autosave: with prompt editedNow=%d", document.isDocumentEdited ? 1 : 0)
+                (NSApp.delegate as? AppDelegate)?.autoCorrectSettings(nil)
+                NSLog("autosave: settings tab=%@ visible=%d", (NSApp.delegate as? AppDelegate)?.settings?.model.selectedTab ?? "nil",
+                      (NSApp.delegate as? AppDelegate)?.settings?.window.isVisible ?? false ? 1 : 0)
+                (NSApp.delegate as? AppDelegate)?.settings?.window.orderOut(nil)
             }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FREEZE"] != nil,
                let controller = window.windowController as? WorkbookWindowController,

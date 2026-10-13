@@ -32,6 +32,8 @@ final class PreferencesModel: ObservableObject {
     @Published var sortIsCaseSensitive: Bool { didSet { preferences.sortIsCaseSensitive = sortIsCaseSensitive } }
     @Published var sortAscending: Bool { didSet { preferences.sortAscending = sortAscending } }
     @Published var sortInitialClauseCount: Int { didSet { preferences.sortInitialClauseCount = sortInitialClauseCount } }
+    /// The tab shown: General, Editing, Undo, Sorting, or Font.
+    @Published var selectedTab = "General"
 
     init(preferences: Preferences) {
         self.preferences = preferences
@@ -81,12 +83,12 @@ struct PreferencesView: View {
     }
 
     var body: some View {
-        TabView {
-            general.tabItem { Text("General") }
-            editing.tabItem { Text("Editing") }
-            undo.tabItem { Text("Undo") }
-            sorting.tabItem { Text("Sorting") }
-            font.tabItem { Text("Font") }
+        TabView(selection: $model.selectedTab) {
+            general.tabItem { Text("General") }.tag("General")
+            editing.tabItem { Text("Editing") }.tag("Editing")
+            undo.tabItem { Text("Undo") }.tag("Undo")
+            sorting.tabItem { Text("Sorting") }.tag("Sorting")
+            font.tabItem { Text("Font") }.tag("Font")
         }
         .padding(16)
         .frame(width: 520, height: 400)
@@ -220,7 +222,11 @@ final class PreferencesWindowController {
         window.setFrameAutosaveName("Settings")
     }
 
-    func show() {
+    /// Show the window, on a tab when one is named (the GTK
+    /// `dialog_preferences (wbcg, "Auto Correct")` from Tools → Auto
+    /// Correct…; that page is the Editing tab's section here).
+    func show(tab: String? = nil) {
+        if let tab { model.selectedTab = tab }
         if !window.isVisible, !window.setFrameUsingName("Settings") {
             window.center()
         }

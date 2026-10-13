@@ -117,6 +117,76 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         show(sheet: workbook.currentSheet ?? workbook.sheets.first)
         window.center()
         window.setFrameAutosaveName("WorkbookWindow")
+        autosaveTime = Engine.shared?.preferences.autosaveTime ?? 0
+        scheduleAutosave()
+    }
+
+    // MARK: Auto Save
+
+    /// The GTK's per-window autosave (wbc-gtk.c cb_autosave): every
+    /// `autosaveTime` seconds (0 for never; the preference
+    /// `core/workbook/autosave_time` to start with) an edited workbook is
+    /// saved, after a question first when `autosavePrompt` is on.
+    var autosaveTime = 0 { didSet { scheduleAutosave() } }
+    var autosavePrompt = false
+    private var autosaveTimer: Timer?
+    var autosaveTimerIsScheduledForTesting: Bool { autosaveTimer != nil }
+
+    private func scheduleAutosave() {
+        autosaveTimer?.invalidate()
+        autosaveTimer = nil
+        guard autosaveTime > 0 else { return }
+        let timer = Timer(timeInterval: TimeInterval(autosaveTime), repeats: true) { [weak self] timer in
+            guard let self else {
+                timer.invalidate()
+                return
+            }
+            MainActor.assumeIsolated { autosaveNow() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        autosaveTimer = timer
+    }
+
+    /// What the timer does (cb_autosave): nothing unless the workbook is
+    /// edited; the question when it is asked for; then File → Save (a
+    /// Save panel for an untitled workbook, as the GTK's gui_file_save).
+    func autosaveNow(completion: (((any Error)?) -> Void)? = nil) {
+        guard autosaveTime > 0, let document = workbookDocument, document.isDocumentEdited, let window else { return }
+        let save = {
+            if let url = document.fileURL, let type = document.fileType {
+                document.save(to: url, ofType: type, for: .saveOperation) { error in completion?(error) }
+            } else {
+                document.save(nil)   // the Save panel, as gui_file_save
+            }
+        }
+        guard autosavePrompt else {
+            save()
+            return
+        }
+        if ProcessInfo.processInfo.environment["GNM_SNAPSHOT"] != nil {
+            NSLog("autosave: would ask to save %@", document.displayName)
+            return
+        }
+        guard window.attachedSheet == nil else { return }
+        let alert = NSAlert()
+        alert.messageText = "Do you want to save the workbook \(document.displayName)?"
+        alert.addButton(withTitle: "Yes")
+        alert.addButton(withTitle: "No")
+        alert.beginSheetModal(for: window) { response in
+            guard response == .alertFirstButtonReturn else { return }
+            save()
+        }
+    }
+
+    /// Tools → Auto Save… (dialog_autosave).
+    @objc func autoSave(_ sender: Any?) {
+        guard let window, window.attachedSheet == nil else { return }
+        let dialog = AutoSaveDialog(seconds: autosaveTime, prompt: autosavePrompt)
+        dialog.present(in: window) { [weak self] seconds, prompt in
+            guard let self else { return }
+            autosavePrompt = prompt
+            autosaveTime = seconds
+        }
     }
 
     @available(*, unavailable)

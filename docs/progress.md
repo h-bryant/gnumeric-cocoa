@@ -1833,6 +1833,24 @@
   otherwise, and removes the folder a minute later.  Headlessly the
   copy is written and logged only (`GNM_SNAPSHOT_SENDTO=1`).
 
+### 2026-10-13 (later): Tools → Auto Correct… and Auto Save…
+
+- `GnmPreferences.autosaveTime` (`core/workbook/autosave_time`,
+  seconds; `preferences.m`).  The Settings window's tabs now have a
+  selection (`PreferencesModel.selectedTab`, `show(tab:)`), and Tools →
+  Auto Correct… opens it on Editing, whose Auto Correct section is the
+  GTK page (`dialog_preferences (wbcg, "Auto Correct")`).
+- Tools → Auto Save… (`AutoSaveDialog.swift`, dialog-autosave.c): on or
+  off, minutes, prompt first; OK is refused while on with bad minutes.
+  The window controller keeps the GTK's per-window `autosave_time` and
+  `autosave_prompt` (the preference to start with) and a repeating
+  Timer; `autosaveNow()` is cb_autosave: an edited workbook is saved in
+  place (a Save panel for an untitled one), after "Do you want to save
+  the workbook …?" when the prompt is on.  Headlessly the question is
+  logged instead of asked.  `GNM_SNAPSHOT_AUTOSAVE=1` drives the dialog,
+  writes the workbook beside the capture, edits, runs the save, and
+  checks the file holds the edit.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and

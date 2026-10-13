@@ -34,6 +34,10 @@ int main (void)
         GNM_ASSERT (p.sortRetainsFormats && !p.sortIsCaseSensitive && p.sortAscending && p.sortInitialClauseCount == 10,
                     @"sort defaults %d %d %d %ld", p.sortRetainsFormats, p.sortIsCaseSensitive, p.sortAscending,
                     (long) p.sortInitialClauseCount);
+        GNM_ASSERT (p.autosaveTime == 0, @"autosave default %ld", (long) p.autosaveTime);
+        p.autosaveTime = 120;
+        GNM_ASSERT (p.autosaveTime == 120, @"autosave round trip %ld", (long) p.autosaveTime);
+        p.autosaveTime = 0;
         NSLog (@"defaults: font %@ %g, sheets %ld, undo %ld/%ld", p.defaultFontName, p.defaultFontSize,
                (long) p.newWorkbookSheetCount, (long) p.undoMaximumSteps, (long) p.undoMaximumSize);
 

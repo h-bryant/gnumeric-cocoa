@@ -32,6 +32,7 @@ GNM_PREF_INT (newWorkbookSheetCount, setNewWorkbookSheetCount, core_workbook_n_s
 GNM_PREF_INT (newWorkbookRowCount, setNewWorkbookRowCount, core_workbook_n_rows)
 GNM_PREF_INT (newWorkbookColumnCount, setNewWorkbookColumnCount, core_workbook_n_cols)
 GNM_PREF_DOUBLE (defaultZoom, setDefaultZoom, core_gui_window_zoom)
+GNM_PREF_INT (autosaveTime, setAutosaveTime, core_workbook_autosave_time)
 
 - (NSString *)defaultFontName { return string_from (gnm_conf_get_core_defaultfont_name ()); }
 - (void)setDefaultFontName:(NSString *)name { gnm_conf_set_core_defaultfont_name (name.UTF8String ?: ""); }
