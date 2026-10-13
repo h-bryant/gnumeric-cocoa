@@ -34,6 +34,7 @@
 #import <GnmCocoa/GnmAutoFormat.h>
 #import <GnmCocoa/GnmWidgets.h>
 #import <GnmCocoa/GnmNumberFormats.h>
+#import <GnmCocoa/GnmDragging.h>
 #import <GnmCocoa/GnmSearch.h>
 #import <GnmCocoa/GnmTextExport.h>
 #import <GnmCocoa/GnmTextImport.h>

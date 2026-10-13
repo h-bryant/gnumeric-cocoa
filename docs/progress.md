@@ -1673,6 +1673,28 @@
   `GNM_SNAPSHOT_TOOLBAR` hook presses the items.  Not yet: the object
   toolbar, borders, colors, indent, super- and subscript, print preview.
 
+## 2026-10-13: Drag and drop
+
+- `GnmDragging.h`: `dropSelectionAtColumn:row:copying:` is
+  `item_cursor_do_action`'s ACTION_MOVE_CELLS and ACTION_COPY_CELLS:
+  `gnm_sheet_view_selection_cut` or `_copy`, then `cmd_paste` on a
+  paste target over the dropped range (`paste_target_init` takes a
+  range, not a position).  `cmd_paste` returns nothing and reports
+  refusals through the context, so the command runner's `reported`
+  flag makes those the failure ("Would split array M21:M23").  As in
+  the GTK, the engine's clipboard holds the cells afterwards.
+- `GridView`: a press on the selection's border (3-pixel bands, the
+  open-hand cursor) starts a cell drag drawn as an accent outline where
+  the range would land; letting go moves the cells, with Option a copy
+  (the GTK's Ctrl), and selects the target; a click without a drag
+  selects the cell under it.  Files dropped on the grid: images are
+  placed where they land (`insertImage`), anything else opens through
+  the document controller.  `SheetTabControl` tracks a press itself: a
+  drag of more than four points onto another tab moves the sheet there
+  (`reorderTab`, `workbook.move`), a plain press selects.  `editing.m`
+  tests the engine side; the `GNM_SNAPSHOT_DRAG` hook drives the grid's
+  drop, a dropped PNG, and a tab reorder.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -1690,9 +1712,8 @@
    printing, formula range selection by mouse and keyboard, the font
    shortcuts, autocompletion, the function selector, and array formulas;
    and all 27 Statistics tools; next the rest of Phase 5 by usage
-   frequency: the smaller Phase 3 gaps such as drag and drop, the
-   formula bar's multi-line editing, and the toolbar's missing items)
-   from
+   frequency: the formula bar's multi-line editing, the toolbar's
+   missing items, widgets that act) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -1715,8 +1736,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-13: `main` at the toolbar commit
-   (after the widget editors, AutoFormat, scenarios and simulation, the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-13: `main` at the drag and drop
+   commit (after the toolbar, the widget editors, AutoFormat, scenarios and simulation, the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

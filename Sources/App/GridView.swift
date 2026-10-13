@@ -1,4 +1,5 @@
 import AppKit
+import UniformTypeIdentifiers
 import GnmCocoa
 
 /// The cell grid: a flipped view whose coordinates are the sheet's pixel
@@ -35,6 +36,16 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     /// Dragging the fill handle: the source range and the pending target.
     private var fillSource: CellRange?
     private var fillTarget: CellRange?
+    /// Dragging the selection by its border (item-cursor.c): the range
+    /// picked up, where the grab was inside it, and where it would drop.
+    private struct MoveDrag {
+        var source: CellRange
+        var grabColumn: Int
+        var grabRow: Int
+        var target: CellRange?
+        var moved = false
+    }
+    private var moveDrag: MoveDrag?
     /// A column or row boundary being dragged in a header, as a guide line
     /// across the grid (sheet pixels).
     var resizeGuide: (isColumn: Bool, position: CGFloat)? {
@@ -117,8 +128,48 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     private var editingCell: CellCoordinate?
     var isEditing: Bool { editingCell != nil }
 
+    // MARK: Dropped files
+
+    /// A file dropped on the grid: images are placed where they land,
+    /// anything else opens as a document (the GTK's drop of a URI).
+    var openDroppedDocument: ((URL) -> Void)?
+
+    override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        sender.draggingPasteboard.canReadObject(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) ? .copy : []
+    }
+
+    override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        guard let urls = sender.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL],
+              !urls.isEmpty else { return false }
+        let point = sheetPoint(forViewPoint: convert(sender.draggingLocation, from: nil))
+        handleDroppedFiles(urls, at: point)
+        return true
+    }
+
+    func handleDroppedFiles(_ urls: [URL], at point: NSPoint) {
+        var origin = point
+        for url in urls {
+            let type = UTType(filenameExtension: url.pathExtension) ?? .data
+            if type.conforms(to: .image), let sheet, let data = try? Data(contentsOf: url) {
+                let natural = sheet.naturalSize(ofImageData: data)
+                let size = natural == .zero ? CGSize(width: 200, height: 150) : natural
+                do {
+                    let object = try sheet.insertImage(data, frame: CGRect(origin: origin, size: size))
+                    select(objects: [object])
+                    origin.x += 20
+                    origin.y += 20
+                } catch {
+                    presentError?(error)
+                }
+            } else {
+                openDroppedDocument?(url)
+            }
+        }
+    }
+
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
+        registerForDraggedTypes([.fileURL])
         // Layer-backed like the rest of the window (AppKit gives it a layer
         // because its ancestors have one); everything is drawn in draw(_:),
         // so cacheDisplay(in:to:) snapshots stay faithful.  Full-window
@@ -317,6 +368,12 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
             NSColor.controlAccentColor.setStroke()
             path.stroke()
         }
+        if let target = moveDrag?.target {
+            let path = NSBezierPath(rect: rect(of: target, in: sheet).insetBy(dx: -1, dy: -1))
+            path.lineWidth = 2
+            NSColor.controlAccentColor.withAlphaComponent(0.8).setStroke()
+            path.stroke()
+        }
         if let resizeGuide {
             NSColor.controlAccentColor.withAlphaComponent(0.6).setFill()
             let visible = visibleRect
@@ -344,6 +401,8 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
                 let frame = viewRect(forSheetRect: rect(of: range, in: sheet))
                 if !frame.isEmpty { addCursorRect(frame, cursor: .pointingHand) }
             }
+            let selection = viewRect(forSheetRect: rect(of: sheet.selectedRange, in: sheet))
+            for edge in Self.borderBands(of: selection) { addCursorRect(edge, cursor: .openHand) }
             addCursorRect(viewRect(forSheetRect: fillHandleRect(for: rect(of: sheet.selectedRange, in: sheet))).insetBy(dx: -2, dy: -2),
                           cursor: .crosshair)
             return
@@ -1618,6 +1677,12 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         if !selectedObjects.isEmpty {
             deselectObjects()   // a click on the cells leaves the object mode
         }
+        if selectedObjects.isEmpty, !event.modifierFlags.contains(.shift), isOnSelectionBorder(point, of: sheet) {
+            let cell = CellCoordinate(column: sheet.column(atX: point.x), row: sheet.row(atY: point.y))
+            let source = sheet.selectedRange
+            moveDrag = MoveDrag(source: source, grabColumn: cell.column - source.start.column, grabRow: cell.row - source.start.row)
+            return
+        }
         if !isEditing, event.clickCount == 1,
            fillHandleRect(for: rect(of: sheet.selectedRange, in: sheet)).insetBy(dx: -2, dy: -2).contains(point) {
             fillSource = sheet.selectedRange
@@ -1663,6 +1728,20 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
             needsDisplay = true
             return
         }
+        if var drag = moveDrag {
+            autoscroll(with: event)
+            let point = sheetPoint(forViewPoint: convert(event.locationInWindow, from: nil))
+            let cell = CellCoordinate(column: sheet.column(atX: point.x), row: sheet.row(atY: point.y))
+            let target = moveTarget(for: drag, pointerAt: cell, in: sheet)
+            drag.moved = true
+            if drag.target.map({ $0 != target }) ?? true {
+                drag.target = target
+                needsDisplay = true
+            }
+            moveDrag = drag
+            NSCursor.closedHand.set()
+            return
+        }
         if let fillSource {
             autoscroll(with: event)
             let point = sheetPoint(forViewPoint: convert(event.locationInWindow, from: nil))
@@ -1706,6 +1785,19 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
             window?.invalidateCursorRects(for: self)
             return
         }
+        if let drag = moveDrag {
+            moveDrag = nil
+            needsDisplay = true
+            window?.invalidateCursorRects(for: self)
+            if drag.moved {
+                dropMovedCells(drag, copying: event.modifierFlags.contains(.option))
+            } else if let sheet {
+                // a click on the border without a drag selects the cell under it
+                let point = sheetPoint(forViewPoint: convert(event.locationInWindow, from: nil))
+                sheet.selectCell(atColumn: sheet.column(atX: point.x), row: sheet.row(atY: point.y))
+            }
+            return
+        }
         guard let sheet, let source = fillSource else { return }
         let target = fillTarget
         fillSource = nil
@@ -1721,6 +1813,54 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         } catch {
             presentError?(error)
         }
+    }
+
+    /// The four bands along a selection's border a drag of the cells
+    /// starts from (the GTK's cursor edge, 3 pixels either side).
+    static func borderBands(of rect: NSRect) -> [NSRect] {
+        let w: CGFloat = 3
+        return [
+            NSRect(x: rect.minX - w, y: rect.minY - w, width: rect.width + 2 * w, height: 2 * w),
+            NSRect(x: rect.minX - w, y: rect.maxY - w, width: rect.width + 2 * w, height: 2 * w),
+            NSRect(x: rect.minX - w, y: rect.minY - w, width: 2 * w, height: rect.height + 2 * w),
+            NSRect(x: rect.maxX - w, y: rect.minY - w, width: 2 * w, height: rect.height + 2 * w),
+        ]
+    }
+
+    private func isOnSelectionBorder(_ sheetPoint: NSPoint, of sheet: Sheet) -> Bool {
+        let selection = rect(of: sheet.selectedRange, in: sheet)
+        guard !selection.isEmpty else { return false }
+        if fillHandleRect(for: selection).insetBy(dx: -2, dy: -2).contains(sheetPoint) { return false }
+        return Self.borderBands(of: selection).contains { $0.contains(sheetPoint) }
+    }
+
+    /// Where the dragged range would land for the pointer at `cell`.
+    private func moveTarget(for drag: MoveDrag, pointerAt cell: CellCoordinate, in sheet: Sheet) -> CellRange {
+        let width = drag.source.end.column - drag.source.start.column
+        let height = drag.source.end.row - drag.source.start.row
+        let column = min(max(cell.column - drag.grabColumn, 0), sheet.columnCount - 1 - width)
+        let row = min(max(cell.row - drag.grabRow, 0), sheet.rowCount - 1 - height)
+        return CellRange(start: CellCoordinate(column: column, row: row), end: CellCoordinate(column: column + width, row: row + height))
+    }
+
+    /// Finish a drag of the cells: Option drops a copy (the GTK's Ctrl).
+    private func dropMovedCells(_ drag: MoveDrag, copying: Bool) {
+        guard let sheet, let target = drag.target, target != drag.source else { return }
+        do {
+            try sheet.dropSelection(atColumn: target.start.column, row: target.start.row, copying: copying)
+            sheet.selectRange(target, editPosition: target.start)
+        } catch {
+            presentError?(error)
+        }
+    }
+
+    /// The checks' drag: the selection dropped with its top left at `cell`.
+    func dropSelectionForTesting(at cell: CellCoordinate, copying: Bool) {
+        guard let sheet else { return }
+        let source = sheet.selectedRange
+        var drag = MoveDrag(source: source, grabColumn: 0, grabRow: 0)
+        drag.target = moveTarget(for: drag, pointerAt: cell, in: sheet)
+        dropMovedCells(drag, copying: copying)
     }
 
     /// The fill handle extends the source in one direction only, by whole

@@ -440,6 +440,34 @@ int main (void)
         GNM_ASSERT ([s toggleHorizontalAlignmentOfSelection:4 error:&error] && [s formatOfCellAtColumn:7 row:7].horizontalAlignment.intValue == 4, @"right: %@", error);
         [wb undo];
         GNM_ASSERT ([s formatOfCellAtColumn:7 row:7].horizontalAlignment.intValue == 1, @"alignment undone");
+        /* dragging the selection by its border: a move adjusts references,
+         * a copy leaves the source */
+        GNM_ASSERT ([s setText:@"7" atColumn:9 row:9 autocorrect:NO error:&error] && [s setText:@"=J10*2" atColumn:10 row:9 autocorrect:NO error:&error], @"J10 K10: %@", error);
+        [s selectRange:GnmCellRangeMake (9, 9, 10, 9) editPosition:GnmCellCoordinateMake (9, 9)];
+        GNM_ASSERT ([s dropSelectionAtColumn:9 row:12 copying:NO error:&error], @"move: %@", error);
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:9 row:12] ?: @"", @"7");
+        GNM_ASSERT_EQ_STR ([s enteredTextOfCellAtColumn:10 row:12] ?: @"", @"=J13*2");
+        GNM_ASSERT ([s displayTextOfCellAtColumn:9 row:9] == nil || [[s displayTextOfCellAtColumn:9 row:9] isEqualToString:@""], @"source emptied: '%@'", [s displayTextOfCellAtColumn:9 row:9]);
+        NSLog (@"editing: move undo label '%@'", wb.undoLabel);
+        [wb undo];
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:9 row:9] ?: @"", @"7");
+        GNM_ASSERT_EQ_STR ([s enteredTextOfCellAtColumn:10 row:9] ?: @"", @"=J10*2");
+        [s selectRange:GnmCellRangeMake (9, 9, 10, 9) editPosition:GnmCellCoordinateMake (9, 9)];
+        GNM_ASSERT ([s dropSelectionAtColumn:9 row:15 copying:YES error:&error], @"copy: %@", error);
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:9 row:15] ?: @"", @"7");
+        GNM_ASSERT_EQ_STR ([s enteredTextOfCellAtColumn:10 row:15] ?: @"", @"=J16*2");
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:9 row:9] ?: @"", @"7");
+        GNM_ASSERT ([s dropSelectionAtColumn:9 row:9 copying:NO error:&error], @"dropping where it is is nothing");
+        error = nil;
+        GNM_ASSERT (![s dropSelectionAtColumn:s.columnCount - 1 row:9 copying:NO error:&error] && [error.localizedDescription containsString:@"off the sheet"], @"off the sheet: %@", error);
+        /* a refusal the engine reports: a cut that would split an array */
+        [s selectRange:GnmCellRangeMake (12, 20, 12, 22) editPosition:GnmCellCoordinateMake (12, 20)];
+        GNM_ASSERT ([s enterArrayFormula:@"={1;2;3}" error:&error], @"array: %@", error);
+        [s selectRange:GnmCellRangeMake (12, 20, 12, 20) editPosition:GnmCellCoordinateMake (12, 20)];
+        error = nil;
+        BOOL split = [s dropSelectionAtColumn:12 row:25 copying:NO error:&error];
+        NSLog (@"editing: moving part of an array -> %d (%@ / %@)", split, error.localizedDescription, error.localizedRecoverySuggestion);
+        GNM_ASSERT (!split && error != nil, @"the engine's refusal comes back as the error");
         /* the last sheet of a workbook stays (a fresh one: the engine's undo
          * stack keeps only a limited number of commands) */
         @autoreleasepool {

@@ -156,7 +156,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | Frozen panes | ported | 2026-10-11: frozen strips painted as overlays on one document view, scrolling clamped to the first unfrozen cell |
 | Right-to-left sheets | no | Phase 7; drawn left-to-right |
 | Marching ants animation | partial | static dashed outline |
-| Drag and drop (cells, files, sheet tabs) | no | Phase 3; sheets move through the menu for now |
+| Drag and drop (cells, files, sheet tabs) | ported | 2026-10-13: the selection dragged by its border moves the cells (Option drops a copy; `GnmSheet.dropSelection`, the GTK item cursor's cut or copy and paste), image files dropped on the grid are placed where they land and other files open as documents, and a sheet tab dragged onto another's place moves the sheet (`SheetTabControl`) |
 | Column and row header drag resizing, double-click autosize | ported | 2026-10-11; resizes every selected column (row) when the dragged one is selected |
 | Sheet tab context menu, tab colors | partial | context menu 2026-10-11; Tab Color… 2026-10-12 shows the background as a swatch before the name (the text color is kept in the file, not shown) |
 | Printing and page setup | ported | 2026-10-12: `NSPrintOperation` over `PrintView`, the engine's `print-cell.c` and a port of print.c's pagination and page drawing in `GnmPrinting.m` |

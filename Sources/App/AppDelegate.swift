@@ -1872,6 +1872,46 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_DRAG"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // Drag and drop: A1:B1 dragged to A4 (moved, the formula
+                // follows), then Option-dragged to A7 (copied); a PNG file
+                // dropped at D2; the second tab dragged before the first.
+                do {
+                    try sheet.setText("5", atColumn: 0, row: 0, autocorrect: false)
+                    try sheet.setText("=A1*3", atColumn: 1, row: 0, autocorrect: false)
+                } catch { NSLog("drag: data failed: %@", error.localizedDescription) }
+                sheet.selectRange(CellRange(start: CellCoordinate(column: 0, row: 0), end: CellCoordinate(column: 1, row: 0)),
+                                  editPosition: CellCoordinate(column: 0, row: 0))
+                controller.gridView.dropSelectionForTesting(at: CellCoordinate(column: 0, row: 3), copying: false)
+                NSLog("drag: moved A4='%@' B4='%@' A1='%@' selection=%ld,%ld undo=%@", sheet.displayTextOfCell(atColumn: 0, row: 3) ?? "nil",
+                      sheet.enteredTextOfCell(atColumn: 1, row: 3) ?? "nil", sheet.displayTextOfCell(atColumn: 0, row: 0) ?? "",
+                      sheet.selectedRange.start.column, sheet.selectedRange.start.row, sheet.workbook?.undoLabel ?? "nil")
+                controller.gridView.dropSelectionForTesting(at: CellCoordinate(column: 0, row: 6), copying: true)
+                NSLog("drag: copied A7='%@' B7='%@' A4='%@'", sheet.displayTextOfCell(atColumn: 0, row: 6) ?? "nil",
+                      sheet.enteredTextOfCell(atColumn: 1, row: 6) ?? "nil", sheet.displayTextOfCell(atColumn: 0, row: 3) ?? "nil")
+                let pngPath = (path as NSString).deletingPathExtension + "-drop.png"
+                let image = NSImage(size: NSSize(width: 40, height: 30), flipped: false) { rect in
+                    NSColor.systemPurple.setFill()
+                    rect.fill()
+                    return true
+                }
+                if let tiff = image.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff), let png = rep.representation(using: .png, properties: [:]) {
+                    try? png.write(to: URL(fileURLWithPath: pngPath))
+                    let frame = sheet.frameOfCell(atColumn: 3, row: 1)
+                    controller.gridView.handleDroppedFiles([URL(fileURLWithPath: pngPath)], at: frame.origin)
+                    NSLog("drag: dropped image -> %ld objects, first %@", sheet.sheetObjects.count, sheet.sheetObjects.first?.typeName ?? "nil")
+                }
+                controller.appendSheet(nil)
+                sheet.workbook?.select(sheet)
+                let before = sheet.workbook?.sheets.map(\.name).joined(separator: ",") ?? ""
+                controller.reorderTab(from: 1, to: 0)
+                NSLog("drag: tabs %@ -> %@ undo=%@", before, sheet.workbook?.sheets.map(\.name).joined(separator: ",") ?? "", sheet.workbook?.undoLabel ?? "nil")
+                sheet.workbook?.select(sheet)
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FREEZE"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

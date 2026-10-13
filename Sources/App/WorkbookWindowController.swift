@@ -128,6 +128,12 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         tabs.trackingMode = .selectOne
         tabs.target = self
         tabs.action = #selector(tabChanged(_:))
+        tabs.onReorder = { [weak self] from, to in self?.reorderTab(from: from, to: to) }
+        gridView.openDroppedDocument = { url in
+            NSDocumentController.shared.openDocument(withContentsOf: url, display: true) { _, _, error in
+                if let error { NSLog("open %@ failed: %@", url.path, error.localizedDescription) }
+            }
+        }
         tabs.menu = MainMenu.sheetMenu()   // right-click on a tab
         // Many sheets overflow the window: the tabs sit in a horizontally
         // scrolling strip (trackpad scroll, no visible scroller).
@@ -2101,6 +2107,14 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         workbook.setAutoExpression(function: function, label: sender.title)
     }
 
+    /// A tab dropped at another tab's place moves the sheet there.
+    func reorderTab(from: Int, to: Int) {
+        guard from >= 0, from < tabSheets.count, to >= 0, to < tabSheets.count, from != to else { return }
+        runSheetCommand { workbook in
+            try workbook.move(tabSheets[from], toIndex: tabSheets[to].index)
+        }
+    }
+
     @objc private func tabChanged(_ sender: NSSegmentedControl) {
         guard sender.selectedSegment >= 0, sender.selectedSegment < tabSheets.count else { return }
         workbook.select(tabSheets[sender.selectedSegment])
@@ -2203,6 +2217,43 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
 /// its context menu opens, so the menu's commands apply to that sheet.
 @MainActor
 final class SheetTabControl: NSSegmentedControl {
+    /// A tab dragged onto another's place: (from, to) segment indexes.
+    var onReorder: ((Int, Int) -> Void)?
+
+    private func segment(at point: NSPoint) -> Int? {
+        var x: CGFloat = 0
+        for segment in 0..<segmentCount {
+            let width = self.width(forSegment: segment) > 0 ? self.width(forSegment: segment)
+                : bounds.width / CGFloat(max(segmentCount, 1))
+            if point.x >= x && point.x < x + width { return segment }
+            x += width
+        }
+        return nil
+    }
+
+    /// A press selects the tab; a drag of more than a few points moves it
+    /// to where it is let go (the GTK notebook's tab reordering).
+    override func mouseDown(with event: NSEvent) {
+        guard let from = segment(at: convert(event.locationInWindow, from: nil)), let window else {
+            super.mouseDown(with: event)
+            return
+        }
+        var dragged = false
+        var last = event
+        while true {
+            guard let next = window.nextEvent(matching: [.leftMouseDragged, .leftMouseUp]) else { break }
+            last = next
+            if next.type == .leftMouseUp { break }
+            if abs(next.locationInWindow.x - event.locationInWindow.x) > 4 { dragged = true }
+        }
+        if dragged, let to = segment(at: convert(last.locationInWindow, from: nil)), to != from {
+            onReorder?(from, to)
+        } else if selectedSegment != from {
+            selectedSegment = from
+            sendAction(action, to: target)
+        }
+    }
+
     override func menu(for event: NSEvent) -> NSMenu? {
         let point = convert(event.locationInWindow, from: nil)
         var x: CGFloat = 0
