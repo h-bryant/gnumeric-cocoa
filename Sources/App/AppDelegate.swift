@@ -2045,6 +2045,10 @@ enum Snapshot {
                     let statistics: String = dialog.statistics.map { "\($0.0)=\($0.1)" }.joined(separator: "; ")
                     NSLog("props: statistics %@", statistics)
                     dialog.setCalculation(DocumentPropertiesDialog.Calculation(automatic: false, iterates: true, maximum: 50, tolerance: 0.01))
+                    dialog.stageProperty(name: "project", type: .string, value: "alpha")
+                    dialog.stageProperty(name: "runs", type: .integer, value: "12")
+                    let staged: String = dialog.propertyRowsForTesting.joined(separator: "; ")
+                    NSLog("props: staged rows %@", staged)
                     return true
                 }
                 controller.documentProperties(nil)
@@ -2053,6 +2057,8 @@ enum Snapshot {
                       controller.workbook.documentProperties["dc:creator"] ?? "nil", controller.workbook.undoLabel ?? "nil")
                 let calc: String = "automatic=\(controller.workbook.recalculatesAutomatically) iterates=\(controller.workbook.iterationEnabled) max=\(controller.workbook.iterationMaximum) tol=\(controller.workbook.iterationTolerance)"
                 NSLog("props: calculation %@", calc)
+                let custom: String = controller.workbook.allDocumentProperties.filter { ["project", "runs"].contains($0.name) }.map { "\($0.name)=\($0.value)/\($0.type.rawValue)" }.joined(separator: " ")
+                NSLog("props: custom %@ undo=%@", custom, controller.workbook.undoLabel ?? "nil")
                 controller.workbook.recalculatesAutomatically = true
                 controller.workbook.iterationEnabled = false
                 view.layoutSubtreeIfNeeded()

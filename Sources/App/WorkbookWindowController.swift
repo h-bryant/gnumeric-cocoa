@@ -71,10 +71,18 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         guard let window, window.attachedSheet == nil else { return }
         if gridView.isEditing { gridView.cancelEditing() }
         let dialog = DocumentPropertiesDialog(workbook: workbook, fileURL: workbookDocument?.fileURL)
-        dialog.present(in: window) { [weak self] values, calculation in
+        dialog.present(in: window) { [weak self] values, calculation, changes in
             guard let self else { return true }
             do {
                 try workbook.setDocumentProperties(values)
+                // The Properties page's staged sets and removals, each a
+                // command as the GTK page runs them.
+                for change in changes {
+                    switch change {
+                    case .set(let name, let type, let value): try workbook.setDocumentProperty(name, type: type, value: value)
+                    case .remove(let name): try workbook.removeDocumentProperty(name)
+                    }
+                }
             } catch {
                 present(error)
                 return false

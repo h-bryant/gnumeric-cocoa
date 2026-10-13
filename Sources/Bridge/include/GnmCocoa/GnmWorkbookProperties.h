@@ -34,6 +34,28 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// The document's metadata (File → Properties…): the standard
 /// string-valued properties by their gsf names ("dc:title").
+/// The types the GTK Properties page offers for a custom property.
+typedef NS_ENUM(NSInteger, GnmDocumentPropertyType) {
+    GnmDocumentPropertyTypeString = 0,
+    GnmDocumentPropertyTypeInteger,
+    GnmDocumentPropertyTypeNumber,
+    GnmDocumentPropertyTypeBoolean,
+    GnmDocumentPropertyTypeTimestamp,
+    /// A list of strings (keywords) or anything else, shown as text.
+    GnmDocumentPropertyTypeOther,
+} NS_SWIFT_NAME(DocumentProperty.Kind);
+
+/// One metadata property as the GTK Properties page lists it: the
+/// name, the value rendered as text, and the type.
+NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(DocumentProperty)
+@interface GnmDocumentProperty : NSObject
+- (instancetype)init NS_UNAVAILABLE;
++ (instancetype)new NS_UNAVAILABLE;
+@property (nonatomic, readonly, copy) NSString *name;
+@property (nonatomic, readonly, copy) NSString *value;
+@property (nonatomic, readonly) GnmDocumentPropertyType type;
+@end
+
 @interface GnmWorkbook (DocumentProperties)
 /// The names the dialog edits, in its order: title, subject,
 /// description, keywords, creator, initial creator, manager, company,
@@ -46,6 +68,18 @@ NS_ASSUME_NONNULL_BEGIN
 /// Set the given properties (an empty value removes one) as one undoable
 /// command ("Changing workbook properties"); nothing when none differ.
 - (BOOL)setDocumentProperties:(NSDictionary<NSString *, NSString *> *)changes error:(NSError **)error NS_SWIFT_NAME(setDocumentProperties(_:));
+
+/// Every property of the document's metadata, by name.
+@property (nonatomic, readonly, copy) NSArray<GnmDocumentProperty *> *allDocumentProperties;
+/// Set (or add) a property of a type from text, as the GTK page's Add
+/// does (dialog_doc_metadata_set_gsf_prop_val: numbers through the
+/// engine's matcher, booleans from TRUE/FALSE or a number, timestamps
+/// as "yyyy-mm-dd hh:mm:ss", else now); one undoable command.  NO with
+/// a message for an empty name.
+- (BOOL)setDocumentProperty:(NSString *)name type:(GnmDocumentPropertyType)type value:(NSString *)value error:(NSError **)error
+    NS_SWIFT_NAME(setDocumentProperty(_:type:value:));
+/// Remove a property (the page's Remove); one undoable command.
+- (BOOL)removeDocumentProperty:(NSString *)name error:(NSError **)error NS_SWIFT_NAME(removeDocumentProperty(_:));
 @end
 
 /// The GTK Properties dialog's Calculation page (dialog-doc-metadata.c):

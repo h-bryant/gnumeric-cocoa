@@ -2024,6 +2024,23 @@
   The GTK's Data → Import Other File… is its file chooser in an import
   style; File → Open already takes every format the engine reads.
 
+### 2026-10-13 (later): custom document properties
+
+- `GnmWorkbook (DocumentProperties)` gained `allDocumentProperties`
+  (`GnmDocumentProperty`: name, the value as text, the type; the
+  GTK page's OTHER TO G_TYPE_STRING renderings, timestamps through
+  `gsf_timestamp_as_string`), `setDocumentProperty:type:value:` (a
+  typed `GsfDocProp` built as dialog_doc_metadata_set_gsf_prop_val
+  does: integers with strtol, numbers and booleans through the
+  engine's matcher, timestamps from "yyyy-mm-dd hh:mm:ss" or now), and
+  `removeDocumentProperty:`, each one `cmd_change_meta_data`.
+  `properties.m` covers the five types, the refusals, and undo/redo.
+- The Properties dialog's fourth tab, Properties: a table of every
+  property, a name/value/type entry with Add, and Remove; changes are
+  staged and applied on OK after the Description page's command, each
+  as its own command as the GTK page runs them.  The `GNM_SNAPSHOT_PROPS`
+  hook stages a text and an integer property.
+
 ### 2026-10-13 (later): ViewNew left out
 
 - Henry chose to leave View → New View… out.  The bridge assumes one

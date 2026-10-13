@@ -74,6 +74,33 @@ int main (void)
         NSString *label = wb.undoLabel;
         GNM_ASSERT ([wb setDocumentProperties:same error:&error] && [wb.undoLabel isEqualToString:label], @"no change, no command");
 
+        /* custom properties of each type */
+        GNM_ASSERT ([wb setDocumentProperty:@"project" type:GnmDocumentPropertyTypeString value:@"alpha" error:&error], @"string: %@", error);
+        GNM_ASSERT ([wb setDocumentProperty:@"runs" type:GnmDocumentPropertyTypeInteger value:@"12" error:&error], @"integer: %@", error);
+        GNM_ASSERT ([wb setDocumentProperty:@"weight" type:GnmDocumentPropertyTypeNumber value:@"2.5" error:&error], @"number: %@", error);
+        GNM_ASSERT ([wb setDocumentProperty:@"final" type:GnmDocumentPropertyTypeBoolean value:@"TRUE" error:&error], @"boolean: %@", error);
+        GNM_ASSERT ([wb setDocumentProperty:@"reviewed" type:GnmDocumentPropertyTypeTimestamp value:@"2026-10-13 09:30:00" error:&error], @"timestamp: %@", error);
+        GNM_ASSERT_EQ_STR (wb.undoLabel ?: @"", @"Changing workbook properties");
+        NSMutableDictionary<NSString *, GnmDocumentProperty *> *byName = [NSMutableDictionary dictionary];
+        for (GnmDocumentProperty *prop in wb.allDocumentProperties)
+            byName[prop.name] = prop;
+        NSLog (@"properties: %@", wb.allDocumentProperties);
+        GNM_ASSERT (byName[@"project"].type == GnmDocumentPropertyTypeString && [byName[@"project"].value isEqualToString:@"alpha"], @"string back: %@", byName[@"project"]);
+        GNM_ASSERT (byName[@"runs"].type == GnmDocumentPropertyTypeInteger && [byName[@"runs"].value isEqualToString:@"12"], @"integer back: %@", byName[@"runs"]);
+        GNM_ASSERT (byName[@"weight"].type == GnmDocumentPropertyTypeNumber && [byName[@"weight"].value isEqualToString:@"2.5"], @"number back: %@", byName[@"weight"]);
+        GNM_ASSERT (byName[@"final"].type == GnmDocumentPropertyTypeBoolean && [byName[@"final"].value isEqualToString:@"TRUE"], @"boolean back: %@", byName[@"final"]);
+        GNM_ASSERT (byName[@"reviewed"].type == GnmDocumentPropertyTypeTimestamp && [byName[@"reviewed"].value hasPrefix:@"2026-10-13"], @"timestamp back: %@", byName[@"reviewed"]);
+        error = nil;
+        GNM_ASSERT (![wb setDocumentProperty:@" " type:GnmDocumentPropertyTypeString value:@"x" error:&error] && error, @"empty name refused");
+        error = nil;
+        GNM_ASSERT (![wb removeDocumentProperty:@"nope" error:&error] && error, @"unknown name refused");
+        GNM_ASSERT ([wb removeDocumentProperty:@"runs" error:&error], @"remove: %@", error);
+        NSUInteger afterRemove = wb.allDocumentProperties.count;
+        [wb undo];
+        GNM_ASSERT (wb.allDocumentProperties.count == afterRemove + 1, @"undo restores the property: %lu", (unsigned long) wb.allDocumentProperties.count);
+        [wb redo];
+        GNM_ASSERT (wb.allDocumentProperties.count == afterRemove, @"redo removes it again");
+
         /* the Calculation page and the statistics */
         /* a new workbook recalculates automatically with iteration enabled (workbook.c) */
         GNM_ASSERT (wb.recalculatesAutomatically && wb.iterationEnabled, @"calculation defaults %d %d", wb.recalculatesAutomatically, wb.iterationEnabled);

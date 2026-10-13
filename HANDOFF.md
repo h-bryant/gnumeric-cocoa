@@ -405,10 +405,10 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    2026-10-13, as were the data slicers (the GTK's pivot tables are a
    stub in 1.12.62) and the goffice components (no component plugins
    are installed, so the GTK greys them out here too); the gap table
-   has the reasoning for all three.  Next, by usage: the remaining
-   "partial" rows of `docs/mvp-known-gaps.md` (custom document
-   properties, the sheet direction), and above all Henry's on-screen
-   checks.
+   has the reasoning for all three.  Custom document properties came
+   last (the Properties dialog's fourth tab).  Next: the sheet
+   direction row of `docs/mvp-known-gaps.md` (right-to-left, a Phase 7
+   item), the later-phase rows, and above all Henry's on-screen checks.
 6. Headless checks for all of it: `GNM_SNAPSHOT=out.png scripts/run-app.sh
    file` plus `GNM_SNAPSHOT_TYPE`, `_FORMAT`, `_PHASE3`, `_FREEZE`,
    `_SHEETS`, `_FILTER`, `_OBJECTS`, `_CHART`, `_EDITOR`, `_EVERYDAY`, `_FIND`, `_PREFS`, `_TEXT`, `_IMPORT`, `_COMMENT`, `_NAMES`, `_FILL`, `_GOAL`, `_COND`, `_STATS`, `_VALID`, `_LINK`, `_SOLVE`, `_PRINT`, `_FORMULA`, `_FUNC`, `_ZOOM` (`docs/build.md`); compare `out.png` with

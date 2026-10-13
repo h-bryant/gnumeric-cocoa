@@ -64,7 +64,7 @@ final class WorkbookAttributesDialog {
 /// alert sheet: the standard string properties, set as one undoable
 /// command on OK.
 @MainActor
-final class DocumentPropertiesDialog {
+final class DocumentPropertiesDialog: NSObject {
     nonisolated(unsafe) static var headlessDriver: ((DocumentPropertiesDialog) -> Bool)?
 
     /// The Calculation page's settings (the GTK's, set on the workbook).
@@ -86,6 +86,7 @@ final class DocumentPropertiesDialog {
     private(set) var statistics: [(String, String)] = []
 
     init(workbook: Workbook, fileURL: URL?) {
+        super.init()
         alert.messageText = "Document Properties"
         alert.addButton(withTitle: "OK")
         alert.addButton(withTitle: "Cancel")
@@ -93,6 +94,7 @@ final class DocumentPropertiesDialog {
         tabs.addTabViewItem(Self.tab("Description", view: descriptionGrid(workbook)))
         tabs.addTabViewItem(Self.tab("Statistics", view: statisticsGrid(workbook, fileURL: fileURL)))
         tabs.addTabViewItem(Self.tab("Calculation", view: calculationGrid(workbook)))
+        tabs.addTabViewItem(Self.tab("Properties", view: propertiesView(workbook)))
         alert.accessoryView = tabs
         alert.window.initialFirstResponder = fields.first?.field
     }
@@ -165,6 +167,100 @@ final class DocumentPropertiesDialog {
         return grid
     }
 
+    // MARK: The Properties page (custom properties)
+
+    /// A change staged on the Properties page, applied on OK.
+    enum PropertyChange: Equatable {
+        case set(name: String, type: DocumentProperty.Kind, value: String)
+        case remove(name: String)
+    }
+
+    private let propertiesTable = NSTableView()
+    private var rows: [(name: String, value: String, type: DocumentProperty.Kind)] = []
+    let propertyNameField = NSTextField(string: "")
+    let propertyValueField = NSTextField(string: "")
+    let propertyTypePopUp = NSPopUpButton(frame: .zero, pullsDown: false)
+    private(set) var propertyChanges: [PropertyChange] = []
+    static let propertyTypes: [(String, DocumentProperty.Kind)] = [("Text", .string), ("Integer", .integer), ("Number", .number), ("Yes/No", .boolean), ("Date and time", .timestamp)]
+
+    private func propertiesView(_ workbook: Workbook) -> NSView {
+        rows = workbook.allDocumentProperties.map { ($0.name, $0.value, $0.type) }
+        for (identifier, title, width) in [("name", "Name", 140.0), ("value", "Value", 170.0), ("type", "Type", 90.0)] {
+            let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(identifier))
+            column.title = title
+            column.width = width
+            propertiesTable.addTableColumn(column)
+        }
+        propertiesTable.usesAlternatingRowBackgroundColors = true
+        propertiesTable.allowsEmptySelection = true
+        propertiesTable.dataSource = self
+        propertiesTable.delegate = self
+        let scroll = NSScrollView()
+        scroll.documentView = propertiesTable
+        scroll.hasVerticalScroller = true
+        scroll.borderType = .bezelBorder
+        scroll.translatesAutoresizingMaskIntoConstraints = false
+        scroll.heightAnchor.constraint(equalToConstant: 150).isActive = true
+        scroll.widthAnchor.constraint(equalToConstant: 420).isActive = true
+        propertyNameField.placeholderString = "Name"
+        propertyNameField.widthAnchor.constraint(equalToConstant: 130).isActive = true
+        propertyValueField.placeholderString = "Value"
+        propertyValueField.widthAnchor.constraint(equalToConstant: 160).isActive = true
+        propertyTypePopUp.addItems(withTitles: Self.propertyTypes.map(\.0))
+        let entry = NSStackView(views: [propertyNameField, propertyValueField, propertyTypePopUp])
+        entry.orientation = .horizontal
+        entry.spacing = 6
+        let addButton = NSButton(title: "Add", target: self, action: #selector(addProperty(_:)))
+        let removeButton = NSButton(title: "Remove", target: self, action: #selector(removeProperty(_:)))
+        let buttons = NSStackView(views: [addButton, removeButton, NSView()])
+        buttons.orientation = .horizontal
+        buttons.spacing = 6
+        let stack = NSStackView(views: [scroll, entry, buttons])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 8
+        return stack
+    }
+
+    /// Stage a set (the Add button): the table shows it at once, the
+    /// workbook takes it on OK.
+    func stageProperty(name: String, type: DocumentProperty.Kind, value: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        propertyChanges.removeAll { if case .set(let n, _, _) = $0 { return n == trimmed }; if case .remove(let n) = $0 { return n == trimmed }; return false }
+        propertyChanges.append(.set(name: trimmed, type: type, value: value))
+        if let index = rows.firstIndex(where: { $0.name == trimmed }) {
+            rows[index] = (trimmed, value, type)
+        } else {
+            rows.append((trimmed, value, type))
+            rows.sort { $0.name < $1.name }
+        }
+        propertiesTable.reloadData()
+    }
+
+    /// Stage a removal (the Remove button) of a listed property.
+    func stageRemoval(name: String) {
+        guard let index = rows.firstIndex(where: { $0.name == name }) else { return }
+        propertyChanges.removeAll { if case .set(let n, _, _) = $0 { return n == name }; return false }
+        propertyChanges.append(.remove(name: name))
+        rows.remove(at: index)
+        propertiesTable.reloadData()
+    }
+
+    @objc private func addProperty(_ sender: Any?) {
+        let index = max(propertyTypePopUp.indexOfSelectedItem, 0)
+        stageProperty(name: propertyNameField.stringValue, type: Self.propertyTypes[index].1, value: propertyValueField.stringValue)
+    }
+
+    @objc private func removeProperty(_ sender: Any?) {
+        let row = propertiesTable.selectedRow
+        guard row >= 0, row < rows.count else { return }
+        stageRemoval(name: rows[row].name)
+    }
+
+    /// The table's rows as "name=value" (the headless checks).
+    var propertyRowsForTesting: [String] { rows.map { "\($0.name)=\($0.value)" } }
+
     private func calculationGrid(_ workbook: Workbook) -> NSGridView {
         automaticButton.state = workbook.recalculatesAutomatically ? .on : .off
         manualButton.state = workbook.recalculatesAutomatically ? .off : .on
@@ -232,17 +328,49 @@ final class DocumentPropertiesDialog {
         return Calculation(automatic: automaticButton.state == .on, iterates: iterationButton.state == .on, maximum: maximum, tolerance: tolerance)
     }
 
-    func present(in window: NSWindow, apply: @escaping ([String: String], Calculation) -> Bool) {
+    func present(in window: NSWindow, apply: @escaping ([String: String], Calculation, [PropertyChange]) -> Bool) {
         if let driver = Self.headlessDriver {
-            if driver(self), let calculation { _ = apply(values, calculation) }
+            if driver(self), let calculation { _ = apply(values, calculation, propertyChanges) }
             return
         }
         alert.beginSheetModal(for: window) { [self] response in
             guard response == .alertFirstButtonReturn else { return }
-            guard let calculation, apply(values, calculation) else {
+            guard let calculation, apply(values, calculation, propertyChanges) else {
                 DispatchQueue.main.async { [self] in present(in: window, apply: apply) }
                 return
             }
         }
+    }
+}
+
+extension DocumentPropertiesDialog: NSTableViewDataSource, NSTableViewDelegate {
+    func numberOfRows(in tableView: NSTableView) -> Int { rows.count }
+
+    func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
+        guard let identifier = tableColumn?.identifier else { return nil }
+        let entry = rows[row]
+        let text: String
+        switch identifier.rawValue {
+        case "value": text = entry.value
+        case "type": text = Self.propertyTypes.first { $0.1 == entry.type }?.0 ?? "Other"
+        default: text = entry.name
+        }
+        if let cell = tableView.makeView(withIdentifier: identifier, owner: nil) as? NSTableCellView {
+            cell.textField?.stringValue = text
+            return cell
+        }
+        let cell = NSTableCellView()
+        cell.identifier = identifier
+        let label = NSTextField(labelWithString: text)
+        label.lineBreakMode = .byTruncatingTail
+        label.translatesAutoresizingMaskIntoConstraints = false
+        cell.addSubview(label)
+        cell.textField = label
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 2),
+            label.trailingAnchor.constraint(equalTo: cell.trailingAnchor, constant: -2),
+            label.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
+        ])
+        return cell
     }
 }
