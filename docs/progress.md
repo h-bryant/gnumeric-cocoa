@@ -1359,6 +1359,28 @@
   `GNM_SNAPSHOT_FORMULA=1` hook (A6 in bold Georgia 14, right, red
   before "=MAX(") cover it; `formula_range.m` checks the accessors.
 
+## 2026-10-12: Format → Sheet toggles and the Zoom dialog
+
+- `GnmSheet.toggleDisplayOption:` runs `cmd_toggle_sheet_property` for
+  the GTK's Display Formulæ, Hide Zeros, Hide Gridlines, Hide Column
+  Headers, Hide Row Headers, Use R1C1 Notation (and the right-to-left
+  flag, without a menu item), undoable with the GTK's labels;
+  `displayOption:` and `displaysFormulas` / `hidesZeros` / `usesR1C1`
+  read them.  The workbook wrapper now listens to the sheet's
+  `notify::display-*`, `use-r1c1`, and `text-is-rtl` and tells the
+  sheet delegate `sheetGeometryDidChange:`, so the grid redraws (the
+  engine draws formulas, blank zeros, and no grid lines itself);
+  `nameOfColumn:` gives numbers under R1C1 as item-bar.c does.
+- `zoomFactor` is now `cmd_zoom` (undoable, "Zoom Sheet1 to 150%"),
+  and `setZoomFactor:forAllSheets:` takes every sheet; `ZoomDialog`
+  (View → Zoom…, Format → Sheet → Zoom…) offers the presets or a typed
+  percentage, 10 to 500, and "All sheets".
+- The window controller collapses the header views through zero-size
+  constraints when the sheet hides them (`applySheetDisplay`, on each
+  geometry change and sheet switch); Format → Sheet shows the toggles
+  checked from the sheet.  `GNM_SNAPSHOT_SHEET=1` exercises the
+  toggles and the dialog; `editing.m` checks the commands and undo.
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -1376,8 +1398,8 @@
    printing, formula range selection by mouse and keyboard, the font
    shortcuts, autocompletion, the function selector, and array formulas;
    and all 27 Statistics tools; next the rest of Phase 5 by usage
-   frequency: a plugin manager, the scenarios and simulation tools,
-   Data → Fill → Merge and Tabulate) from
+   frequency: Data → Table and Tabulate, the random generator, outlines,
+   a plugin manager, the scenarios and simulation tools) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -1401,7 +1423,7 @@
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
 3. The state at the end of 2026-10-12: `main` at the autocompletion and
-   editor-style commit (after the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+   sheet-display commit (after the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

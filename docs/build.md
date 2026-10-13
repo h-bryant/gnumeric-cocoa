@@ -107,7 +107,8 @@ GNM_SNAPSHOT=/tmp/grid.png scripts/run-app.sh upstream/gnumeric/samples/format-t
 `GNM_SNAPSHOT_COMMENT=1`, `GNM_SNAPSHOT_NAMES=1`, `GNM_SNAPSHOT_FILL=1`,
 `GNM_SNAPSHOT_GOAL=1`, `GNM_SNAPSHOT_COND=1`, `GNM_SNAPSHOT_STATS=1`,
 `GNM_SNAPSHOT_VALID=1`, `GNM_SNAPSHOT_LINK=1`, `GNM_SNAPSHOT_SOLVE=1`,
-`GNM_SNAPSHOT_PRINT=1`, `GNM_SNAPSHOT_FORMULA=1`, and `GNM_SNAPSHOT_FUNC=1`
+`GNM_SNAPSHOT_PRINT=1`, `GNM_SNAPSHOT_FORMULA=1`, `GNM_SNAPSHOT_FUNC=1`,
+and `GNM_SNAPSHOT_SHEET=1`
 exercise zoom, editing and saving, the Format Cells model, the Phase 3
 commands, frozen panes, sheet management, the autofilter with the Sort
 command, a sheet resize, and a tab color, the sheet objects (select, move,
@@ -150,7 +151,10 @@ right-aligned so the editor shows the cell's style; "=MAX(" in A6 takes B1:B3 by
 Right, ⌘Up, and ⇧⌘Up sent as key events, ")" ends the selection, Up
 commits; "=B1:B3*2" over A7:A9 by ⇧⌘Return), and autocompletion with the
 function selector ("app" under "apple" completes; SUM inserted through
-the dialog, captured to `-func.png`) before the
+the dialog, captured to `-func.png`), and the sheet display toggles
+(A1 a formula and B1 a zero, then Display Formulæ, Hide Zeros, Hide
+Gridlines, Hide Row Headers, R1C1 column names, and Zoom… to 150%
+through its dialog, captured to `-zoom.png`) before the
 capture (`AppDelegate.swift`, `Snapshot`). The typing hook saves as a
 Save As next to the snapshot; with `GNM_SNAPSHOT_SAVE_INPLACE=1` it saves
 the opened file in place instead (give it a copy). Should a quit ever go

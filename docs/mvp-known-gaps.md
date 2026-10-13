@@ -61,7 +61,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | ViewStatusbar | partial | the auto-expression (Sum/Min/Max/Average/Count of the selection) sits at the right of the tab bar; no hide toggle, no other status fields |
 | ViewFullScreen | no | enable the window's full-screen behavior, Phase 3 |
 | FormatWorkbook (workbook properties) | no | Phase 5 |
-| ViewZoom | partial | fixed steps via View menu; no zoom dialog or percentage entry |
+| ViewZoom | ported | View → Zoom In/Out/Actual Size, and View → Zoom… (also Format → Sheet → Zoom…) with the presets or a typed percentage and "All sheets", over `cmd_zoom` (undoable, "Zoom Sheet1 to 150%") (2026-10-12) |
 
 ## Insert
 
@@ -93,7 +93,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | FontStrikeThrough, FontDoubleUnderline, FontSuperscript, FontSubscript | partial | through the dialog only; no shortcuts or toolbar |
 | ColumnSize, RowSize, ColumnAutoSize, RowAutoSize, ColumnDefaultSize, RowDefaultSize | ported | Format → Column / Row (points); headers drag-resize and autofit on a boundary double-click |
 | ColumnHide, RowHide, ColumnUnhide, RowUnhide | ported | Format → Column / Row |
-| SheetDisplayFormulas, SheetUseR1C1, SheetHideZeros, SheetHideGridlines, SheetHideColHeader, SheetHideRowHeader, SheetDirection | partial | the grid honors the file's settings (except direction, drawn left-to-right); no menu items, Phase 3/7 |
+| SheetDisplayFormulas, SheetUseR1C1, SheetHideZeros, SheetHideGridlines, SheetHideColHeader, SheetHideRowHeader, SheetDirection | partial | Format → Sheet (2026-10-12): Display Formulæ, Use R1C1 Notation, Hide Zeros, Hide Gridlines, Hide Column Headers, Hide Row Headers as checked items over `cmd_toggle_sheet_property` (undoable; the header views collapse); no Direction item, the sheet is drawn left-to-right |
 
 ## Tools and Statistics
 

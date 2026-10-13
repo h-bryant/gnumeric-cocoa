@@ -119,6 +119,28 @@ int main (void)
         GNM_ASSERT ([engine resolvedFontFamilyForName:@"Sans"].length > 0 && ![[engine resolvedFontFamilyForName:@"Sans"] isEqualToString:@"Sans"], @"Sans resolves to a real family");
         GNM_ASSERT_EQ_STR ([engine resolvedFontFamilyForName:@"Georgia"], @"Georgia");
 
+        error = nil;
+        /* Format → Sheet toggles and the zoom command */
+        GNM_ASSERT (![s displaysFormulas], @"formulas off at first");
+        GNM_ASSERT ([s toggleDisplayOption:GnmSheetDisplayOptionFormulas error:&error], @"toggle formulas: %@", error);
+        GNM_ASSERT ([s displaysFormulas] && [s displayOption:GnmSheetDisplayOptionFormulas], @"formulas on");
+        NSLog (@"display: undo '%@'", wb.undoLabel);
+        GNM_ASSERT_EQ_STR (wb.undoLabel, @"Toggle displaying formulæ");
+        [wb undo];
+        GNM_ASSERT (![s displaysFormulas], @"formulas undone");
+        GNM_ASSERT ([s toggleDisplayOption:GnmSheetDisplayOptionR1C1 error:&error] && [s usesR1C1], @"r1c1: %@", error);
+        GNM_ASSERT_EQ_STR ([s nameOfColumn:2], @"3");
+        [wb undo];
+        GNM_ASSERT_EQ_STR ([s nameOfColumn:2], @"C");
+        GNM_ASSERT ([s toggleDisplayOption:GnmSheetDisplayOptionHideGridLines error:&error] && [s hidesGridLines], @"grid: %@", error);
+        [wb undo];
+        GNM_ASSERT (![s hidesGridLines], @"grid undone");
+        GNM_ASSERT ([s setZoomFactor:1.5 forAllSheets:NO error:&error] && fabs (s.zoomFactor - 1.5) < 1e-9, @"zoom: %@ %g", error, s.zoomFactor);
+        NSLog (@"display: zoom undo '%@'", wb.undoLabel);
+        GNM_ASSERT ([wb.undoLabel hasPrefix:@"Zoom"], @"zoom label: %@", wb.undoLabel);
+        [wb undo];
+        GNM_ASSERT (fabs (s.zoomFactor - 1) < 1e-9, @"zoom undone: %g", s.zoomFactor);
+
         GNM_ASSERT (stray.count == 0, @"stray messages: %@", stray);
         wb = nil;
       }

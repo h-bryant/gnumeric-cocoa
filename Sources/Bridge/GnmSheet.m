@@ -863,13 +863,62 @@ gnm_cocoa_cairo_for_context (CGContextRef context, CGRect rect, cairo_surface_t 
 - (BOOL)hidesGridLines { return _sheet->hide_grid; }
 - (BOOL)hidesColumnHeader { return _sheet->hide_col_header; }
 - (BOOL)hidesRowHeader { return _sheet->hide_row_header; }
+- (BOOL)displaysFormulas { return _sheet->display_formulas; }
+- (BOOL)hidesZeros { return _sheet->hide_zero; }
+- (BOOL)usesR1C1 { return sheet_get_conventions (_sheet)->r1c1_addresses; }
+
+- (BOOL)displayOption:(GnmSheetDisplayOption)option
+{
+    switch (option) {
+    case GnmSheetDisplayOptionFormulas: return _sheet->display_formulas;
+    case GnmSheetDisplayOptionHideZeros: return _sheet->hide_zero;
+    case GnmSheetDisplayOptionHideGridLines: return _sheet->hide_grid;
+    case GnmSheetDisplayOptionHideColumnHeader: return _sheet->hide_col_header;
+    case GnmSheetDisplayOptionHideRowHeader: return _sheet->hide_row_header;
+    case GnmSheetDisplayOptionR1C1: return sheet_get_conventions (_sheet)->r1c1_addresses;
+    case GnmSheetDisplayOptionRightToLeft: return _sheet->text_is_rtl;
+    }
+    return NO;
+}
+
+- (BOOL)toggleDisplayOption:(GnmSheetDisplayOption)option error:(NSError **)error
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    /* wbc-gtk-actions.c TOGGLE_HANDLER */
+    const char *property, *desc;
+    switch (option) {
+    case GnmSheetDisplayOptionFormulas: property = "display-formulas"; desc = "Toggle displaying formul\303\246"; break;
+    case GnmSheetDisplayOptionHideZeros: property = "display-zeros"; desc = "Toggle showing zeros"; break;
+    case GnmSheetDisplayOptionHideGridLines: property = "display-grid"; desc = "Toggle showing gridlines"; break;
+    case GnmSheetDisplayOptionHideColumnHeader: property = "display-column-header"; desc = "Toggle showing column headers"; break;
+    case GnmSheetDisplayOptionHideRowHeader: property = "display-row-header"; desc = "Toggle showing row headers"; break;
+    case GnmSheetDisplayOptionR1C1: property = "use-r1c1"; desc = "Toggle whether to show r1c1-style references"; break;
+    case GnmSheetDisplayOptionRightToLeft: property = "text-is-rtl"; desc = "Toggle sheet text direction"; break;
+    default: return NO;
+    }
+    return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_toggle_sheet_property (wbc, _sheet, property, desc);
+    } description:@"Could not change the sheet's display." error:error];
+}
+
 - (double)zoomFactor { return _sheet->last_zoom_factor_used; }
 
 - (void)setZoomFactor:(double)zoomFactor
 {
-    /* sheet_set_zoom_factor is private to sheet.c; the property is public. */
-    g_object_set (G_OBJECT (_sheet), "zoom-factor", MIN (MAX (zoomFactor, 0.1), 5.0), NULL);
+    [self setZoomFactor:zoomFactor forAllSheets:NO error:NULL];
+}
+
+- (BOOL)setZoomFactor:(double)zoomFactor forAllSheets:(BOOL)all error:(NSError **)error
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    /* dialog-zoom.c cb_zoom_ok_clicked; cmd_zoom takes the list */
+    double factor = MIN (MAX (zoomFactor, 0.1), 5.0);
+    GSList *sheets = all ? workbook_sheets (_sheet->workbook) : g_slist_append (NULL, _sheet);
+    BOOL ok = [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_zoom (wbc, sheets, factor);
+    } description:@"Could not change the zoom." error:error];
     sheet_update (_sheet);
+    return ok;
 }
 - (NSInteger)columnCount { return gnm_sheet_get_max_cols (_sheet); }
 - (NSInteger)rowCount { return gnm_sheet_get_max_rows (_sheet); }
@@ -942,7 +991,13 @@ cell_range_from (GnmRange const *r)
                        [self widthOfColumn:column], [self heightOfRow:row]);
 }
 
-- (NSString *)nameOfColumn:(NSInteger)column { return GnmString (col_name ((int) column)); }
+- (NSString *)nameOfColumn:(NSInteger)column
+{
+    /* item-bar.c: numbers under R1C1 */
+    if (sheet_get_conventions (_sheet)->r1c1_addresses)
+        return [NSString stringWithFormat:@"%ld", (long) column + 1];
+    return GnmString (col_name ((int) column));
+}
 - (NSString *)nameOfRow:(NSInteger)row { return GnmString (row_name ((int) row)); }
 
 #pragma mark - Cells

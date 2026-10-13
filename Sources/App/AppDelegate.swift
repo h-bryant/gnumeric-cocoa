@@ -696,6 +696,51 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_SHEET"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // Format → Sheet: A1 a formula and B1 a zero, then Display
+                // Formulæ, Hide Zeros, Hide Gridlines, and Hide Row Headers
+                // toggled; the window capture shows the formula text, the
+                // blank zero, no grid lines, and no row header.  Then Zoom…
+                // to 150% through its dialog (captured to `-zoom.png`).
+                do {
+                    try sheet.setText("=1+1", atColumn: 0, row: 0, autocorrect: false)
+                    try sheet.setText("0", atColumn: 1, row: 0, autocorrect: false)
+                } catch {
+                    NSLog("sheet: data failed: %@", error.localizedDescription)
+                }
+                controller.toggleDisplayFormulas(nil)
+                controller.toggleHideZeros(nil)
+                controller.toggleHideGridLines(nil)
+                controller.toggleHideRowHeaders(nil)
+                NSLog("sheet: formulas=%d zeros=%d grid=%d rowHeader=%d colHeader=%d A1='%@' B1='%@' undo=%@ rowHeaderHidden=%d",
+                      sheet.displaysFormulas ? 1 : 0, sheet.hidesZeros ? 1 : 0, sheet.hidesGridLines ? 1 : 0, sheet.hidesRowHeader ? 1 : 0,
+                      sheet.hidesColumnHeader ? 1 : 0, sheet.displayTextOfCell(atColumn: 0, row: 0) ?? "nil",
+                      sheet.displayTextOfCell(atColumn: 1, row: 0) ?? "nil", sheet.workbook?.undoLabel ?? "nil",
+                      controller.gridView.headerViews.count == 2 && controller.gridView.headerViews[1].isHidden ? 1 : 0)
+                controller.toggleR1C1(nil)
+                NSLog("sheet: r1c1=%d column 2 is '%@'", sheet.usesR1C1 ? 1 : 0, sheet.name(ofColumn: 2))
+                controller.toggleR1C1(nil)
+                ZoomDialog.headlessDriver = { dialog in
+                    dialog.percentField.stringValue = "150"
+                    if let content = dialog.alert.accessoryView {
+                        content.layoutSubtreeIfNeeded()
+                        if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                            content.cacheDisplay(in: content.bounds, to: rep)
+                            let zoomPath = (path as NSString).deletingPathExtension + "-zoom.png"
+                            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: zoomPath))
+                            NSLog("sheet: captured %@ (%@)", zoomPath, NSStringFromRect(content.bounds))
+                        }
+                    }
+                    return true
+                }
+                controller.zoomDialog(nil)
+                ZoomDialog.headlessDriver = nil
+                NSLog("sheet: zoom=%g undo=%@", sheet.zoomFactor, sheet.workbook?.undoLabel ?? "nil")
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_LINK"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

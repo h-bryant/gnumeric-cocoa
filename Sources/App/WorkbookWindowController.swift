@@ -102,6 +102,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         let columnHeader = ColumnHeaderView(gridView: gridView)
         let rowHeader = RowHeaderView(gridView: gridView)
         gridView.headerViews = [columnHeader, rowHeader]
+        hiddenColumnHeaderConstraint = columnHeader.heightAnchor.constraint(equalToConstant: 0)
+        hiddenRowHeaderConstraint = rowHeader.widthAnchor.constraint(equalToConstant: 0)
         let pane = NSView()
         pane.translatesAutoresizingMaskIntoConstraints = false
         pane.addSubview(rowHeader)
@@ -172,7 +174,10 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         ])
         window.contentView = content
         window.initialFirstResponder = gridView
-        gridView.geometryDidChange = { [weak self] in self?.updateSubtitle() }
+        gridView.geometryDidChange = { [weak self] in
+            self?.updateSubtitle()
+            self?.applySheetDisplay()
+        }
         gridView.editingTextDidChange = { [weak self] text in
             guard let self else { return }
             if let text {
@@ -296,6 +301,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         // (commands.c update_after_action); only a real change resets the grid.
         if gridView.sheet !== sheet {
             gridView.sheet = sheet
+            applySheetDisplay()
             // Only then: taking the first responder during a command kicked
             // the cell editor out, whose end of editing committed the same
             // text again, which the engine reported as a failure (an alert
@@ -412,6 +418,58 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         }
     }
 
+    // MARK: Sheet display (Format → Sheet)
+
+    /// Collapse the header views to nothing when the sheet hides them.
+    private var hiddenColumnHeaderConstraint: NSLayoutConstraint?
+    private var hiddenRowHeaderConstraint: NSLayoutConstraint?
+
+    /// The sheet's Hide Column Headers and Hide Row Headers, on the
+    /// header views beside the grid.
+    func applySheetDisplay() {
+        let hideColumns = gridView.sheet?.hidesColumnHeader ?? false
+        let hideRows = gridView.sheet?.hidesRowHeader ?? false
+        hiddenColumnHeaderConstraint?.isActive = hideColumns
+        hiddenRowHeaderConstraint?.isActive = hideRows
+        if gridView.headerViews.count == 2 {
+            gridView.headerViews[0].isHidden = hideColumns
+            gridView.headerViews[1].isHidden = hideRows
+        }
+    }
+
+    private func toggleDisplayOption(_ option: Sheet.DisplayOption) {
+        guard let sheet = gridView.sheet else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        do {
+            try sheet.toggleDisplayOption(option)
+        } catch {
+            present(error)
+        }
+    }
+
+    @objc func toggleDisplayFormulas(_ sender: Any?) { toggleDisplayOption(.formulas) }
+    @objc func toggleR1C1(_ sender: Any?) { toggleDisplayOption(.r1c1) }
+    @objc func toggleHideZeros(_ sender: Any?) { toggleDisplayOption(.hideZeros) }
+    @objc func toggleHideGridLines(_ sender: Any?) { toggleDisplayOption(.hideGridLines) }
+    @objc func toggleHideColumnHeaders(_ sender: Any?) { toggleDisplayOption(.hideColumnHeader) }
+    @objc func toggleHideRowHeaders(_ sender: Any?) { toggleDisplayOption(.hideRowHeader) }
+
+    /// View → Zoom… and Format → Sheet → Zoom…: the GTK dialog.
+    @objc func zoomDialog(_ sender: Any?) {
+        guard let window, let sheet = gridView.sheet, window.attachedSheet == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        ZoomDialog(sheet: sheet).present(in: window) { [weak self] factor, all in
+            guard let self else { return true }
+            do {
+                try sheet.setZoomFactor(factor, forAllSheets: all)
+                return true
+            } catch {
+                presentMessage(error.localizedDescription)
+                return false
+            }
+        }
+    }
+
     // MARK: Zoom (View menu, through the responder chain)
 
     private func setZoom(_ factor: Double) {
@@ -445,6 +503,22 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         case #selector(zoomActualSize(_:)):
             guard let zoom else { return false }
             return abs(zoom - 1) > 1e-6
+        case #selector(zoomDialog(_:)):
+            return gridView.sheet != nil && window?.attachedSheet == nil
+        case #selector(toggleDisplayFormulas(_:)), #selector(toggleR1C1(_:)), #selector(toggleHideZeros(_:)),
+             #selector(toggleHideGridLines(_:)), #selector(toggleHideColumnHeaders(_:)), #selector(toggleHideRowHeaders(_:)):
+            guard let sheet = gridView.sheet else { return false }
+            let option: Sheet.DisplayOption
+            switch item.action {
+            case #selector(toggleDisplayFormulas(_:)): option = .formulas
+            case #selector(toggleR1C1(_:)): option = .r1c1
+            case #selector(toggleHideZeros(_:)): option = .hideZeros
+            case #selector(toggleHideGridLines(_:)): option = .hideGridLines
+            case #selector(toggleHideColumnHeaders(_:)): option = .hideColumnHeader
+            default: option = .hideRowHeader
+            }
+            (item as? NSMenuItem)?.state = sheet.displayOption(option) ? .on : .off
+            return true
         case #selector(formatCells(_:)):
             return gridView.sheet != nil && formatSheetWindow == nil
         case #selector(setColumnWidth(_:)), #selector(setRowHeight(_:)),

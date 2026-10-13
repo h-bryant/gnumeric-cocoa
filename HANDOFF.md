@@ -362,8 +362,10 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    the status, the objective so far, the elapsed time, and a Stop button
    over `GnmSolverRun` (start, poll, stop, finish), and the in-cell editor
    took the cell's font, colors, and alignment (`formatOfCellAtColumn:`,
-   `resolvedFontFamilyForName:`).  Next, by usage: a plugin manager, the
-   scenarios and simulation tools, Data → Fill → Merge and Tabulate;
+   `resolvedFontFamilyForName:`); Format → Sheet's display toggles and
+   the Zoom dialog followed (`toggleDisplayOption:`, `cmd_zoom`).  Next,
+   by usage: Data → Table and Tools → Tabulate, the random generator,
+   outlines, a plugin manager, the scenarios and simulation tools;
    image and widget editors (`cmd_so_set_*`) later; the smaller Phase 3
    gaps (Insert/Delete Cells,
    Goto and the name box, the formula bar, autocomplete, drag and drop,

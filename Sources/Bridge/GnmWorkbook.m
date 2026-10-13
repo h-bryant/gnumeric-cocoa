@@ -201,6 +201,17 @@ cb_sheet_changed (GObject *sheet, GParamSpec *pspec, gpointer owner)
         [wb.delegate workbook:wb sheetDidChange:wrapper];
 }
 
+/* The Format → Sheet toggles: the grid lays out and redraws, as the
+ * GTK's sheet control does on these notifications. */
+static void
+cb_sheet_display_changed (GObject *sheet, GParamSpec *pspec, gpointer owner)
+{
+    GnmWorkbook *wb = (__bridge GnmWorkbook *) owner;
+    GnmSheet *wrapper = [wb wrapperForEngineSheet:(Sheet *) sheet];
+    if (wrapper && [wrapper.delegate respondsToSelector:@selector(sheetGeometryDidChange:)])
+        [wrapper.delegate sheetGeometryDidChange:wrapper];
+}
+
 static void
 cb_auto_expr_value_changed (GObject *view, GParamSpec *pspec, gpointer owner)
 {
@@ -735,6 +746,10 @@ uri_for_url (NSURL *url)
         g_signal_connect (G_OBJECT (sheet), "notify::visibility", G_CALLBACK (cb_sheet_changed), (__bridge void *) self);
         g_signal_connect (G_OBJECT (sheet), "notify::tab-background", G_CALLBACK (cb_sheet_changed), (__bridge void *) self);
         g_signal_connect (G_OBJECT (sheet), "notify::tab-foreground", G_CALLBACK (cb_sheet_changed), (__bridge void *) self);
+        for (const char *signal_name : (const char *[]) { "notify::display-formulas", "notify::display-zeros", "notify::display-grid",
+                                                           "notify::display-column-header", "notify::display-row-header",
+                                                           "notify::use-r1c1", "notify::text-is-rtl" })
+            g_signal_connect (G_OBJECT (sheet), signal_name, G_CALLBACK (cb_sheet_display_changed), (__bridge void *) self);
     }
     if ([self.delegate respondsToSelector:@selector(workbook:didAddSheet:)])
         [self.delegate workbook:self didAddSheet:wrapper];

@@ -120,6 +120,17 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(CellComment)
 @property (nonatomic, readonly, copy) NSString *text;
 @end
 
+/// Format → Sheet's toggles (`cmd_toggle_sheet_property`).
+typedef NS_ENUM(NSInteger, GnmSheetDisplayOption) {
+    GnmSheetDisplayOptionFormulas = 0,
+    GnmSheetDisplayOptionHideZeros,
+    GnmSheetDisplayOptionHideGridLines,
+    GnmSheetDisplayOptionHideColumnHeader,
+    GnmSheetDisplayOptionHideRowHeader,
+    GnmSheetDisplayOptionR1C1 NS_SWIFT_NAME(r1c1),
+    GnmSheetDisplayOptionRightToLeft,
+} NS_SWIFT_NAME(Sheet.DisplayOption);
+
 NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 @interface GnmSheet : NSObject
 
@@ -136,10 +147,21 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 @property (nonatomic, readonly) BOOL hidesGridLines;
 @property (nonatomic, readonly) BOOL hidesColumnHeader;
 @property (nonatomic, readonly) BOOL hidesRowHeader;
-/// The sheet's zoom (1.0 = 100%).  Setting it re-lays out the engine's
-/// column and row sizes and rendered values; the control reports back
-/// through `sheetGeometryDidChange:`.
+@property (nonatomic, readonly) BOOL displaysFormulas;
+@property (nonatomic, readonly) BOOL hidesZeros;
+@property (nonatomic, readonly) BOOL usesR1C1;
+/// One of the toggles as it stands.
+- (BOOL)displayOption:(GnmSheetDisplayOption)option NS_SWIFT_NAME(displayOption(_:));
+/// Flip one, undoable ("Toggle displaying formulæ" and so on); the
+/// delegate then hears `sheetGeometryDidChange:`.
+- (BOOL)toggleDisplayOption:(GnmSheetDisplayOption)option error:(NSError **)error NS_SWIFT_NAME(toggleDisplayOption(_:));
+/// The sheet's zoom (1.0 = 100%).  Setting it is `cmd_zoom` on this
+/// sheet ("Zoom Sheet1 to 150%", undoable); the engine re-lays out its
+/// column and row sizes and rendered values, and the control reports
+/// back through `sheetGeometryDidChange:`.
 @property (nonatomic) double zoomFactor;
+/// `cmd_zoom` on this sheet or on all the workbook's (the Zoom dialog).
+- (BOOL)setZoomFactor:(double)zoomFactor forAllSheets:(BOOL)all error:(NSError **)error NS_SWIFT_NAME(setZoomFactor(_:forAllSheets:));
 
 /// Sheet dimensions in cells.
 @property (nonatomic, readonly) NSInteger columnCount;
