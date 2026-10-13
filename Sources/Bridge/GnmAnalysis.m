@@ -19,6 +19,7 @@
 #include <tools/analysis-anova.h>
 #include <tools/random-generator.h>
 #include <tools/random-generator-cor.h>
+#include <tools/filter.h>
 
 static NSError *
 analysis_error (GnmEngine *engine, NSString *message)
@@ -48,7 +49,9 @@ single_range (Sheet *sheet, NSString *text)
 
 #pragma mark - Output
 
-@implementation GnmAnalysisOutput
+@implementation GnmAnalysisOutput {
+    BOOL _isInPlace;
+}
 
 - (instancetype)initPrivate
 {
@@ -74,10 +77,22 @@ single_range (Sheet *sheet, NSString *text)
     return output;
 }
 
++ (instancetype)inPlace
+{
+    GnmAnalysisOutput *output = [[self alloc] initPrivate];
+    output->_isInPlace = YES;
+    return output;
+}
+
+- (BOOL)isInPlace { return _isInPlace; }
+
 - (data_analysis_output_t *)_outputForSheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error
 {
     data_analysis_output_t *dao;
-    if (_isNewSheet)
+    if (_isInPlace) {
+        dao = dao_init (GNM_DAO_OUTPUT_INPLACE);
+        dao->dst_sheet = sheet;
+    } else if (_isNewSheet)
         dao = dao_init_new_sheet (sheet);
     else {
         GnmValue *range = single_range (sheet, _rangeName);
@@ -1291,6 +1306,109 @@ random_strings_find (GnmRandomDistribution distribution)
     rtool->variables = matrix->v_range.cell.b.row - matrix->v_range.cell.a.row + 1;
     rtool->matrix_type = _isCholesky ? random_gen_cor_type_cholesky : random_gen_cor_type_cov;
     return tool;
+}
+
+@end
+
+#pragma mark - Advanced filter
+
+@implementation GnmAdvancedFilter
+
+- (instancetype)init
+{
+    if (!(self = [super initWithTitle:@"Advanced Filter"]))
+        return nil;
+    _listRange = @"";
+    _criteriaRange = @"";
+    return self;
+}
+
+- (GnmAnalysisTool *)_engineToolForSheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error
+{
+    /* advanced_filter_update_sensitivity_cb */
+    GnmValue *list = single_range (sheet, _listRange);
+    if (!list) {
+        if (error)
+            *error = analysis_error (engine, @"The list range is invalid.");
+        return NULL;
+    }
+    GnmValue *criteria = single_range (sheet, _criteriaRange);
+    if (!criteria) {
+        value_release (list);
+        if (error)
+            *error = analysis_error (engine, @"The criteria range is invalid.");
+        return NULL;
+    }
+    GnmAnalysisTool *tool = gnm_advanced_filter_tool_new ();
+    GnmAdvancedFilterTool *ftool = GNM_ADVANCED_FILTER_TOOL (tool);
+    ftool->parent.base.range_1 = list;
+    ftool->parent.base.range_2 = criteria;
+    ftool->unique_only_flag = _uniqueOnly;
+    return tool;
+}
+
+- (NSString *)_failureDescriptionForEngineTool:(GnmAnalysisTool *)tool
+{
+    return [GnmAdvancedFilter descriptionOfFilterError:GNM_GENERIC_B_ANALYSIS_TOOL (tool)->base.err];
+}
+
++ (NSString *)descriptionOfFilterError:(int)err
+{
+    switch (err) {
+    case analysis_tools_noerr: return nil;
+    case analysis_tools_invalid_field: return @"The given criteria are invalid.";
+    case analysis_tools_no_records_found: return @"No matching records were found.";
+    default: return [NSString stringWithFormat:@"An unexpected error has occurred: %d.", err];
+    }
+}
+
+@end
+
+@implementation GnmSheet (Filtering)
+
+- (BOOL)applyAdvancedFilter:(GnmAdvancedFilter *)filter output:(GnmAnalysisOutput *)output error:(NSError **)error
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    if (!output.isInPlace)
+        return [self runAnalysis:filter output:output error:error] != nil;
+    /* advanced_filter_ok_clicked_cb's in-place branch */
+    Sheet *sheet = self.engineSheet;
+    GnmWorkbook *workbook = self.workbook;
+    if (!sheet || !workbook)
+        return NO;
+    GnmEngine *engine = workbook.engine;
+    GnmValue *list = single_range (sheet, filter.listRange);
+    if (!list) {
+        if (error)
+            *error = analysis_error (engine, @"The list range is invalid.");
+        return NO;
+    }
+    GnmValue *criteria = single_range (sheet, filter.criteriaRange);
+    if (!criteria) {
+        value_release (list);
+        if (error)
+            *error = analysis_error (engine, @"The criteria range is invalid.");
+        return NO;
+    }
+    data_analysis_output_t *dao = [output _outputForSheet:sheet engine:engine error:error];
+    if (!dao) {
+        value_release (list);
+        value_release (criteria);
+        return NO;
+    }
+    [engine _beginCollectingMessages];
+    gint err = advanced_filter (workbook.control, dao, list, criteria, filter.uniqueOnly);
+    NSArray *messages = [engine _endCollectingMessages];
+    value_release (list);
+    value_release (criteria);
+    dao_free (dao);
+    NSString *why = [GnmAdvancedFilter descriptionOfFilterError:err];
+    if (why) {
+        if (error)
+            *error = [engine _errorWithCode:GnmErrorCommandFailed description:why collected:messages];
+        return NO;
+    }
+    return YES;
 }
 
 @end

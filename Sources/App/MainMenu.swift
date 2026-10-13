@@ -104,6 +104,9 @@ enum MainMenu {
         viewMenu.addItem(withTitle: "Actual Size", action: Selector(("zoomActualSize:")), keyEquivalent: "0")
         viewMenu.addItem(withTitle: "Zoom…", action: Selector(("zoomDialog:")), keyEquivalent: "")
         viewMenu.addItem(.separator())
+        let fullScreen = viewMenu.addItem(withTitle: "Enter Full Screen", action: #selector(NSWindow.toggleFullScreen(_:)), keyEquivalent: "f")
+        fullScreen.keyEquivalentModifierMask = [.control, .command]
+        viewMenu.addItem(.separator())
         viewMenu.addItem(withTitle: "Freeze Panes", action: Selector(("freezePanes:")), keyEquivalent: "")
         menuBar.addItem(submenu(viewMenu, title: "View"))
 
@@ -176,6 +179,7 @@ enum MainMenu {
         let filterMenu = NSMenu(title: "Filter")
         filterMenu.addItem(withTitle: "Add Auto Filter", action: Selector(("toggleAutofilter:")), keyEquivalent: "")
         filterMenu.addItem(withTitle: "Show All", action: Selector(("showAllFilteredRows:")), keyEquivalent: "")
+        filterMenu.addItem(withTitle: "Advanced Filter…", action: Selector(("advancedFilter:")), keyEquivalent: "")
         dataMenu.addItem(submenu(filterMenu, title: "Filter"))
         dataMenu.addItem(.separator())
         dataMenu.addItem(withTitle: "Text to Columns…", action: Selector(("textToColumns:")), keyEquivalent: "")
@@ -277,6 +281,9 @@ enum MainMenu {
         menu.addItem(withTitle: "Tab Color…", action: Selector(("setTabColor:")), keyEquivalent: "")
         menu.addItem(withTitle: "Move Left", action: Selector(("moveSheetLeft:")), keyEquivalent: "")
         menu.addItem(withTitle: "Move Right", action: Selector(("moveSheetRight:")), keyEquivalent: "")
+        menu.addItem(.separator())
+        menu.addItem(withTitle: "Hide", action: Selector(("hideSheet:")), keyEquivalent: "")
+        menu.addItem(withTitle: "Unhide…", action: Selector(("unhideSheet:")), keyEquivalent: "")
         menu.addItem(.separator())
         menu.addItem(withTitle: "Remove", action: Selector(("removeSheet:")), keyEquivalent: "")
         return menu

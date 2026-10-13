@@ -32,6 +32,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1100, height: 720),
                               styleMask: [.titled, .closable, .miniaturizable, .resizable],
                               backing: .buffered, defer: false)
+        window.collectionBehavior.insert(.fullScreenPrimary)   // View → Enter Full Screen
         window.minSize = NSSize(width: 400, height: 300)
         window.tabbingMode = .disallowed
         super.init(window: window)
@@ -544,6 +545,12 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(removeSheet(_:)):
             return gridView.sheet != nil && workbook.canRemoveSheets
+        case #selector(hideSheet(_:)):
+            return gridView.sheet != nil && workbook.sheets.filter({ $0.isVisible }).count > 1
+        case #selector(unhideSheet(_:)):
+            return workbook.sheets.contains { !$0.isVisible } && window?.attachedSheet == nil
+        case #selector(advancedFilter(_:)):
+            return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(pasteSpecial(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil && workbook.canPaste
         case #selector(moveSheetLeft(_:)):
@@ -1348,6 +1355,70 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
                 presentMessage(error.localizedDescription)
                 return false
             }
+        }
+    }
+
+    // MARK: Advanced filter (Data → Filter)
+
+    /// Data → Filter → Advanced Filter…: the GTK dialog; in place the rows
+    /// that do not match are hidden, otherwise the matches are copied.
+    @objc func advancedFilter(_ sender: Any?) {
+        guard let window, let sheet = gridView.sheet, window.attachedSheet == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        AdvancedFilterDialog(sheet: sheet).present(in: window) { [weak self] filter, output in
+            guard let self else { return true }
+            do {
+                try sheet.applyAdvancedFilter(filter, output: output)
+                if output.isNewSheet, let last = workbook.sheets.last, last != gridView.sheet { workbook.select(last) }
+                gridView.needsDisplay = true
+                return true
+            } catch {
+                presentMessage(error.localizedDescription)
+                return false
+            }
+        }
+    }
+
+    // MARK: Sheet visibility (Edit → Sheet)
+
+    /// For the headless checks: which hidden sheet Unhide… picks.
+    nonisolated(unsafe) static var unhideChoiceForTesting: String?
+
+    @objc func hideSheet(_ sender: Any?) {
+        guard let current = gridView.sheet else { return }
+        runSheetCommand { workbook in
+            try workbook.setSheet(current, visible: false)
+            if let next = workbook.sheets.first(where: { $0.isVisible }) { workbook.select(next) }
+        }
+    }
+
+    /// The Manage Sheets dialog's visibility toggle, as a choice among the
+    /// hidden sheets.
+    @objc func unhideSheet(_ sender: Any?) {
+        guard let window, window.attachedSheet == nil else { return }
+        let hidden = workbook.sheets.filter { !$0.isVisible }
+        guard !hidden.isEmpty else { return }
+        let show = { [weak self] (sheet: Sheet) in
+            self?.runSheetCommand { workbook in
+                try workbook.setSheet(sheet, visible: true)
+                workbook.select(sheet)
+            }
+        }
+        if let choice = Self.unhideChoiceForTesting {
+            if let sheet = hidden.first(where: { $0.name == choice }) { show(sheet) }
+            return
+        }
+        let alert = NSAlert()
+        alert.messageText = "Unhide Sheet"
+        alert.informativeText = "Choose the sheet to show again."
+        alert.addButton(withTitle: "Unhide")
+        alert.addButton(withTitle: "Cancel")
+        let popUp = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 240, height: 26), pullsDown: false)
+        popUp.addItems(withTitles: hidden.map(\.name))
+        alert.accessoryView = popUp
+        alert.beginSheetModal(for: window) { response in
+            guard response == .alertFirstButtonReturn, popUp.indexOfSelectedItem >= 0, popUp.indexOfSelectedItem < hidden.count else { return }
+            show(hidden[popUp.indexOfSelectedItem])
         }
     }
 

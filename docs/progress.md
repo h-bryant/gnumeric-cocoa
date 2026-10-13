@@ -1437,6 +1437,25 @@
   `outline.m` (26 XCTest programs) and `GNM_SNAPSHOT_OUTLINE=1` with the
   window capture.
 
+## 2026-10-12: Advanced filter, hidden sheets, full screen
+
+- `GnmAdvancedFilter` on the analysis pattern (list and criteria ranges,
+  unique records) and `GnmSheet.applyAdvancedFilter:output:`: in place
+  it runs `advanced_filter` as the GTK's OK does (rows hidden, not
+  undoable; Show All restores them), otherwise the engine's tool through
+  `runAnalysis:` (a three-line heading, the header, the matches; no
+  match is not a refusal there).  `GnmAnalysisOutput.inPlace` is the
+  dialog's "Filter in-place".  `AdvancedFilterDialog` under Data →
+  Filter.
+- `GnmWorkbook.setSheet:visible:` (the Manage Sheets dialog's toggle,
+  `cmd_reorganize_sheets` over the "visibility" property; at least one
+  sheet stays visible).  Edit → Sheet → Hide and Unhide… (a chooser of
+  the hidden sheets); the tab strip already skipped hidden sheets.
+- View → Enter Full Screen (⌃⌘F): the window takes
+  `fullScreenPrimary`.
+- `filter_visibility.m` (27 XCTest programs) and
+  `GNM_SNAPSHOT_ADVFILTER=1`.
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -1454,8 +1473,8 @@
    printing, formula range selection by mouse and keyboard, the font
    shortcuts, autocompletion, the function selector, and array formulas;
    and all 27 Statistics tools; next the rest of Phase 5 by usage
-   frequency: a Manage Sheets dialog, more sort keys, the advanced
-   filter, a plugin manager, the scenarios and simulation tools) from
+   frequency: more sort keys, a Manage Sheets dialog, Consolidate and
+   Shuffle, a plugin manager, the scenarios and simulation tools) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -1479,7 +1498,7 @@
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
 3. The state at the end of 2026-10-12: `main` at the autocompletion and
-   outlines commit (after the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+   advanced-filter commit (after outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

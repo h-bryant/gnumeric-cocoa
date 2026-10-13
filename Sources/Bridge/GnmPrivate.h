@@ -188,6 +188,7 @@ GType gnm_cocoa_sheet_control_get_type (void);
 
 @interface GnmAnalysisOutput ()
 - (instancetype)initPrivate NS_DESIGNATED_INITIALIZER;
+@property (nonatomic, readonly) BOOL isInPlace;
 /// The engine's output description for a run on a sheet; the command
 /// that runs takes it over.  NULL with the dialogs' message.
 - (nullable data_analysis_output_t *)_outputForSheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error;
@@ -202,6 +203,10 @@ GType gnm_cocoa_sheet_control_get_type (void);
 - (nullable NSString *)_failureDescriptionForEngineTool:(GnmAnalysisTool *)tool;
 /// The function plugins the GTK dialog checks for (its `plugins[]`).
 - (NSArray<NSString *> *)_requiredPluginIdentifiers;
+@end
+
+@interface GnmAdvancedFilter ()
++ (nullable NSString *)descriptionOfFilterError:(int)err;
 @end
 
 @interface GnmGroupedAnalysis ()

@@ -696,6 +696,67 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_ADVFILTER"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // The advanced filter: a list in A1:B6 and criteria in D1:D2
+                // (Qty > 4) filtered in place through the dialog (captured
+                // to `-advfilter.png`), then the matches copied to G1; then
+                // a second sheet hidden and shown again.
+                let table: [(String, String)] = [("Name", "Qty"), ("apple", "3"), ("pear", "5"), ("apple", "7"), ("fig", "1"), ("kiwi", "9")]
+                do {
+                    for (i, row) in table.enumerated() {
+                        try sheet.setText(row.0, atColumn: 0, row: i, autocorrect: false)
+                        try sheet.setText(row.1, atColumn: 1, row: i, autocorrect: false)
+                    }
+                    try sheet.setText("Qty", atColumn: 3, row: 0, autocorrect: false)
+                    try sheet.setText(">4", atColumn: 3, row: 1, autocorrect: false)
+                } catch {
+                    NSLog("advfilter: data failed: %@", error.localizedDescription)
+                }
+                sheet.selectRange(CellRange(start: CellCoordinate(column: 0, row: 0), end: CellCoordinate(column: 1, row: 5)),
+                                  editPosition: CellCoordinate(column: 0, row: 0))
+                AdvancedFilterDialog.headlessDriver = { dialog in
+                    dialog.criteriaField.stringValue = "D1:D2"
+                    if let content = dialog.alert.accessoryView {
+                        content.layoutSubtreeIfNeeded()
+                        if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                            content.cacheDisplay(in: content.bounds, to: rep)
+                            let filterPath = (path as NSString).deletingPathExtension + "-advfilter.png"
+                            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: filterPath))
+                            NSLog("advfilter: captured %@ (%@)", filterPath, NSStringFromRect(content.bounds))
+                        }
+                    }
+                    return true
+                }
+                controller.advancedFilter(nil)
+                NSLog("advfilter: in place: rows visible %d %d %d %d %d", sheet.isRowVisible(1) ? 1 : 0, sheet.isRowVisible(2) ? 1 : 0,
+                      sheet.isRowVisible(3) ? 1 : 0, sheet.isRowVisible(4) ? 1 : 0, sheet.isRowVisible(5) ? 1 : 0)
+                AdvancedFilterDialog.headlessDriver = { dialog in
+                    dialog.listField.stringValue = "A1:B6"
+                    dialog.criteriaField.stringValue = "D1:D2"
+                    dialog.destination.selectItem(at: 1)
+                    dialog.outputField.stringValue = "G1"
+                    return true
+                }
+                controller.advancedFilter(nil)
+                AdvancedFilterDialog.headlessDriver = nil
+                NSLog("advfilter: copied: G1=%@ G2=%@ H2=%@ G4=%@ undo=%@", sheet.displayTextOfCell(atColumn: 6, row: 0) ?? "nil",
+                      sheet.displayTextOfCell(atColumn: 6, row: 1) ?? "nil", sheet.displayTextOfCell(atColumn: 7, row: 1) ?? "nil",
+                      sheet.displayTextOfCell(atColumn: 6, row: 3) ?? "nil", sheet.workbook?.undoLabel ?? "nil")
+                controller.appendSheet(nil)
+                let added = controller.gridView.sheet
+                controller.hideSheet(nil)
+                NSLog("advfilter: '%@' hidden=%d tabs=%ld now on '%@' undo=%@", added?.name ?? "nil", added?.isVisible == false ? 1 : 0, controller.tabCount,
+                      controller.gridView.sheet?.name ?? "nil", sheet.workbook?.undoLabel ?? "nil")
+                WorkbookWindowController.unhideChoiceForTesting = added?.name
+                controller.unhideSheet(nil)
+                WorkbookWindowController.unhideChoiceForTesting = nil
+                NSLog("advfilter: shown again=%d tabs=%ld on '%@'", added?.isVisible == true ? 1 : 0, controller.tabCount, controller.gridView.sheet?.name ?? "nil")
+                controller.workbook.select(sheet)
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_OUTLINE"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

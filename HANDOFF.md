@@ -367,9 +367,11 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    Data → Table…, Fill → Tabulate Dependency…, and the random
    generators (`GnmWhatIf.h`, `GnmRandomNumbersAnalysis`, `whatif.m`).
    Outlines followed (`GnmOutline.h`, the header strips in
-   `SheetHeaderView.swift`, `outline.m`).  Next, by usage: a Manage
-   Sheets dialog, more sort keys, the advanced filter, a plugin manager,
-   the scenarios and simulation tools;
+   `SheetHeaderView.swift`, `outline.m`), then the advanced filter,
+   sheet Hide / Unhide, and full screen (`GnmAdvancedFilter`,
+   `setSheet:visible:`, `filter_visibility.m`).  Next, by usage: more
+   sort keys, a Manage Sheets dialog, Data → Consolidate and Shuffle, a
+   plugin manager, the scenarios and simulation tools;
    image and widget editors (`cmd_so_set_*`) later; the smaller Phase 3
    gaps (Insert/Delete Cells,
    Goto and the name box, the formula bar, autocomplete, drag and drop,

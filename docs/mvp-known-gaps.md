@@ -45,7 +45,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | EditNames | ported | Edit → Define Names… (2026-10-12): list, add or update, remove, workbook or sheet scope |
 | EditComment | ported | Insert → Comment… (Edit Comment… over one) and the cell's context menu (2026-10-12) |
 | InsertSheet, InsertSheetAtEnd, EditDuplicateSheet, SheetRemove, SheetChangeName | ported | Edit → Sheet and the tab context menu; rename through a prompt |
-| SheetReorder | partial | Move Left / Move Right; no Manage Sheets dialog or drag |
+| SheetReorder | partial | Move Left / Move Right, and Edit → Sheet → Hide / Unhide… (the Manage Sheets dialog's visibility toggle, 2026-10-12); no Manage Sheets dialog or drag |
 | SheetResize | ported | Edit → Sheet → Resize… (2026-10-12): powers of two, optionally every sheet |
 | EditSelectAll | ported | ⌘A and the header corner |
 | EditSelectColumn, EditSelectRow | ported | header clicks and Edit → Select |
@@ -59,7 +59,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | ViewNew | no | second window on one workbook (`control_new` slot), Phase 3 |
 | ViewFreezeThawPanes | ported | View → Freeze/Unfreeze Panes with the GTK placement rules; files with frozen panes open frozen |
 | ViewStatusbar | partial | the auto-expression (Sum/Min/Max/Average/Count of the selection) sits at the right of the tab bar; no hide toggle, no other status fields |
-| ViewFullScreen | no | enable the window's full-screen behavior, Phase 3 |
+| ViewFullScreen | ported | View → Enter Full Screen (⌃⌘F), the window's full-screen behavior (2026-10-12) |
 | FormatWorkbook (workbook properties) | no | Phase 5 |
 | ViewZoom | ported | View → Zoom In/Out/Actual Size, and View → Zoom… (also Format → Sheet → Zoom…) with the presets or a typed percentage and "All sheets", over `cmd_zoom` (undoable, "Zoom Sheet1 to 150%") (2026-10-12) |
 
@@ -120,7 +120,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | ToolsMerge | no | Phase 5 |
 | EditFillSeries | ported | Edit → Fill → Series… (2026-10-12): linear, growth, date series in rows or columns |
 | DataAutoFilter, DataFilterShowAll | ported | Data → Filter (2026-10-12): buttons in the heading cells with the GTK list, Custom… and Top 10… sheets; Show All also drops every autofilter condition (GTK's only serves the advanced filter) |
-| DataFilterAdvancedfilter | no | Phase 5 |
+| DataFilterAdvancedfilter | ported | Data → Filter → Advanced Filter… (2026-10-12): list and criteria ranges, unique records, in place (`advanced_filter`, Show All brings the rows back) or copied to a range or a new sheet (the engine's tool with its three-line heading) |
 | DataOutline* (7) | ported | Data → Outline (2026-10-12): Hide Detail, Show Detail, Group…, Ungroup… (whole rows or columns settle the axis, otherwise a Rows/Columns question), Display Outlines, Outlines Below, Outlines Right; the headers grow an outline strip ((levels + 1) × 14 px as item-bar.c) with a bar per level, a corner where a group starts, and a − or + box on the column or row that ends it, clicked to collapse or expand (`cmd_selection_outline_change`); no global level buttons |
 | DataSlicer* (3) | no | Phase 5 |
 | DataImportText, DataImportOther, DataExportText, DataExportCSV, DataExport, DataExportRepeat | partial | Save As to CSV writes the current sheet with the exporter's defaults; Save As to "Text (configurable)" asks the GTK export dialog's options first; plain text opens through the import assistant and File → Import Text… (⇧⌘O) sends any file through it, `.csv` and `.tsv` take the guessed options (2026-10-12); no DataImportOther, DataExportRepeat |

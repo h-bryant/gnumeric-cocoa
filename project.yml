@@ -98,6 +98,8 @@ targets:
     templates: [BridgeTestProgram]
   outline:
     templates: [BridgeTestProgram]
+  filter_visibility:
+    templates: [BridgeTestProgram]
   BridgeTests:
     type: bundle.unit-test
     platform: macOS
@@ -130,6 +132,7 @@ targets:
       - target: functions
       - target: whatif
       - target: outline
+      - target: filter_visibility
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.github.h-bryant.gnumeric-cocoa.BridgeTests

@@ -22,6 +22,9 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(AnalysisOutput)
 @interface GnmAnalysisOutput : NSObject
 - (instancetype)init NS_UNAVAILABLE;
 + (instancetype)new NS_UNAVAILABLE;
+/// "Filter in-place": the rows that match stay, the others are hidden
+/// (only the advanced filter takes it).
++ (instancetype)inPlace;
 /// A new sheet after the others, named after the tool ("Descriptive
 /// Statistics (1)"), and focused.
 + (instancetype)onNewSheet NS_SWIFT_NAME(newSheet());
@@ -523,6 +526,30 @@ NS_SWIFT_NAME(CorrelatedRandomNumbersAnalysis)
 @property (nonatomic) BOOL isCholesky;
 /// 2 at first.
 @property (nonatomic) NSInteger count;
+@end
+
+/// Data → Filter → Advanced Filter… (dialog-advanced-filter.c): the
+/// rows of a list whose values meet the criteria, as a database
+/// function reads them (a header row, then conditions), left in place
+/// with the rest hidden, or copied to a range or a new sheet.
+NS_SWIFT_NAME(AdvancedFilter)
+@interface GnmAdvancedFilter : GnmAnalysis
+- (instancetype)init;
+/// The list with its header row.
+@property (nonatomic, copy) NSString *listRange;
+/// The criteria: field names over conditions.
+@property (nonatomic, copy) NSString *criteriaRange;
+/// "Unique records only".
+@property (nonatomic) BOOL uniqueOnly;
+@end
+
+@interface GnmSheet (Filtering)
+/// Run the filter: in place (`advanced_filter`, not undoable; Data →
+/// Filter → Show All brings the rows back) or as an analysis tool to the
+/// output.  NO with the dialog's messages: an invalid range, criteria
+/// that do not parse, no matching records.
+- (BOOL)applyAdvancedFilter:(GnmAdvancedFilter *)filter output:(GnmAnalysisOutput *)output error:(NSError **)error
+    NS_SWIFT_NAME(applyAdvancedFilter(_:output:));
 @end
 
 @interface GnmSheet (Analysis)

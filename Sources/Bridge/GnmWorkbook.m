@@ -438,6 +438,31 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
     } description:@"Could not rename the sheet." error:error];
 }
 
+- (BOOL)setSheet:(GnmSheet *)sheet visible:(BOOL)visible error:(NSError **)error
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    Sheet *target = sheet.engineSheet;
+    if (target == NULL)
+        return NO;
+    if (sheet_is_visible (target) == (visible != NO))
+        return YES;
+    if (!visible) {
+        /* cb_toggled_visible */
+        int shown = 0;
+        for (int i = workbook_sheet_count (_wb) - 1; i >= 0; i--)
+            if (sheet_is_visible (workbook_sheet_by_index (_wb, i)))
+                shown++;
+        if (shown <= 1) {
+            if (error)
+                *error = [_engine _errorWithCode:GnmErrorCommandFailed description:@"At least one sheet must remain visible!" collected:@[]];
+            return NO;
+        }
+    }
+    return [self _reorganizeSheetsWith:^{
+        g_object_set (G_OBJECT (target), "visibility", visible ? GNM_SHEET_VISIBILITY_VISIBLE : GNM_SHEET_VISIBILITY_HIDDEN, NULL);
+    } undoFocus:target error:error];
+}
+
 - (BOOL)moveSheet:(GnmSheet *)sheet toIndex:(NSInteger)index error:(NSError **)error
 {
     Sheet *target = sheet.engineSheet;

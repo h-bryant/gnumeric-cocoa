@@ -88,6 +88,9 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Workbook)
 - (BOOL)renameSheet:(GnmSheet *)sheet to:(NSString *)name error:(NSError **)error NS_SWIFT_NAME(rename(_:to:));
 /// Move `sheet` to position `index` in the workbook order.
 - (BOOL)moveSheet:(GnmSheet *)sheet toIndex:(NSInteger)index error:(NSError **)error NS_SWIFT_NAME(move(_:toIndex:));
+/// Hide a sheet or show it again (the Manage Sheets dialog's visibility
+/// toggle, `cmd_reorganize_sheets`); at least one sheet stays visible.
+- (BOOL)setSheet:(GnmSheet *)sheet visible:(BOOL)visible error:(NSError **)error NS_SWIFT_NAME(setSheet(_:visible:));
 /// Resize `sheets` to `columns` by `rows` (`cmd_resize_sheets`), one
 /// undoable command; the first sheet keeps the focus on undo.  Sizes
 /// must be powers of two within the limits below (the GTK dialog's
