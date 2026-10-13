@@ -2024,6 +2024,17 @@
   The GTK's Data → Import Other File… is its file chooser in an import
   style; File → Open already takes every format the engine reads.
 
+### 2026-10-13 (later): ViewNew left out
+
+- Henry chose to leave View → New View… out.  The bridge assumes one
+  engine view, one control, and one delegate per workbook; an
+  independent second view (the GTK's default) would need a sibling
+  wrapper and every notification fanned out to each view, two to three
+  sessions of work for a rarely used feature, and a shared view alone
+  shows the same sheet in both windows.  `docs/mvp-known-gaps.md` keeps
+  the reasoning; the decision can be revisited if side-by-side sheets
+  of one file are wanted.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and

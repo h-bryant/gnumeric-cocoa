@@ -57,7 +57,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 
 | Action | Status | Notes / Phase |
 |---|---|---|
-| ViewNew | no | second window on one workbook (`control_new` slot), Phase 3 |
+| ViewNew | no | left out by decision on 2026-10-13: the GTK's View → New View… opens a second window with its own view (own sheet, selection, scrolling) or a shared one; the bridge is built on one view, one control, and one delegate per workbook, so an independent view means a sibling wrapper and fanning every notification out to each view (two to three sessions), and a shared view alone always shows the same sheet, which misses the point; revisit if side-by-side sheets of one file are wanted |
 | ViewFreezeThawPanes | ported | View → Freeze/Unfreeze Panes with the GTK placement rules; files with frozen panes open frozen |
 | ViewStatusbar | ported | the auto-expression (Sum/Min/Max/Average/Count of the selection) sits at the right of the tab bar; View → Status Bar (2026-10-13) hides and shows it for every window, remembered in the defaults; the GTK's other status fields are its "END" text and the file-loading progress bar, neither of which applies here (loads are synchronous) |
 | ViewFullScreen | ported | View → Enter Full Screen (⌃⌘F), the window's full-screen behavior (2026-10-12) |
