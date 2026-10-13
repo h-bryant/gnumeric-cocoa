@@ -65,7 +65,7 @@ not a Homebrew formula; `dylibbundler` 1.0.5 is (Phase 6).
 | `scripts/build-app.sh` | swiftc build of `Sources/App` plus the bridge into `build/app/GnumericCocoa.app` (ad-hoc signed) |
 | `scripts/test-xcode.sh` | build the Xcode test bundle and run it with `xcrun xctest`; `--xcodebuild` uses `xcodebuild test` (needs developer mode) |
 | `scripts/bundle.sh` | make `build/dist/GnumericCocoa.app`, a relocatable bundle: the dylib closure in `Contents/Frameworks` rewritten to `@rpath`, the Gnumeric and goffice plugins, the templates, the GSettings schemas, the gdk-pixbuf loaders, and every bundled library's license texts with an index under `Contents/Resources`, everything ad-hoc signed (see "Bundling") |
-| `scripts/gen-gtk-labels.py` | regenerate `Sources/App/GTKLabels.swift`, the GTK's action labels by plain title, from `upstream/gnumeric/src/wbc-gtk-actions.c` (run after an upstream update) |
+| `scripts/gen-gtk-labels.py` | regenerate `Sources/App/GTKLabels.swift`: the GTK's action labels by plain title from `upstream/gnumeric/src/wbc-gtk-actions.c`, and the loose matches of the app's own strings (scanned from `Sources/App`) against the catalog's message ids (`po/de.po`); run after an upstream update or after adding dialog strings |
 | `scripts/verify-bundle.sh` | make the bundle and run it headlessly with `build/prefix` renamed away, logging what the engine found and whether the licenses are inside (`GNM_SNAPSHOT_BUNDLE=1`) |
 | `scripts/run-app.sh [file ...]` | launch that app directly; `GNM_SNAPSHOT=out.png` writes the grid (`out.png`), the whole window through `cacheDisplay` (`out-window.png`) and through `CALayer.render` (`out-layers.png`), then quits; `GNM_DEBUG_LAYOUT=1` logs view frames, layer state, and every grid and header draw with its transform |
 
@@ -367,9 +367,12 @@ as do the dialogs' labels, check boxes, radio buttons, window titles,
 alert headings, the rows their `label`, `heading`, and `row` helpers
 build, their pop-up entries (`addItems(withTitles:)`), and the SwiftUI
 dialogs' `Text`, `Toggle`, `Picker`, `Section`, and `Button` strings.
-Still English: the dialogs' explanatory sentences and placeholders, the
-labels the GTK words differently, and the titles with no GTK
-counterpart.
+A string that is a catalog message apart from case, a trailing colon, an
+ellipsis, or spacing matches through `GTKLabels.looseMatches`, which the
+generator builds by scanning the Swift sources; `Localization.aliases`
+maps the rest by hand.  Still English: the dialogs' explanatory sentences
+and placeholders, the labels with no GTK wording, and the titles with no
+GTK counterpart.
 
 ## Xcode build
 

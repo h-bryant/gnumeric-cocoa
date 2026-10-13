@@ -413,9 +413,10 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    the menu bar's titles, the toolbar, the context menus, and the
    dialogs' buttons, labels, check boxes, titles, helper-built rows,
    pop-ups, and SwiftUI views follow it through the GTK's own labels
-   (`Localization`, `scripts/gen-gtk-labels.py`).  Next: aliases for
-   the labels the GTK words differently and the dialogs' sentences (the
-   rest of the localization row of `docs/mvp-known-gaps.md`), Phase 6's remaining
+   (`Localization`, `scripts/gen-gtk-labels.py`, whose loose matches
+   and the hand aliases cover the labels worded differently).  Next:
+   whatever Henry sees in German dialogs (the rest of the localization
+   row of `docs/mvp-known-gaps.md` is the app's own sentences), Phase 6's remaining
    items (a run on a Mac without Homebrew, a real signature; the
    relocatable bundle, the licenses, and the locale data are done since
    2026-10-13), and Henry's

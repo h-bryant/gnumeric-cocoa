@@ -2315,6 +2315,29 @@
   worded differently from the GTK's (the analysis dialogs' "Place in:",
   "Predicted mean:", …), which want an alias each.
 
+### 2026-10-13 (later): loose matches and aliases for the dialogs' labels
+
+- Of the app's 750 strings that go through `Localization.title`, 239 had
+  no translation, most of them a catalog message apart from case, a
+  trailing colon, an ellipsis, or spacing ("Elapsed time:" is "Elapsed
+  Time:", "Set target cell:" is "_Set Target Cell:       " with the
+  GTK's padding).  `scripts/gen-gtk-labels.py` now scans the Swift
+  sources for those strings, matches them loosely against the catalog's
+  message ids (`po/de.po`, which every language's file shares), and
+  writes `GTKLabels.looseMatches`: 106 entries.  45 hand aliases cover
+  wording the GTK chose differently ("Column input cell:" → "Co_lumn
+  Input:", "Range contains a header" → "Sort range has a _header",
+  "Return moves the selection:" → "Enter _Moves Selection").
+- `GNM_SNAPSHOT_MENUS=1` under German: Case sensitive →
+  Groß-/Kleinschreibung berücksichtigen, Shapiro-Francia test →
+  Shapiro-Francia-Test, Sort A → Z → Aufsteigend sortieren, AutoFormat
+  → Auto-Formatierung, Column input cell: → Spalteneingabe:.  The
+  German catalog renders "_Predicted Mean:" as "Vorhergesagter
+  Medianwert:" (its own error, the same text as the median's).
+- Left: the app's own sentences and placeholders, the labels with no
+  GTK wording ("Place in:", "Tolerance:", "At least:"), and the titles
+  with no GTK counterpart.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -2355,8 +2378,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-13: `main` at the dialog-rows-and-
-   SwiftUI commit (after the stock labels and dialog chrome, the toolbar and buttons, the menu titles, the engine's messages, right-to-left sheets, the bundled
+3. The state at the end of 2026-10-13: `main` at the loose-matches-and-
+   aliases commit (after the dialog rows and SwiftUI, the stock labels and dialog chrome, the toolbar and buttons, the menu titles, the engine's messages, right-to-left sheets, the bundled
    licenses, the relocatable bundle, the workbook properties, multi-line editing, drag and drop, the toolbar, the widget editors, AutoFormat, scenarios and simulation, the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,

@@ -2738,6 +2738,8 @@ enum Snapshot {
                 NSLog("menus: chrome=%@", chrome.joined(separator: " | "))
                 let rows: [String] = ["Rows:", "Columns:", "Protection", "Border", "Background", "Keep formats with the data", "Sheets:"].map { Localization.title($0) }
                 NSLog("menus: rows=%@", rows.joined(separator: " | "))
+                let loose: [String] = ["Case sensitive", "Predicted mean:", "Shapiro-Francia test", "Column input cell:", "Return moves the selection:", "Sort A → Z", "AutoFormat"].map { Localization.title($0) }
+                NSLog("menus: loose=%@", loose.joined(separator: " | "))
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }

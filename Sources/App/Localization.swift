@@ -71,6 +71,47 @@ enum Localization {
         "Objects": "_Object",
         "Open": "_Open",
         "Save As": "Save _As",
+        "Sort A → Z": "Sort Ascending",
+        "Sort Z → A": "Sort Descending",
+        // The dialogs
+        "Autocomplete text in cells": "A_uto Complete Text in Cells",
+        "Average rank for ties": "_Average rank",
+        "Capitalize the first letter of a sentence": "Capitalize _first letter of sentence",
+        "Censorship column:": "Censor co_lumn:",
+        "Column input cell:": "Co_lumn Input:",
+        "Compare Sheets": "Compare Sheets...",
+        "Conditional Formatting": "C_onditional Formatting...",
+        "Confidence interval for the mean, 1 − α:": "Confidence Interval for the _Mean",
+        "Data Validation": "Validation",
+        "Don't change formulae": "D_o not change formulæ",
+        "Find and Replace": "Search _& Replace...",
+        "Formulas": "Formulæ",
+        "Go To": "Go To...",
+        "Goal Seek": "_Goal Seek...",
+        "Header and footer": "Headers and Footers",
+        "Ignore empty cells": "Ignore _blank cells",
+        "Ignore separators at the start of a line": "Ignore any separators at the beginning of lines",
+        "Import Text": "Import _Text File...",
+        "Kth largest, K:": "Kth _Largest",
+        "Kth smallest, K:": "Kth _Smallest",
+        "Linear (LP/MILP)": "_Linear Model (LP/MILP)",
+        "Mark cells with spreadsheet functions": "By default, mark cells with spreadsheet functions",
+        "Mark cells with truncated content": "By default, mark cells with truncated content",
+        "Matrix is:": "_Matrix:",
+        "Max time (seconds):": "Max _Time (sec.):",
+        "Merge zone:": "Merge _Range:",
+        "Non-linear": "_Non-Linear Model",
+        "Number format:": "Number Format",
+        "Percentage of normal size:": "% of normal size",
+        "Quadratic (QP/MIQP)": "_Quadratic Model (QP/MIQP)",
+        "Range contains a header": "Sort range has a _header",
+        "Return moves the selection:": "Enter _Moves Selection",
+        "Row and column headers": "Row and co_lumn headings",
+        "Row input cell:": "_Row Input:",
+        "Sensitivity report": "_Sensitivity",
+        "Use the first series as the shared abscissa": "Use first series as shared abscissa",
+        "Use thousands separator": "Thousands Separator",
+        "Whole words only": "Ma_tch whole words only",
         // The context menus and the dialogs' buttons
         "Delete Comment": "_Remove Comments",
         "Insert Comment…": "Add _Comment...",
@@ -94,13 +135,15 @@ enum Localization {
         let colon = english.hasSuffix(":")
         let bare = colon ? String(english.dropLast()) : english
         let dotted = bare.replacingOccurrences(of: "…", with: "...")
-        var candidates = [GTKLabels.messages[bare], aliases[bare], dotted, "_" + dotted].compactMap { $0 }
+        var candidates = [GTKLabels.messages[english], aliases[english], GTKLabels.looseMatches[english],
+                          GTKLabels.messages[bare], aliases[bare], GTKLabels.looseMatches[bare],
+                          dotted, "_" + dotted].compactMap { $0 }
         if colon { candidates = [dotted + ":", "_" + dotted + ":"] + candidates }
         if dotted.hasSuffix("...") {
             // "Open…" is the stock "_Open", "Save As…" the alias "Save _As";
             // the ellipsis comes back below.
             let short = String(dotted.dropLast(3))
-            candidates += [GTKLabels.messages[short], aliases[short], short, "_" + short].compactMap { $0 }
+            candidates += [GTKLabels.messages[short], aliases[short], GTKLabels.looseMatches[short], short, "_" + short].compactMap { $0 }
         }
         func lookup(_ message: String) -> String? {
             let plain = engine.localizedString(message)
