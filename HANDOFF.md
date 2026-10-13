@@ -151,8 +151,9 @@ flipped grid view drawing through cairo-quartz with a native selection, mouse
 and keyboard selection, column and row headers (plain views beside the scroll
 view since 2026-10-11; `NSRulerView` left the grid invisible on macOS 26) with
 click-to-select and a select-all corner, zoom (View menu), and scrolling sheet
-tabs; Xcode builds it and runs the XCTest bundle. Not yet: frozen panes
-(Phase 3) and right-to-left sheets (Phase 7). Details in `docs/progress.md`.
+tabs; Xcode builds it and runs the XCTest bundle. Frozen panes (Phase 3)
+and right-to-left sheets (Phase 7, 2026-10-13) came later. Details in
+`docs/progress.md`.
 
 ### Phase 2 — Editing
 
@@ -406,11 +407,11 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    stub in 1.12.62) and the goffice components (no component plugins
    are installed, so the GTK greys them out here too); the gap table
    has the reasoning for all three.  Custom document properties came
-   last (the Properties dialog's fourth tab).  Next: the sheet
-   direction row of `docs/mvp-known-gaps.md` (right-to-left, a Phase 7
-   item), Phase 6's remaining items (a run on a Mac without Homebrew,
-   locale data, a real signature; the relocatable bundle and the bundled
-   licenses are done since 2026-10-13), and Henry's
+   last (the Properties dialog's fourth tab).  Right-to-left sheets (Phase 7) came
+   the same day.  Next: localization (the last Phase 7 row of
+   `docs/mvp-known-gaps.md`), Phase 6's remaining items (a run on a Mac
+   without Homebrew, locale data, a real signature; the relocatable
+   bundle and the bundled licenses are done since 2026-10-13), and Henry's
    on-screen checks (his first report on 2026-10-13 found four faults,
    all fixed the same day: `docs/progress.md`).
 6. Headless checks for all of it: `GNM_SNAPSHOT=out.png scripts/run-app.sh

@@ -17,11 +17,14 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
                 old.delegate = nil
             }
             sheet?.delegate = self
+            let wasRightToLeft = layoutIsRightToLeft
+            layoutIsRightToLeft = isRightToLeft
             updateFrameSize()
             updateCommentToolTips()
-            scroll(.zero)
+            scrollToSheetStart()
             needsDisplay = true
             headerViews.forEach { $0.needsDisplay = true }
+            if wasRightToLeft != layoutIsRightToLeft { directionDidChange?() }
         }
     }
     var headerViews: [SheetHeaderView] = []
@@ -155,17 +158,81 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     }
 
     /// The scroll origin the clip view must not go above: the first
-    /// unfrozen cell sits right under the frozen strips.
+    /// unfrozen cell sits right under the frozen strips (at the top and
+    /// left; for a right-to-left sheet the columns strip is at the right,
+    /// and `maximumScrollOriginX` bounds the origin instead).
     var minimumScrollOrigin: NSPoint {
         guard let panes else { return .zero }
-        return panes.origin
+        return NSPoint(x: isRightToLeft ? 0 : panes.origin.x, y: panes.origin.y)
+    }
+
+    var maximumScrollOriginX: CGFloat? {
+        guard isRightToLeft, let panes, panes.hasColumns, let clip = enclosingScrollView?.contentView else { return nil }
+        return mirrorWidth - panes.origin.x - clip.bounds.width
+    }
+
+    // MARK: Right to left
+
+    /// A right-to-left sheet (`text_is_rtl`, Format → Sheet → Right to
+    /// Left): column A sits at the right edge of the document view and the
+    /// columns run leftward, as the GTK's canvas direction mirrors them.
+    /// Sheet pixels keep counting from column A; the mirror lives in the
+    /// sheet-to-view mapping below and in the drawing passes.
+    var isRightToLeft: Bool { sheet?.isRightToLeft ?? false }
+
+    /// The view x of sheet x 0 for a right-to-left sheet: the document's
+    /// right edge (`updateFrameSize` keeps the scroll position on the same
+    /// cells as the frame grows).
+    var mirrorWidth: CGFloat { bounds.width }
+
+    /// The direction the view was last laid out for.  A change flips the
+    /// scroll position so the same columns stay in view, and tells the
+    /// window controller, which moves the row header to the other side.
+    private var layoutIsRightToLeft = false
+    var directionDidChange: (() -> Void)?
+
+    func syncDirection() {
+        let rtl = isRightToLeft
+        guard rtl != layoutIsRightToLeft else { return }
+        layoutIsRightToLeft = rtl
+        if let clip = enclosingScrollView?.contentView {
+            var origin = clip.bounds.origin
+            origin.x = max(0, bounds.width - clip.bounds.width - origin.x)
+            clip.scroll(to: clip.constrainBoundsRect(NSRect(origin: origin, size: clip.bounds.size)).origin)
+            enclosingScrollView?.reflectScrolledClipView(clip)
+        }
+        needsDisplay = true
+        headerViews.forEach { $0.needsDisplay = true }
+        directionDidChange?()
+    }
+
+    /// The document's start: A1 at the top left, or at the top right of a
+    /// right-to-left sheet.
+    private func scrollToSheetStart() {
+        guard let clip = enclosingScrollView?.contentView else { scroll(.zero); return }
+        scroll(NSPoint(x: isRightToLeft ? max(0, bounds.width - clip.bounds.width) : 0, y: 0))
+    }
+
+    /// The sheet x range the visible rect covers, apart from the strips.
+    var visibleSheetXRange: (minX: CGFloat, maxX: CGFloat) {
+        let visible = visibleRect
+        return isRightToLeft ? (mirrorWidth - visible.maxX, mirrorWidth - visible.minX) : (visible.minX, visible.maxX)
     }
 
     // Sheet pixels and view points coincide, except where a frozen strip
-    // covers the visible rect: there the view shows the frozen cells.
+    // covers the visible rect (there the view shows the frozen cells) and
+    // on a right-to-left sheet (mirrored).
     func viewX(forSheetX x: CGFloat) -> CGFloat {
-        guard let panes, panes.hasColumns, x >= panes.origin.x, x < panes.origin.x + panes.width else { return x }
-        return visibleRect.minX + (x - panes.origin.x)
+        if let panes, panes.hasColumns, x >= panes.origin.x, x < panes.origin.x + panes.width {
+            return isRightToLeft ? visibleRect.maxX - (x - panes.origin.x) : visibleRect.minX + (x - panes.origin.x)
+        }
+        return isRightToLeft ? mirrorWidth - x : x
+    }
+
+    /// The view x of a column's right edge in sheet pixels (exclusive): on
+    /// a right-to-left sheet the column's left edge in the view.
+    func viewX(forSheetRightEdge x: CGFloat) -> CGFloat {
+        isRightToLeft ? viewX(forSheetX: x - 0.5) - 0.5 : viewX(forSheetX: x - 0.5) + 0.5
     }
 
     func viewY(forSheetY y: CGFloat) -> CGFloat {
@@ -174,8 +241,16 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     }
 
     func sheetX(forViewX x: CGFloat) -> CGFloat {
-        guard let panes, panes.hasColumns, x >= visibleRect.minX, x < visibleRect.minX + panes.width else { return x }
-        return panes.origin.x + (x - visibleRect.minX)
+        if let panes, panes.hasColumns {
+            if isRightToLeft {
+                if x > visibleRect.maxX - panes.width, x <= visibleRect.maxX {
+                    return panes.origin.x + (visibleRect.maxX - x)
+                }
+            } else if x >= visibleRect.minX, x < visibleRect.minX + panes.width {
+                return panes.origin.x + (x - visibleRect.minX)
+            }
+        }
+        return isRightToLeft ? mirrorWidth - x : x
     }
 
     func sheetY(forViewY y: CGFloat) -> CGFloat {
@@ -188,9 +263,10 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     }
 
     /// Where a sheet rect appears; one that straddles a frozen boundary
-    /// keeps its size and follows its origin.
+    /// keeps its size and follows its origin (its right edge, right to left).
     func viewRect(forSheetRect r: NSRect) -> NSRect {
-        NSRect(x: viewX(forSheetX: r.minX), y: viewY(forSheetY: r.minY), width: r.width, height: r.height)
+        let x = isRightToLeft ? viewX(forSheetRightEdge: r.maxX) : viewX(forSheetX: r.minX)
+        return NSRect(x: x, y: viewY(forSheetY: r.minY), width: r.width, height: r.height)
     }
 
     /// The part of the visible rect that scrolls: the visible rect minus
@@ -198,7 +274,8 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     var scrollingVisibleRect: NSRect {
         var r = visibleRect
         if let panes {
-            r.origin.x += panes.width; r.size.width -= panes.width
+            if !isRightToLeft { r.origin.x += panes.width }
+            r.size.width -= panes.width
             r.origin.y += panes.height; r.size.height -= panes.height
         }
         return r
@@ -266,6 +343,9 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         editor.onCancel = { [weak self] in self?.cancelEditing() }
         editor.onArrow = { [weak self] columns, rows, extend, jump in
             guard let self else { return false }
+            // The arrows follow the screen: Left is the next column of a
+            // right-to-left sheet (gnm-pane.c).
+            let columns = isRightToLeft ? -columns : columns
             if moveFormulaRange(columns: columns, rows: rows, extend: extend, jump: jump) { return true }
             // An entry started by typing ends on an arrow key, which then
             // moves the cursor (the GTK's wbcg_edit_start without the
@@ -314,7 +394,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         let minimum = NSRect(x: frame.minX, y: frame.minY, width: max(frame.width, 80 * zoom), height: max(frame.height, 16 * zoom))
         let height = lines.count > 1 ? max(minimum.height, lineHeight * CGFloat(lines.count) + 4) : minimum.height
         let width = max(minimum.width, widest + 8)
-        let fitted = NSRect(x: minimum.minX, y: minimum.minY, width: width, height: height)
+        let fitted = viewRect(forSheetRect: NSRect(x: minimum.minX, y: minimum.minY, width: width, height: height))
         if fitted != editor.frame {
             editor.frame = fitted
             needsDisplay = true
@@ -346,7 +426,16 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         let height = sheet.topEdge(ofRow: min(extent.row + 1, sheet.rowCount)) + visible.height
         let size = NSSize(width: ceil(width), height: ceil(height))
         if size != frame.size {
+            let previousWidth = frame.width
             setFrameSize(size)
+            if isRightToLeft, let clip = enclosingScrollView?.contentView {
+                // Column A stays at the right edge: the scroll origin moves
+                // with the growth.
+                var origin = clip.bounds.origin
+                origin.x += size.width - previousWidth
+                clip.scroll(to: clip.constrainBoundsRect(NSRect(origin: origin, size: clip.bounds.size)).origin)
+                enclosingScrollView?.reflectScrolledClipView(clip)
+            }
         }
     }
 
@@ -394,52 +483,116 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
             dirtyRect.fill()
             return
         }
-        drawPass(sheet, context: context, dirtyRect: dirtyRect)
-        guard let panes else { return }
-        // Frozen strips: the sheet drawn again, shifted so the frozen cells
-        // land at the top and left of the visible rect, clipped to each strip.
+        // Each pass maps sheet pixels to the view: the main one as they
+        // are; a frozen strip shifted so its cells land at the top or left
+        // of the visible rect; a right-to-left sheet mirrored, about the
+        // document's right edge or, under the frozen columns strip (then at
+        // the right), about the visible rect's.  Shapes drawn in sheet
+        // coordinates come out mirrored by the transform; the engine places
+        // the cells and objects itself, and text is set upright locally.
+        let rtl = isRightToLeft
+        var passes = [DrawPass(clip: dirtyRect, shift: .zero, mirror: rtl ? mirrorWidth : nil)]
         let visible = visibleRect
-        var strips: [(clip: NSRect, shift: NSPoint)] = []
-        if panes.hasRows {
-            strips.append((NSRect(x: visible.minX + panes.width, y: visible.minY,
-                                  width: visible.width - panes.width, height: panes.height),
-                           NSPoint(x: 0, y: visible.minY - panes.origin.y)))
+        if let panes {
+            let stripX = rtl ? visible.maxX - panes.width : visible.minX
+            let stripMirror: CGFloat? = rtl ? visible.maxX + panes.origin.x : nil
+            let stripShift = rtl ? 0 : visible.minX - panes.origin.x
+            if panes.hasRows {
+                passes.append(DrawPass(clip: NSRect(x: rtl ? visible.minX : visible.minX + panes.width, y: visible.minY,
+                                                    width: visible.width - panes.width, height: panes.height),
+                                       shift: NSPoint(x: 0, y: visible.minY - panes.origin.y), mirror: rtl ? mirrorWidth : nil))
+            }
+            if panes.hasColumns {
+                passes.append(DrawPass(clip: NSRect(x: stripX, y: visible.minY + panes.height,
+                                                    width: panes.width, height: visible.height - panes.height),
+                                       shift: NSPoint(x: stripShift, y: 0), mirror: stripMirror))
+            }
+            if panes.hasRows && panes.hasColumns {
+                passes.append(DrawPass(clip: NSRect(x: stripX, y: visible.minY, width: panes.width, height: panes.height),
+                                       shift: NSPoint(x: stripShift, y: visible.minY - panes.origin.y), mirror: stripMirror))
+            }
         }
-        if panes.hasColumns {
-            strips.append((NSRect(x: visible.minX, y: visible.minY + panes.height,
-                                  width: panes.width, height: visible.height - panes.height),
-                           NSPoint(x: visible.minX - panes.origin.x, y: 0)))
-        }
-        if panes.hasRows && panes.hasColumns {
-            strips.append((NSRect(x: visible.minX, y: visible.minY, width: panes.width, height: panes.height),
-                           NSPoint(x: visible.minX - panes.origin.x, y: visible.minY - panes.origin.y)))
-        }
-        for strip in strips {
-            let clip = strip.clip.intersection(dirtyRect)
+        for (index, pass) in passes.enumerated() {
+            let clip = index == 0 ? dirtyRect : pass.clip.intersection(dirtyRect)
             guard !clip.isEmpty else { continue }
             NSGraphicsContext.saveGraphicsState()
-            clip.clip()
-            let transform = NSAffineTransform()
-            transform.translateX(by: strip.shift.x, yBy: strip.shift.y)
-            transform.concat()
-            drawPass(sheet, context: context, dirtyRect: clip.offsetBy(dx: -strip.shift.x, dy: -strip.shift.y))
+            if index > 0 { clip.clip() }
+            context.concatenate(pass.transform)
+            currentPass = pass
+            drawPass(sheet, context: context, dirtyRect: clip.applying(pass.transform.inverted()))
+            currentPass = nil
             NSGraphicsContext.restoreGraphicsState()
         }
+        guard let panes else { return }
         // The pane boundaries.
         NSColor.tertiaryLabelColor.setFill()
         if panes.hasRows {
             NSRect(x: visible.minX, y: visible.minY + panes.height - 1, width: visible.width, height: 1).fill()
         }
         if panes.hasColumns {
-            NSRect(x: visible.minX + panes.width - 1, y: visible.minY, width: 1, height: visible.height).fill()
+            NSRect(x: rtl ? visible.maxX - panes.width : visible.minX + panes.width - 1, y: visible.minY, width: 1, height: visible.height).fill()
         }
+    }
+
+    /// One drawing pass: how a region's sheet pixels reach the view.
+    struct DrawPass {
+        let clip: NSRect
+        let shift: NSPoint
+        /// The view x of sheet x 0, for a right-to-left sheet.
+        let mirror: CGFloat?
+        var mirrorTransform: CGAffineTransform? {
+            mirror.map { CGAffineTransform(a: -1, b: 0, c: 0, d: 1, tx: $0, ty: 0) }
+        }
+        var transform: CGAffineTransform {
+            (mirrorTransform ?? .identity).concatenating(CGAffineTransform(translationX: shift.x, y: shift.y))
+        }
+    }
+    private var currentPass: DrawPass?
+
+    /// The cells and the objects come from the engine, which places a
+    /// right-to-left sheet's columns itself (item-grid's direction of -1)
+    /// and never mirrors their text: under a mirrored pass the context goes
+    /// back to view x and the engine is given the mirror.
+    private func drawCells(of sheet: Sheet, context: CGContext, dirtyRect: NSRect) {
+        guard let pass = currentPass, let mirror = pass.mirror, let flip = pass.mirrorTransform else {
+            sheet.drawCells(in: dirtyRect, context: context, backgroundColor: NSColor.white.cgColor)
+            return
+        }
+        context.saveGState()
+        context.concatenate(flip)   // its own inverse
+        sheet.drawCells(in: dirtyRect.applying(flip), context: context, backgroundColor: NSColor.white.cgColor, rightToLeftWidth: mirror)
+        context.restoreGState()
+    }
+
+    private func drawSheetObjects(of sheet: Sheet, context: CGContext, dirtyRect: NSRect) {
+        guard let pass = currentPass, let mirror = pass.mirror, let flip = pass.mirrorTransform else {
+            sheet.drawSheetObjects(in: dirtyRect, context: context)
+            return
+        }
+        context.saveGState()
+        context.concatenate(flip)
+        sheet.drawSheetObjects(in: dirtyRect.applying(flip), context: context, rightToLeftWidth: mirror)
+        context.restoreGState()
+    }
+
+    /// Text drawn in sheet coordinates under a mirrored pass: mirrored
+    /// again about its box's centre, it reads upright where the box lands.
+    private func withUprightText(around box: NSRect, _ body: () -> Void) {
+        guard let pass = currentPass, pass.mirror != nil, let context = NSGraphicsContext.current?.cgContext else {
+            body()
+            return
+        }
+        context.saveGState()
+        context.concatenate(CGAffineTransform(a: -1, b: 0, c: 0, d: 1, tx: 2 * box.midX, ty: 0))
+        body()
+        context.restoreGState()
     }
 
     /// Everything the sheet shows in `dirtyRect` (sheet coordinates).
     private func drawPass(_ sheet: Sheet, context: CGContext, dirtyRect: NSRect) {
-        sheet.drawCells(in: dirtyRect, context: context, backgroundColor: NSColor.white.cgColor)
+        drawCells(of: sheet, context: context, dirtyRect: dirtyRect)
         drawPageBreaks(of: sheet, dirtyRect: dirtyRect)
-        sheet.drawSheetObjects(in: dirtyRect, context: context)
+        drawSheetObjects(of: sheet, context: context, dirtyRect: dirtyRect)
         drawFilterButtons(of: sheet, dirtyRect: dirtyRect)
         drawCommentMarkers(of: sheet, dirtyRect: dirtyRect)
         drawMarchingAnts(of: sheet, dirtyRect: dirtyRect)
@@ -647,8 +800,8 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         case 0x08: editor.alignment = .center
         default: editor.alignment = .left
         }
-        editor.frame = NSRect(x: frame.minX, y: frame.minY,
-                              width: max(frame.width, 80 * zoom), height: max(frame.height, 16 * zoom))
+        editor.frame = viewRect(forSheetRect: NSRect(x: frame.minX, y: frame.minY,
+                                                     width: max(frame.width, 80 * zoom), height: max(frame.height, 16 * zoom)))
         editor.stringValue = initialText ?? (sheet.editingTextOfCell(atColumn: cell.column, row: cell.row) ?? "")
         editingCell = cell
         // wbcg_edit_start: completion only when typing starts with a letter
@@ -1430,13 +1583,15 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         let size = text.boundingRect(with: NSSize(width: 420, height: 300), options: [.usesLineFragmentOrigin]).size
         let box = NSRect(x: frame.minX, y: editor.frame.maxY + 2, width: ceil(size.width) + 12, height: ceil(size.height) + 8)
         guard box.intersects(dirtyRect) else { return }
-        let path = NSBezierPath(roundedRect: box, xRadius: 4, yRadius: 4)
-        NSColor(red: 1, green: 1, blue: 0.86, alpha: 1).setFill()
-        path.fill()
-        NSColor.gray.setStroke()
-        path.lineWidth = 0.5
-        path.stroke()
-        text.draw(with: box.insetBy(dx: 6, dy: 4), options: [.usesLineFragmentOrigin])
+        withUprightText(around: box) {
+            let path = NSBezierPath(roundedRect: box, xRadius: 4, yRadius: 4)
+            NSColor(red: 1, green: 1, blue: 0.86, alpha: 1).setFill()
+            path.fill()
+            NSColor.gray.setStroke()
+            path.lineWidth = 0.5
+            path.stroke()
+            text.draw(with: box.insetBy(dx: 6, dy: 4), options: [.usesLineFragmentOrigin])
+        }
     }
 
     /// The outline of the range being put into the formula.
@@ -1537,13 +1692,15 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         let size = text.boundingRect(with: NSSize(width: 260, height: 200), options: [.usesLineFragmentOrigin]).size
         let box = NSRect(x: frame.minX, y: frame.maxY + 2, width: ceil(size.width) + 12, height: ceil(size.height) + 8)
         guard box.intersects(dirtyRect) else { return }
-        let path = NSBezierPath(roundedRect: box, xRadius: 4, yRadius: 4)
-        NSColor(red: 1, green: 1, blue: 0.86, alpha: 1).setFill()
-        path.fill()
-        NSColor.gray.setStroke()
-        path.lineWidth = 0.5
-        path.stroke()
-        text.draw(with: box.insetBy(dx: 6, dy: 4), options: [.usesLineFragmentOrigin])
+        withUprightText(around: box) {
+            let path = NSBezierPath(roundedRect: box, xRadius: 4, yRadius: 4)
+            NSColor(red: 1, green: 1, blue: 0.86, alpha: 1).setFill()
+            path.fill()
+            NSColor.gray.setStroke()
+            path.lineWidth = 0.5
+            path.stroke()
+            text.draw(with: box.insetBy(dx: 6, dy: 4), options: [.usesLineFragmentOrigin])
+        }
     }
 
     // MARK: Comments
@@ -2295,26 +2452,29 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
 
     override func moveUp(_ sender: Any?) { move(columns: 0, rows: -1, extend: false) }
     override func moveDown(_ sender: Any?) { move(columns: 0, rows: 1, extend: false) }
-    override func moveLeft(_ sender: Any?) { move(columns: -1, rows: 0, extend: false) }
-    override func moveRight(_ sender: Any?) { move(columns: 1, rows: 0, extend: false) }
+    /// The arrows follow the screen (gnm-pane.c): Left is the next column
+    /// of a right-to-left sheet.
+    private var leftward: Int { isRightToLeft ? 1 : -1 }
+    override func moveLeft(_ sender: Any?) { move(columns: leftward, rows: 0, extend: false) }
+    override func moveRight(_ sender: Any?) { move(columns: -leftward, rows: 0, extend: false) }
     override func moveUpAndModifySelection(_ sender: Any?) { move(columns: 0, rows: -1, extend: true) }
     override func moveDownAndModifySelection(_ sender: Any?) { move(columns: 0, rows: 1, extend: true) }
-    override func moveLeftAndModifySelection(_ sender: Any?) { move(columns: -1, rows: 0, extend: true) }
-    override func moveRightAndModifySelection(_ sender: Any?) { move(columns: 1, rows: 0, extend: true) }
+    override func moveLeftAndModifySelection(_ sender: Any?) { move(columns: leftward, rows: 0, extend: true) }
+    override func moveRightAndModifySelection(_ sender: Any?) { move(columns: -leftward, rows: 0, extend: true) }
     override func pageDown(_ sender: Any?) { move(columns: 0, rows: pageRows, extend: false) }
     override func pageUp(_ sender: Any?) { move(columns: 0, rows: -pageRows, extend: false) }
     // ⌘-arrows jump to the edge of the data (the GTK's Ctrl+arrow), Shift
     // extending; Home goes to the row's first column.
     override func moveToBeginningOfLine(_ sender: Any?) { move(columns: -1, rows: 0, extend: false, jump: true) }
-    override func moveToLeftEndOfLine(_ sender: Any?) { move(columns: -1, rows: 0, extend: false, jump: true) }
+    override func moveToLeftEndOfLine(_ sender: Any?) { move(columns: leftward, rows: 0, extend: false, jump: true) }
     override func moveToEndOfLine(_ sender: Any?) { move(columns: 1, rows: 0, extend: false, jump: true) }
-    override func moveToRightEndOfLine(_ sender: Any?) { move(columns: 1, rows: 0, extend: false, jump: true) }
+    override func moveToRightEndOfLine(_ sender: Any?) { move(columns: -leftward, rows: 0, extend: false, jump: true) }
     override func moveToBeginningOfDocument(_ sender: Any?) { move(columns: 0, rows: -1, extend: false, jump: true) }
     override func moveToEndOfDocument(_ sender: Any?) { move(columns: 0, rows: 1, extend: false, jump: true) }
     override func moveToBeginningOfLineAndModifySelection(_ sender: Any?) { move(columns: -1, rows: 0, extend: true, jump: true) }
-    override func moveToLeftEndOfLineAndModifySelection(_ sender: Any?) { move(columns: -1, rows: 0, extend: true, jump: true) }
+    override func moveToLeftEndOfLineAndModifySelection(_ sender: Any?) { move(columns: leftward, rows: 0, extend: true, jump: true) }
     override func moveToEndOfLineAndModifySelection(_ sender: Any?) { move(columns: 1, rows: 0, extend: true, jump: true) }
-    override func moveToRightEndOfLineAndModifySelection(_ sender: Any?) { move(columns: 1, rows: 0, extend: true, jump: true) }
+    override func moveToRightEndOfLineAndModifySelection(_ sender: Any?) { move(columns: -leftward, rows: 0, extend: true, jump: true) }
     override func moveToBeginningOfDocumentAndModifySelection(_ sender: Any?) { move(columns: 0, rows: -1, extend: true, jump: true) }
     override func moveToEndOfDocumentAndModifySelection(_ sender: Any?) { move(columns: 0, rows: 1, extend: true, jump: true) }
     override func scrollToBeginningOfDocument(_ sender: Any?) {
@@ -2333,6 +2493,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     // MARK: SheetDelegate
 
     func sheetNeedsDisplay(_ sheet: Sheet, includingHeaders: Bool) {
+        syncDirection()
         needsDisplay = true
         if includingHeaders {
             headerViews.forEach { $0.needsDisplay = true }
@@ -2348,6 +2509,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     }
 
     func sheetGeometryDidChange(_ sheet: Sheet) {
+        syncDirection()
         updateFrameSize()
         headerViews.forEach { $0.invalidateIntrinsicContentSize() }
         updateCommentToolTips()
@@ -2382,22 +2544,19 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     /// Scroll so the cell shows; a scrolling cell must clear the frozen
     /// strips, a frozen one is always in view.
     func sheet(_ sheet: Sheet, makeVisibleColumn column: Int, row: Int) {
-        var frame = sheet.frameOfCell(atColumn: column, row: row)
+        // In view coordinates: a frozen cell is in view already; an
+        // unfrozen one must clear the strips, at the top and at the left
+        // (the right, for a right-to-left sheet) of the visible rect.
+        var frame = viewRect(forSheetRect: sheet.frameOfCell(atColumn: column, row: row))
         if let panes {
             let unfrozen = sheet.unfrozenTopLeft
-            if panes.hasColumns {
-                if column < unfrozen.column { frame.size.width = 0 } else {
-                    frame.origin.x -= panes.width; frame.size.width += panes.width
-                }
+            if panes.hasColumns, column >= unfrozen.column {
+                if !isRightToLeft { frame.origin.x -= panes.width }
+                frame.size.width += panes.width
             }
-            if panes.hasRows {
-                if row < unfrozen.row { frame.size.height = 0 } else {
-                    frame.origin.y -= panes.height; frame.size.height += panes.height
-                }
+            if panes.hasRows, row >= unfrozen.row {
+                frame.origin.y -= panes.height; frame.size.height += panes.height
             }
-            if frame.width == 0 && frame.height == 0 { return }
-            if frame.width == 0 { frame.origin.x = visibleRect.minX; frame.size.width = 1 }
-            if frame.height == 0 { frame.origin.y = visibleRect.minY; frame.size.height = 1 }
         }
         scrollToVisible(frame)
     }
@@ -2423,6 +2582,9 @@ final class GridClipView: NSClipView {
             let minimum = grid.minimumScrollOrigin
             bounds.origin.x = max(bounds.origin.x, minimum.x)
             bounds.origin.y = max(bounds.origin.y, minimum.y)
+            if let maximumX = grid.maximumScrollOriginX {
+                bounds.origin.x = min(bounds.origin.x, max(minimum.x, maximumX))
+            }
         }
         return bounds
     }

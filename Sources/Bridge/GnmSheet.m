@@ -316,10 +316,13 @@ merged_col_cmp (GnmRange const *a, GnmRange const *b)
 
 /* Draw the cells intersecting the sheet-pixel rectangle [x0,x1) x [y0,y1),
  * restricted to `bound`, onto `cr`, whose user space is sheet pixels. */
+/* `mirror` > 0 draws a right-to-left sheet: the columns run leftward from
+ * the cairo x `mirror` of the sheet's left edge (dir = -1 below, as
+ * item-grid.c under a right-to-left canvas); x0..x1 stay sheet pixels. */
 static void
 draw_region (DrawContext const *dc, cairo_t *cr,
              gint64 x0, gint64 y0, gint64 x1, gint64 y1,
-             GnmRange const *bound, GdkRGBA const *background)
+             GnmRange const *bound, GdkRGBA const *background, double mirror)
 {
     Sheet const *sheet = dc->sheet;
     ColRowInfo const *ri = NULL, *next_ri = NULL;
@@ -383,10 +386,14 @@ draw_region (DrawContext const *dc, cairo_t *cr,
 
     sheet_style_update_grid_color (sheet, NULL);
 
+    /* A right-to-left sheet: the first column's right edge, in cairo x. */
+    if (mirror > 0)
+        start_x = (gint64) llround (mirror) - start_x;
+
     /* Fill entire region with the background (even past the far edge) */
     cairo_save (cr);
     gdk_cairo_set_source_rgba (cr, background);
-    cairo_rectangle (cr, x0, y0, x1 - x0, y1 - y0);
+    cairo_rectangle (cr, mirror > 0 ? (double) ((gint64) llround (mirror) - x1) : (double) x0, y0, x1 - x0, y1 - y0);
     cairo_fill (cr);
     cairo_restore (cr);
 
@@ -2085,8 +2092,21 @@ pixels_from_points (Sheet const *sheet, gboolean horizontal, double points)
 
 - (void)drawCellsInRect:(CGRect)rect context:(CGContextRef)context backgroundColor:(CGColorRef)backgroundColor
 {
+    [self drawCellsInRect:rect context:context backgroundColor:backgroundColor rightToLeftWidth:0];
+}
+
+- (void)drawCellsInRect:(CGRect)rect context:(CGContextRef)context backgroundColor:(CGColorRef)backgroundColor rightToLeftWidth:(CGFloat)width
+{
     if (_sv == NULL || CGRectIsEmpty (rect))
         return;
+    double mirror = 0;
+    gint64 x0 = (gint64) floor (CGRectGetMinX (rect)), x1 = (gint64) ceil (CGRectGetMaxX (rect));
+    if (_sheet->text_is_rtl) {
+        mirror = width > 0 ? width : CGRectGetMaxX (rect);
+        gint64 m = (gint64) llround (mirror);
+        x0 = m - (gint64) ceil (CGRectGetMaxX (rect));
+        x1 = m - (gint64) floor (CGRectGetMinX (rect));
+    }
     GdkRGBA bg = { 1, 1, 1, 1 };
     if (backgroundColor)
         bg = gnm_cocoa_rgba_from_cgcolor (backgroundColor);
@@ -2102,9 +2122,9 @@ pixels_from_points (Sheet const *sheet, gboolean horizontal, double points)
     cairo_surface_t *surface;
     cairo_t *cr = gnm_cocoa_cairo_for_context (context, rect, &surface);
     draw_region (&dc, cr,
-                 (gint64) floor (CGRectGetMinX (rect)), (gint64) floor (CGRectGetMinY (rect)),
-                 (gint64) ceil (CGRectGetMaxX (rect)), (gint64) ceil (CGRectGetMaxY (rect)),
-                 &bound, &bg);
+                 x0, (gint64) floor (CGRectGetMinY (rect)),
+                 x1, (gint64) ceil (CGRectGetMaxY (rect)),
+                 &bound, &bg, mirror);
     cairo_destroy (cr);
     cairo_surface_flush (surface);
     cairo_surface_destroy (surface);
@@ -2114,8 +2134,14 @@ pixels_from_points (Sheet const *sheet, gboolean horizontal, double points)
 
 - (void)drawSheetObjectsInRect:(CGRect)rect context:(CGContextRef)context
 {
+    [self drawSheetObjectsInRect:rect context:context rightToLeftWidth:0];
+}
+
+- (void)drawSheetObjectsInRect:(CGRect)rect context:(CGContextRef)context rightToLeftWidth:(CGFloat)width
+{
     if (_sheet->sheet_objects == NULL || CGRectIsEmpty (rect))
         return;
+    double mirror = _sheet->text_is_rtl ? (width > 0 ? width : CGRectGetMaxX (rect)) : 0;
     CGAffineTransform text_matrix = CGContextGetTextMatrix (context);
     CGContextSaveGState (context);
     CGContextClipToRect (context, rect);
@@ -2133,6 +2159,8 @@ pixels_from_points (Sheet const *sheet, gboolean horizontal, double points)
             continue;
         object_pixel_frame (_sheet, so, c);
         CGRect frame = CGRectMake (c[0], c[1], c[2] - c[0], c[3] - c[1]);
+        if (mirror > 0)
+            frame.origin.x = mirror - c[2];
         if (!CGRectIntersectsRect (frame, rect) || frame.size.width <= 0 || frame.size.height <= 0)
             continue;
         cairo_save (cr);

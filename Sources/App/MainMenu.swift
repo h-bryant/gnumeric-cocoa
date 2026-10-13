@@ -210,6 +210,7 @@ enum MainMenu {
         sheetDisplayMenu.addItem(withTitle: "Hide Gridlines", action: Selector(("toggleHideGridLines:")), keyEquivalent: "")
         sheetDisplayMenu.addItem(withTitle: "Hide Column Headers", action: Selector(("toggleHideColumnHeaders:")), keyEquivalent: "")
         sheetDisplayMenu.addItem(withTitle: "Hide Row Headers", action: Selector(("toggleHideRowHeaders:")), keyEquivalent: "")
+        sheetDisplayMenu.addItem(withTitle: "Right to Left", action: Selector(("toggleDirection:")), keyEquivalent: "")
         sheetDisplayMenu.addItem(.separator())
         sheetDisplayMenu.addItem(withTitle: "Zoom…", action: Selector(("zoomDialog:")), keyEquivalent: "")
         formatMenu.addItem(submenu(sheetDisplayMenu, title: "Sheet"))

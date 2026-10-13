@@ -118,7 +118,8 @@ GNM_SNAPSHOT=/tmp/grid.png scripts/run-app.sh upstream/gnumeric/samples/format-t
 `GNM_SNAPSHOT_PAGEBREAK=1`, `GNM_SNAPSHOT_SENDTO=1`, `GNM_SNAPSHOT_AUTOSAVE=1`,
 `GNM_SNAPSHOT_MERGE=1`, `GNM_SNAPSHOT_COMPARE=1`, `GNM_SNAPSHOT_PROTECT=1`,
 `GNM_SNAPSHOT_SHAPES=1`, `GNM_SNAPSHOT_PREVIEW=1`, `GNM_SNAPSHOT_SORTSETUP=1`,
-`GNM_SNAPSHOT_REPEAT=1`, `GNM_SNAPSHOT_XMLOPEN=1`, and `GNM_SNAPSHOT_BUNDLE=1`
+`GNM_SNAPSHOT_REPEAT=1`, `GNM_SNAPSHOT_XMLOPEN=1`, `GNM_SNAPSHOT_BUNDLE=1`, and
+`GNM_SNAPSHOT_RTL=1` (a right-to-left sheet: column A at the right, the row header on the right, Left moving to B, and back)
 exercise zoom, editing and saving, the Format Cells model, the Phase 3
 commands, frozen panes, sheet management, the autofilter with the Sort
 command, a sheet resize, and a tab color, the sheet objects (select, move,

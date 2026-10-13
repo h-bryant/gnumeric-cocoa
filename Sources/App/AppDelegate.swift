@@ -2626,6 +2626,47 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_RTL"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // Format → Sheet → Right to Left: column A at the right edge
+                // of the view, the row header on the right, Left moving to
+                // B; a round trip back puts A1 at the left again.
+                for (column, text) in ["Alpha", "Beta", "Gamma"].enumerated() {
+                    try? sheet.setText(text, atColumn: column, row: 0, autocorrect: false)
+                }
+                try? sheet.setText("12.5", atColumn: 0, row: 1, autocorrect: false)
+                sheet.selectRange(CellRange(start: CellCoordinate(column: 0, row: 0), end: CellCoordinate(column: 0, row: 0)), editPosition: CellCoordinate(column: 0, row: 0))
+                let grid = controller.gridView
+                controller.toggleDirection(nil)
+                view.layoutSubtreeIfNeeded()
+                let clip: NSRect = grid.enclosingScrollView?.contentView.bounds ?? .zero
+                let a1: NSRect = grid.viewRect(forSheetRect: sheet.frameOfCell(atColumn: 0, row: 0))
+                let undo: String = sheet.workbook?.undoLabel ?? "nil"
+                let state: String = "rtl=\(sheet.isRightToLeft) a1=\(NSStringFromRect(a1)) clip=\(NSStringFromRect(clip)) undo=\(undo)"
+                NSLog("rtl: %@", state)
+                let rightPoint = grid.sheetPoint(forViewPoint: NSPoint(x: clip.maxX - 2, y: clip.minY + 5))
+                let leftPoint = grid.sheetPoint(forViewPoint: NSPoint(x: clip.minX + 2, y: clip.minY + 5))
+                let columnAtRight: Int = sheet.column(atX: rightPoint.x)
+                let columnAtLeft: Int = sheet.column(atX: leftPoint.x)
+                grid.moveLeft(nil)
+                let afterLeft = sheet.editPosition
+                let headerXs: [CGFloat] = grid.headerViews.map { $0.frame.minX }
+                let hits: String = "columnAtRight=\(columnAtRight) columnAtLeft=\(columnAtLeft) afterLeft=\(afterLeft.column),\(afterLeft.row) headerXs=\(headerXs)"
+                NSLog("rtl: %@", hits)
+                let menuItem = NSMenuItem(title: "", action: #selector(WorkbookWindowController.toggleDirection(_:)), keyEquivalent: "")
+                _ = controller.validateUserInterfaceItem(menuItem)
+                NSLog("rtl: item state=%ld", menuItem.state.rawValue)
+                controller.toggleDirection(nil)
+                view.layoutSubtreeIfNeeded()
+                let back: NSRect = grid.viewRect(forSheetRect: sheet.frameOfCell(atColumn: 0, row: 0))
+                let backHeaderXs: [CGFloat] = grid.headerViews.map { $0.frame.minX }
+                let backState: String = "rtl=\(sheet.isRightToLeft) a1=\(NSStringFromRect(back)) headerXs=\(backHeaderXs)"
+                NSLog("rtl: back %@", backState)
+                controller.toggleDirection(nil)
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FREEZE"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

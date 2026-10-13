@@ -474,8 +474,18 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 // context's CTM must map sheet pixels to the destination with y downward, as
 // a flipped NSView's context does; the backing scale stays in the CTM.
 - (void)drawCellsInRect:(CGRect)rect context:(CGContextRef)context backgroundColor:(nullable CGColorRef)backgroundColor NS_SWIFT_NAME(drawCells(in:context:backgroundColor:));
+/// The same for a right-to-left sheet (`text_is_rtl`): the engine places
+/// the columns leftward from `width`, the destination x of the sheet's
+/// left edge (`rect` is then in destination coordinates, sheet x =
+/// `width` - x), and draws their text upright, as item-grid.c does with
+/// its direction of -1.  With `width` 0 the rect's right edge is the
+/// mirror; a left-to-right sheet ignores it.
+- (void)drawCellsInRect:(CGRect)rect context:(CGContextRef)context backgroundColor:(nullable CGColorRef)backgroundColor rightToLeftWidth:(CGFloat)width NS_SWIFT_NAME(drawCells(in:context:backgroundColor:rightToLeftWidth:));
 /// Charts, images, and other sheet objects whose frames intersect `rect`.
 - (void)drawSheetObjectsInRect:(CGRect)rect context:(CGContextRef)context NS_SWIFT_NAME(drawSheetObjects(in:context:));
+/// The objects of a right-to-left sheet: each frame mirrored about `width`
+/// (its content drawn as is, as sheet_object_draw_cairo's rtl does).
+- (void)drawSheetObjectsInRect:(CGRect)rect context:(CGContextRef)context rightToLeftWidth:(CGFloat)width NS_SWIFT_NAME(drawSheetObjects(in:context:rightToLeftWidth:));
 /// Frames of the sheet objects, for hit testing and invalidation.
 @property (nonatomic, readonly) NSArray<NSValue *> *sheetObjectFrames;
 

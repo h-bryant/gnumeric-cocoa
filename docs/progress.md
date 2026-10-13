@@ -2147,6 +2147,45 @@
 - The index names the GitHub remote as the application's source; nothing
   has been pushed there yet (Henry's call).
 
+### 2026-10-13 (later): right-to-left sheets (Phase 7)
+
+- Format → Sheet → Right to Left (the GTK's SheetDirection toggle over
+  `text-is-rtl`, "Toggle sheet text direction", undoable; checked when
+  on; the Manage Sheets column already toggled it).  Column A sits at
+  the right edge of the document view and the columns run leftward, as
+  the GTK's canvas direction mirrors them; the row header moves to the
+  right side (the window controller swaps the header constraints when
+  `GridView.directionDidChange` fires), the frozen columns strip sits at
+  the right, Left and Right (and the ⌘-arrow jumps, and the arrows that
+  end a typed entry) follow the screen (gnm-pane.c), a column resized
+  from its header grows leftward (item-bar.c), and the in-cell editor,
+  the function tooltip, and the input message are mirrored.
+- How: sheet pixels keep counting from column A.  `GridView` mirrors
+  its sheet-to-view mapping (`viewX`, `sheetX`, `viewRect`, the frozen
+  strip at the right; `mirrorWidth` is the frame width, and
+  `updateFrameSize` shifts the scroll origin as the frame grows so the
+  same cells stay in view) and draws through `DrawPass` transforms: a
+  mirrored CTM turns the overlays drawn in sheet coordinates into their
+  mirror images, text overlays are mirrored again about their box
+  (`withUprightText`), and the cells and objects come from the engine,
+  which already carried item-grid's direction of -1 in the bridge's
+  `draw_region`: `drawCells(in:context:backgroundColor:rightToLeftWidth:)`
+  and `drawSheetObjects(in:context:rightToLeftWidth:)` take the view x
+  of the sheet's left edge and place the columns leftward from it with
+  upright text.  The clip view clamps the origin from above for frozen
+  columns (`maximumScrollOriginX`).
+- Checks: `render.m` draws the sample sheet right to left and finds
+  A1's text at the right edge, nothing at the left, and the grid line
+  reaching the right edge; `GNM_SNAPSHOT_RTL=1` logs A1's view rect at
+  the clip's right edge, the column under the right edge (A) and the
+  left edge, Left moving to B1, the header x's (row header at the
+  right), the checked item, and the round trip back (A1 at x 0, the
+  row header at 0); its window capture shows A, B, C from the right
+  with upright text.  The frozen panes hook still passes.
+- Not checked on screen: the engine draws a general-aligned text at the
+  left of its mirrored cell (the bridge's port of item-grid does what
+  the GTK's does); Henry's eyes decide whether that reads right.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -2187,8 +2226,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-13: `main` at the bundled licenses
-   commit (after the relocatable bundle, the workbook properties, multi-line editing, drag and drop, the toolbar, the widget editors, AutoFormat, scenarios and simulation, the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-13: `main` at the right-to-left
+   commit (after the bundled licenses, the relocatable bundle, the workbook properties, multi-line editing, drag and drop, the toolbar, the widget editors, AutoFormat, scenarios and simulation, the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

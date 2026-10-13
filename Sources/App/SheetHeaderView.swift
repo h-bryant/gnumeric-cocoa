@@ -212,10 +212,13 @@ class SheetHeaderView: NSView {
     override func mouseDragged(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
         if let resizing, let gridView {
-            let size = max(1, resizing.startSize + along(point) - along(resizing.startPoint))
+            // A right-to-left column grows leftward (item-bar.c's rtl case).
+            let mirrored = isColumnHeader && gridView.isRightToLeft
+            let delta = along(point) - along(resizing.startPoint)
+            let size = max(1, resizing.startSize + (mirrored ? -delta : delta))
             let edgeInGrid = (isColumnHeader ? gridView.sheet?.leftEdge(ofColumn: resizing.index)
                                              : gridView.sheet?.topEdge(ofRow: resizing.index)) ?? 0
-            gridView.resizeGuide = (isColumnHeader, isColumnHeader ? gridView.viewX(forSheetX: edgeInGrid) + size
+            gridView.resizeGuide = (isColumnHeader, isColumnHeader ? gridView.viewX(forSheetX: edgeInGrid) + (mirrored ? -size : size)
                                                                     : gridView.viewY(forSheetY: edgeInGrid) + size)
             needsDisplay = true
             return
@@ -268,13 +271,14 @@ class SheetHeaderView: NSView {
         let grip = Self.boundaryGrip
         let visible = gridView.visibleRect
         if isColumnHeader {
-            var column = sheet.column(atX: visible.minX)
+            let range = gridView.visibleSheetXRange
+            var column = sheet.column(atX: range.minX)
             while column < sheet.columnCount {
                 let left = sheet.leftEdge(ofColumn: column)
-                if left > visible.maxX { break }
+                if left > range.maxX { break }
                 let width = sheet.width(ofColumn: column)
                 if width > 0 {
-                    let edge = convert(NSPoint(x: gridView.viewX(forSheetX: left + width - 0.5) + 0.5, y: 0), from: gridView).x
+                    let edge = convert(NSPoint(x: gridView.viewX(forSheetRightEdge: left + width), y: 0), from: gridView).x
                     addCursorRect(NSRect(x: edge - grip, y: 0, width: 2 * grip, height: bounds.height), cursor: cursor)
                 }
                 column += 1
@@ -371,7 +375,11 @@ final class ColumnHeaderView: SheetHeaderView {
                 if left > maxX { break }
                 let width = sheet.width(ofColumn: column)
                 if width > 0 {
-                    let x0 = convert(NSPoint(x: gridView.viewX(forSheetX: left), y: 0), from: gridView).x
+                    // The column's view edges, in either order on a
+                    // right-to-left sheet.
+                    let a = convert(NSPoint(x: gridView.viewX(forSheetX: left), y: 0), from: gridView).x
+                    let b = convert(NSPoint(x: gridView.viewX(forSheetRightEdge: left + width), y: 0), from: gridView).x
+                    let x0 = min(a, b)
                     let cell = NSRect(x: x0, y: indent, width: width, height: height)
                     if cell.intersects(dirtyRect) {
                         let selected = column >= selection.start.column && column <= selection.end.column
@@ -394,14 +402,18 @@ final class ColumnHeaderView: SheetHeaderView {
                 column += 1
             }
         }
-        drawColumns(from: sheet.column(atX: visible.minX), to: sheet.columnCount, maxX: visible.maxX)
+        let range = gridView.visibleSheetXRange
+        drawColumns(from: sheet.column(atX: range.minX), to: sheet.columnCount, maxX: range.maxX)
         if let panes = gridView.panes, panes.hasColumns {
-            // The frozen columns, painted over whatever scrolled under them.
+            // The frozen columns, painted over whatever scrolled under them
+            // (at the right of a right-to-left sheet).
             let frozen = sheet.frozenTopLeft, unfrozen = sheet.unfrozenTopLeft
             drawColumns(from: frozen.column, to: unfrozen.column, maxX: .greatestFiniteMagnitude)
             NSColor.tertiaryLabelColor.setFill()
-            let edge = convert(NSPoint(x: visible.minX + panes.width, y: 0), from: gridView).x
-            NSRect(x: edge - 1, y: 0, width: 1, height: height).fill()
+            let edge = gridView.isRightToLeft
+                ? convert(NSPoint(x: visible.maxX - panes.width, y: 0), from: gridView).x
+                : convert(NSPoint(x: visible.minX + panes.width, y: 0), from: gridView).x - 1
+            NSRect(x: edge, y: 0, width: 1, height: height).fill()
         }
         NSColor.separatorColor.setFill()
         NSRect(x: 0, y: bounds.height - 1, width: bounds.width, height: 1).fill()

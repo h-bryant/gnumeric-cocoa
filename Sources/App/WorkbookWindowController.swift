@@ -280,6 +280,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         // Headers beside the scroll view, not NSRulerViews: see SheetHeaderView.
         let columnHeader = ColumnHeaderView(gridView: gridView)
         let rowHeader = RowHeaderView(gridView: gridView)
+        columnHeaderView = columnHeader
+        rowHeaderView = rowHeader
         gridView.headerViews = [columnHeader, rowHeader]
         hiddenColumnHeaderConstraint = columnHeader.heightAnchor.constraint(equalToConstant: 0)
         hiddenRowHeaderConstraint = rowHeader.widthAnchor.constraint(equalToConstant: 0)
@@ -288,18 +290,19 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         pane.addSubview(rowHeader)
         pane.addSubview(columnHeader)
         pane.addSubview(scrollView)
+        sheetPane = pane
         NSLayoutConstraint.activate([
-            rowHeader.leadingAnchor.constraint(equalTo: pane.leadingAnchor),
             rowHeader.topAnchor.constraint(equalTo: pane.topAnchor),
             rowHeader.bottomAnchor.constraint(equalTo: pane.bottomAnchor),
-            columnHeader.leadingAnchor.constraint(equalTo: rowHeader.trailingAnchor),
-            columnHeader.trailingAnchor.constraint(equalTo: pane.trailingAnchor),
             columnHeader.topAnchor.constraint(equalTo: pane.topAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: rowHeader.trailingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: pane.trailingAnchor),
             scrollView.topAnchor.constraint(equalTo: columnHeader.bottomAnchor),
             scrollView.bottomAnchor.constraint(equalTo: pane.bottomAnchor),
         ])
+        layoutHeaders(rightToLeft: false)
+        gridView.directionDidChange = { [weak self] in
+            guard let self else { return }
+            self.layoutHeaders(rightToLeft: self.gridView.sheet?.isRightToLeft ?? false)
+        }
 
         tabs.segmentStyle = .texturedRounded
         tabs.trackingMode = .selectOne
@@ -656,6 +659,36 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     /// Collapse the header views to nothing when the sheet hides them.
     private var hiddenColumnHeaderConstraint: NSLayoutConstraint?
     private var hiddenRowHeaderConstraint: NSLayoutConstraint?
+    /// The header views and their pane, laid out again when a sheet's
+    /// direction changes: the row header moves to the right side.
+    private var columnHeaderView: ColumnHeaderView?
+    private var rowHeaderView: RowHeaderView?
+    private var sheetPane: NSView?
+    private var headerConstraints: [NSLayoutConstraint] = []
+    private var headersAreRightToLeft = false
+
+    /// The row header at the left of the grid, or at the right of a
+    /// right-to-left sheet (the GTK mirrors its whole table).
+    private func layoutHeaders(rightToLeft: Bool) {
+        guard let pane = sheetPane, let rowHeader = rowHeaderView, let columnHeader = columnHeaderView,
+              headerConstraints.isEmpty || rightToLeft != headersAreRightToLeft else { return }
+        NSLayoutConstraint.deactivate(headerConstraints)
+        headersAreRightToLeft = rightToLeft
+        headerConstraints = rightToLeft ? [
+            rowHeader.trailingAnchor.constraint(equalTo: pane.trailingAnchor),
+            columnHeader.leadingAnchor.constraint(equalTo: pane.leadingAnchor),
+            columnHeader.trailingAnchor.constraint(equalTo: rowHeader.leadingAnchor),
+            scrollView.leadingAnchor.constraint(equalTo: pane.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: rowHeader.leadingAnchor),
+        ] : [
+            rowHeader.leadingAnchor.constraint(equalTo: pane.leadingAnchor),
+            columnHeader.leadingAnchor.constraint(equalTo: rowHeader.trailingAnchor),
+            columnHeader.trailingAnchor.constraint(equalTo: pane.trailingAnchor),
+            scrollView.leadingAnchor.constraint(equalTo: rowHeader.trailingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: pane.trailingAnchor),
+        ]
+        NSLayoutConstraint.activate(headerConstraints)
+    }
 
     /// The sheet's Hide Column Headers and Hide Row Headers, on the
     /// header views beside the grid.
@@ -668,6 +701,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             gridView.headerViews[0].isHidden = hideColumns
             gridView.headerViews[1].isHidden = hideRows
         }
+        layoutHeaders(rightToLeft: gridView.sheet?.isRightToLeft ?? false)
     }
 
     private func toggleDisplayOption(_ option: Sheet.DisplayOption) {
@@ -683,6 +717,11 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     @objc func toggleDisplayFormulas(_ sender: Any?) { toggleDisplayOption(.formulas) }
     @objc func toggleR1C1(_ sender: Any?) { toggleDisplayOption(.r1c1) }
     @objc func toggleHideZeros(_ sender: Any?) { toggleDisplayOption(.hideZeros) }
+    /// Format → Sheet → Right to Left (the GTK's SheetDirection toggle).
+    @objc func toggleDirection(_ sender: Any?) {
+        toggleDisplayOption(.rightToLeft)
+        gridView.syncDirection()
+    }
     @objc func toggleHideGridLines(_ sender: Any?) { toggleDisplayOption(.hideGridLines) }
     @objc func toggleHideColumnHeaders(_ sender: Any?) { toggleDisplayOption(.hideColumnHeader) }
     @objc func toggleHideRowHeaders(_ sender: Any?) { toggleDisplayOption(.hideRowHeader) }
@@ -744,7 +783,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(toggleDisplayFormulas(_:)), #selector(toggleR1C1(_:)), #selector(toggleHideZeros(_:)),
              #selector(toggleHideGridLines(_:)), #selector(toggleHideColumnHeaders(_:)), #selector(toggleHideRowHeaders(_:)),
-             #selector(toggleDisplayOutlines(_:)), #selector(toggleOutlineSymbolsBelow(_:)), #selector(toggleOutlineSymbolsRight(_:)):
+             #selector(toggleDisplayOutlines(_:)), #selector(toggleOutlineSymbolsBelow(_:)), #selector(toggleOutlineSymbolsRight(_:)),
+             #selector(toggleDirection(_:)):
             guard let sheet = gridView.sheet else { return false }
             let option: Sheet.DisplayOption
             switch item.action {
@@ -756,6 +796,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             case #selector(toggleDisplayOutlines(_:)): option = .outlines
             case #selector(toggleOutlineSymbolsBelow(_:)): option = .outlineSymbolsBelow
             case #selector(toggleOutlineSymbolsRight(_:)): option = .outlineSymbolsRight
+            case #selector(toggleDirection(_:)): option = .rightToLeft
             default: option = .hideRowHeader
             }
             (item as? NSMenuItem)?.state = sheet.displayOption(option) ? .on : .off

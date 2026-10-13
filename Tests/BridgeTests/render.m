@@ -158,6 +158,33 @@ int main (void)
             CGContextRelease (ctx);
         }
         wb2 = nil;
+        /* A right-to-left sheet: the columns run leftward from the mirror
+         * (item-grid's dir = -1), so A1's text lands at the right edge, the
+         * left edge shows far, empty columns, and the grid line under A1
+         * reaches the right edge. */
+        GNM_ASSERT ([sheet toggleDisplayOption:GnmSheetDisplayOptionRightToLeft error:&error], @"toggle rtl: %@", error);
+        GNM_ASSERT (sheet.isRightToLeft, @"sheet is right to left");
+        ctx = make_flipped_bitmap (W, H, 1);
+        CGContextSetRGBFillColor (ctx, 1, 1, 1, 1);
+        CGContextFillRect (ctx, CGRectMake (0, 0, W, H));
+        [sheet drawCellsInRect:CGRectMake (0, 0, W, H) context:ctx backgroundColor:NULL rightToLeftWidth:W];
+        CGRect a1r = [sheet frameOfCellAtColumn:0 row:0];
+        size_t dark_right = 0, dark_left = 0;
+        for (size_t y = 2; y + 1 < (size_t) a1r.size.height; y++)
+            for (size_t x = 2; x + 1 < (size_t) a1r.size.width; x++) {
+                uint32_t pr = pixel_at (ctx, W - 1 - x, y), pl = pixel_at (ctx, x, y);
+                if (((pr >> 16) & 0xff) < 0x80 && ((pr >> 8) & 0xff) < 0x80 && (pr & 0xff) < 0x80) dark_right++;
+                if (((pl >> 16) & 0xff) < 0x80 && ((pl >> 8) & 0xff) < 0x80 && (pl & 0xff) < 0x80) dark_left++;
+            }
+        GNM_ASSERT (dark_right > 10, @"rtl: A1's text at the right edge (%zu dark pixels)", dark_right);
+        GNM_ASSERT (dark_left == 0, @"rtl: nothing at the left edge (%zu dark pixels)", dark_left);
+        uint32_t rtl_line = pixel_at (ctx, W - 3, (size_t) a1r.size.height) & 0x00ffffff;
+        GNM_ASSERT (rtl_line == 0xc7c7c7, @"rtl: grid line pixel at the right edge %06x", rtl_line);
+        write_png (ctx, [outdir stringByAppendingPathComponent:@"bridge-cells-rtl.png"]);
+        CGContextRelease (ctx);
+        GNM_ASSERT ([sheet toggleDisplayOption:GnmSheetDisplayOptionRightToLeft error:&error], @"toggle back: %@", error);
+        GNM_ASSERT (!sheet.isRightToLeft, @"sheet is left to right again");
+
         wb = nil;
       }
         [engine shutdown];
