@@ -394,11 +394,12 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    page breaks with Show Print Area, the Help menu, File → Send To…, and
    Tools → Auto Correct… and Auto Save…, Data → Merge… (engine patch
    0009), Tools → Compare Sheets… (`GnmCompare.h`,
-   `SheetCompareDialog.swift`), and the Format Cells Protection page.
-   Next, by usage: the "partial" rows of `docs/mvp-known-gaps.md`
-   (status bar fields, the object toolbar, a print preview window, the
-   marching ants) and the "no" rows (ViewNew, data slicers, goffice
-   components).
+   `SheetCompareDialog.swift`), the Format Cells Protection page, the
+   shapes with the object toolbar's pull-down, Go to Top/Bottom/First/
+   Last, and the marching ants' animation.  Next, by usage: the
+   "partial" rows of `docs/mvp-known-gaps.md` (a print preview window,
+   status bar fields, the tab text color) and the "no" rows (ViewNew,
+   data slicers, goffice components).
 6. Headless checks for all of it: `GNM_SNAPSHOT=out.png scripts/run-app.sh
    file` plus `GNM_SNAPSHOT_TYPE`, `_FORMAT`, `_PHASE3`, `_FREEZE`,
    `_SHEETS`, `_FILTER`, `_OBJECTS`, `_CHART`, `_EDITOR`, `_EVERYDAY`, `_FIND`, `_PREFS`, `_TEXT`, `_IMPORT`, `_COMMENT`, `_NAMES`, `_FILL`, `_GOAL`, `_COND`, `_STATS`, `_VALID`, `_LINK`, `_SOLVE`, `_PRINT`, `_FORMULA`, `_FUNC`, `_ZOOM` (`docs/build.md`); compare `out.png` with

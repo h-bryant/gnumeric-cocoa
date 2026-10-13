@@ -58,7 +58,7 @@ extension WorkbookWindowController: NSToolbarDelegate {
 
     static let defaultToolbarItems: [NSToolbarItem.Identifier] = {
         let names = ["new", "open", "save", "print", "|", "cut", "copy", "paste", "|", "undo", "redo", "|",
-                     "autosum", "function", "sortAscending", "sortDescending", "chart", "zoom", "~",
+                     "autosum", "function", "sortAscending", "sortDescending", "chart", "objects", "zoom", "~",
                      "fontFamily", "fontSize", "bold", "italic", "underline", "|", "alignLeft", "alignCenter", "alignRight", "merge", "|",
                      "accounting", "percent", "thousands", "morePrecision", "lessPrecision", "|",
                      "indentLess", "indentMore", "superscript", "subscript", "borders", "textColor", "fillColor"]
@@ -79,7 +79,7 @@ extension WorkbookWindowController: NSToolbarDelegate {
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
         Self.toolbarSpecs.map { NSToolbarItem.Identifier($0.identifier) }
-            + ["zoom", "fontFamily", "fontSize", "borders", "textColor", "fillColor"].map { NSToolbarItem.Identifier($0) }
+            + ["zoom", "fontFamily", "fontSize", "borders", "textColor", "fillColor", "objects"].map { NSToolbarItem.Identifier($0) }
             + [.space, .flexibleSpace]
     }
 
@@ -103,6 +103,19 @@ extension WorkbookWindowController: NSToolbarDelegate {
             item.view = popUp
             item.label = "Font"
             item.toolTip = "Font"
+        case "objects":
+            // The GTK object toolbar as one pull-down.
+            let popUp = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 120, height: 24), pullsDown: true)
+            popUp.addItem(withTitle: "Objects")
+            for (tag, title) in Self.objectToolbarEntries {
+                let menuItem = NSMenuItem(title: title, action: #selector(objectKindChosen(_:)), keyEquivalent: "")
+                menuItem.target = self
+                menuItem.tag = tag
+                popUp.menu?.addItem(menuItem)
+            }
+            item.view = popUp
+            item.label = "Objects"
+            item.toolTip = "Insert a shape or a widget"
         case "borders":
             let popUp = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 150, height: 24), pullsDown: true)
             popUp.addItem(withTitle: "Borders")

@@ -1912,6 +1912,26 @@
   effect in the GTK's UI (only the file keeps them), so none here.
   `GNM_SNAPSHOT_PROTECT=1`.
 
+### 2026-10-13 (later): shapes and the object toolbar, Go to Top/Bottom/First/Last, marching ants
+
+- `GnmSheet (Shapes)` / `GnmSheetObject.shapeKind` (`GnmWidgets.h`):
+  `GNM_SO_LINE_TYPE` plain or with the GTK's kite `end-arrow`, and
+  `GNM_SO_FILLED_TYPE` plain or `is-oval`, inserted as the widgets are
+  (`_insertCreatedObject`; the engine draws them through `draw_cairo`).
+  `objects.m` covers the four kinds and the undos.
+- The toolbar's Objects pull-down carries the GTK object toolbar's
+  thirteen creations in its order (`objectKindChosen`); Insert → Object
+  lists Rectangle, Ellipse, Line, Arrow above the widgets.
+- `GnmSheet navigateTo:` (`wb_control_navigate_to_cell`; the sheet
+  focused first) behind Edit → Go to Top/Bottom/First/Last, and Go to
+  Current Cell Indicator (⇧⌃G) focusing the name box.  The engine's
+  `gnm_sheet_guess_data_range` joins adjacent columns, so `properties.m`
+  tests the block apart from the other data.
+- The marching ants march: a 75 ms timer (item-cursor.c) steps the dash
+  phase while `marchingAntsFrames` is non-empty, started from the cut or
+  copy, stopped when the frames go or the window hides.
+  `GNM_SNAPSHOT_SHAPES=1`.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and

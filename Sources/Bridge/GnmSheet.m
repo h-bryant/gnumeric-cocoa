@@ -1863,6 +1863,17 @@ pixels_from_points (Sheet const *sheet, gboolean horizontal, double points)
     return result;
 }
 
+- (void)navigateTo:(GnmNavigationTarget)target
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    Sheet *sheet = self.engineSheet;
+    WorkbookControl *wbc = self.workbook.control;
+    if (!sheet || !wbc)
+        return;
+    wb_control_sheet_focus (wbc, sheet);
+    wb_control_navigate_to_cell (wbc, (wb_control_navigator_t) target);
+}
+
 - (void)revealCellAtColumn:(NSInteger)column row:(NSInteger)row
 {
     if (_sv == NULL || _sheet == NULL)

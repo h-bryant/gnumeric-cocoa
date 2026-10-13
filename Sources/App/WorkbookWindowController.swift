@@ -2213,6 +2213,78 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         }
     }
 
+    /// The object toolbar's shapes (cmd_create_line/_arrow/_rectangle/
+    /// _ellipse), placed at the edit cell as the widgets are.
+    func insertShape(ofKind kind: ShapeKind) {
+        guard let sheet = gridView.sheet else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let edit = sheet.editPosition
+        let cell = sheet.frameOfCell(atColumn: edit.column, row: edit.row)
+        let size = kind == .line || kind == .arrow ? CGSize(width: 120, height: 60) : CGSize(width: 120, height: 80)
+        do {
+            let object = try sheet.insertShape(ofKind: kind, frame: CGRect(origin: cell.origin, size: size))
+            gridView.select(objects: [object])
+        } catch {
+            present(error)
+        }
+    }
+
+    @objc func insertLine(_ sender: Any?) { insertShape(ofKind: .line) }
+    @objc func insertArrow(_ sender: Any?) { insertShape(ofKind: .arrow) }
+    @objc func insertRectangle(_ sender: Any?) { insertShape(ofKind: .rectangle) }
+    @objc func insertEllipse(_ sender: Any?) { insertShape(ofKind: .ellipse) }
+
+    /// The toolbar's Objects pull-down: the tag names the creation.
+    @objc func objectKindChosen(_ sender: NSMenuItem) {
+        switch sender.tag {
+        case 1: insertShape(ofKind: .rectangle)
+        case 2: insertShape(ofKind: .ellipse)
+        case 3: insertWidget(ofKind: .frame)
+        case 4: insertShape(ofKind: .line)
+        case 5: insertShape(ofKind: .arrow)
+        case 6: insertWidget(ofKind: .checkbox)
+        case 7: insertWidget(ofKind: .radioButton)
+        case 8: insertWidget(ofKind: .button)
+        case 9: insertWidget(ofKind: .scrollbar)
+        case 10: insertWidget(ofKind: .spinButton)
+        case 11: insertWidget(ofKind: .slider)
+        case 12: insertWidget(ofKind: .list)
+        case 13: insertWidget(ofKind: .combo)
+        default: break
+        }
+    }
+
+    /// The GTK object toolbar's items in its order, with their tags.
+    static let objectToolbarEntries: [(Int, String)] = [
+        (1, "Rectangle"), (2, "Ellipse"), (3, "Frame"), (4, "Line"), (5, "Arrow"), (6, "Checkbox"), (7, "Radio Button"),
+        (8, "Button"), (9, "Scrollbar"), (10, "Spin Button"), (11, "Slider"), (12, "List"), (13, "Combo Box"),
+    ]
+
+    // MARK: Go to Top/Bottom/First/Last
+
+    private func navigate(to target: Sheet.NavigationTarget) {
+        guard let sheet = gridView.sheet else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        sheet.navigate(to: target)
+        let edit = sheet.editPosition
+        gridView.scrollToVisible(sheet.frameOfCell(atColumn: edit.column, row: edit.row).insetBy(dx: -2, dy: -2))
+        gridView.needsDisplay = true
+    }
+
+    @objc func goToTop(_ sender: Any?) { navigate(to: .top) }
+    @objc func goToBottom(_ sender: Any?) { navigate(to: .bottom) }
+    @objc func goToFirst(_ sender: Any?) { navigate(to: .first) }
+    @objc func goToLast(_ sender: Any?) { navigate(to: .last) }
+
+    /// Edit → Go to Current Cell Indicator (⇧⌃G,
+    /// wbcg_focus_current_cell_indicator): the name box takes the focus
+    /// with its text selected.
+    @objc func goToCellIndicator(_ sender: Any?) {
+        guard let window else { return }
+        window.makeFirstResponder(nameBox)
+        nameBox.currentEditor()?.selectAll(nil)
+    }
+
     @objc func insertFrame(_ sender: Any?) { insertWidget(ofKind: .frame) }
     @objc func insertButton(_ sender: Any?) { insertWidget(ofKind: .button) }
     @objc func insertCheckbox(_ sender: Any?) { insertWidget(ofKind: .checkbox) }

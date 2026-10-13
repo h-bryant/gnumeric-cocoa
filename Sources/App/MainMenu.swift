@@ -98,8 +98,14 @@ enum MainMenu {
         let nextObject = selectMenu.addItem(withTitle: "Next Object", action: Selector(("selectNextObjectItem:")), keyEquivalent: "\t")
         nextObject.keyEquivalentModifierMask = [.control]
         editMenu.addItem(submenu(selectMenu, title: "Select"))
+        editMenu.addItem(withTitle: "Go to Top", action: Selector(("goToTop:")), keyEquivalent: "")
+        editMenu.addItem(withTitle: "Go to Bottom", action: Selector(("goToBottom:")), keyEquivalent: "")
+        editMenu.addItem(withTitle: "Go to First", action: Selector(("goToFirst:")), keyEquivalent: "")
+        editMenu.addItem(withTitle: "Go to Last", action: Selector(("goToLast:")), keyEquivalent: "")
         let goTo = editMenu.addItem(withTitle: "Go To…", action: Selector(("goTo:")), keyEquivalent: "g")
         goTo.keyEquivalentModifierMask = [.control]
+        let indicator = editMenu.addItem(withTitle: "Go to Current Cell Indicator", action: Selector(("goToCellIndicator:")), keyEquivalent: "G")
+        indicator.keyEquivalentModifierMask = [.control, .shift]
         editMenu.addItem(.separator())
         editMenu.addItem(withTitle: "Find…", action: Selector(("showFindPanel:")), keyEquivalent: "f")
         let replace = editMenu.addItem(withTitle: "Find and Replace…", action: Selector(("showReplacePanel:")), keyEquivalent: "f")
@@ -143,6 +149,10 @@ enum MainMenu {
         insertMenu.addItem(withTitle: "Image…", action: Selector(("insertImage:")), keyEquivalent: "")
         // The GTK Insert → Object menu's widgets.
         let objectMenu = NSMenu(title: "Object")
+        for (title, action) in [("Rectangle", "insertRectangle:"), ("Ellipse", "insertEllipse:"), ("Line", "insertLine:"), ("Arrow", "insertArrow:")] {
+            objectMenu.addItem(withTitle: title, action: Selector((action)), keyEquivalent: "")
+        }
+        objectMenu.addItem(.separator())
         for (title, action) in [("Frame", "insertFrame:"), ("Button", "insertButton:"), ("Checkbox", "insertCheckbox:"),
                                 ("Radio Button", "insertRadioButton:"), ("Scrollbar", "insertScrollbar:"), ("Spin Button", "insertSpinButton:"),
                                 ("Slider", "insertSlider:"), ("List", "insertList:"), ("Combo Box", "insertCombo:")] {

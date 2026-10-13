@@ -13,6 +13,14 @@ NS_ASSUME_NONNULL_BEGIN
 
 @class GnmWorkbook, GnmSheet;
 
+/// `wb_control_navigator_t`: where Go to Top/Bottom/First/Last goes.
+typedef NS_ENUM(NSInteger, GnmNavigationTarget) {
+    GnmNavigationTargetTop = 0,
+    GnmNavigationTargetBottom,
+    GnmNavigationTargetLast,
+    GnmNavigationTargetFirst,
+} NS_SWIFT_NAME(Sheet.NavigationTarget);
+
 /// What `clearSelection:` removes; mirrors the engine's CLEAR_* flags.
 typedef NS_OPTIONS(NSUInteger, GnmClearOptions) {
     GnmClearValues = 1 << 0,
@@ -219,6 +227,11 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 /// view, focusing this sheet in the workbook first (what the GTK Search
 /// dialog does when a match is chosen).
 - (void)revealCellAtColumn:(NSInteger)column row:(NSInteger)row NS_SWIFT_NAME(revealCell(atColumn:row:));
+/// The GTK Edit → Go to Top/Bottom/First/Last
+/// (`wb_control_navigate_to_cell`): from the selection's first range,
+/// the edge of the block of data around it in that direction, the
+/// selection's own columns (rows) kept; this sheet focused first.
+- (void)navigateTo:(GnmNavigationTarget)target NS_SWIFT_NAME(navigate(to:));
 
 // Editing.  Every method runs an undoable engine command through the
 // workbook's control; a NO return carries the engine's message in `error`.

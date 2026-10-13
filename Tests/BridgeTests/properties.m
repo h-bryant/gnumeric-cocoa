@@ -74,6 +74,24 @@ int main (void)
         NSString *label = wb.undoLabel;
         GNM_ASSERT ([wb setDocumentProperties:same error:&error] && [wb.undoLabel isEqualToString:label], @"no change, no command");
 
+        /* Go to Top/Bottom/First/Last around a block I1:K5, apart from
+         * the other data (the guess joins adjacent columns) */
+        for (NSInteger r = 0; r < 5; r++)
+            for (NSInteger c = 8; c < 11; c++)
+                GNM_ASSERT ([s setText:@"x" atColumn:c row:r autocorrect:NO error:&error], @"block: %@", error);
+        [s selectCellAtColumn:9 row:2];
+        [s navigateTo:GnmNavigationTargetTop];
+        GNM_ASSERT_EQ_STR (selection (s), @"9,0-9,0");
+        [s selectCellAtColumn:9 row:2];
+        [s navigateTo:GnmNavigationTargetBottom];
+        GNM_ASSERT_EQ_STR (selection (s), @"9,4-9,4");
+        [s selectCellAtColumn:9 row:2];
+        [s navigateTo:GnmNavigationTargetFirst];
+        GNM_ASSERT_EQ_STR (selection (s), @"8,2-8,2");
+        [s selectCellAtColumn:9 row:2];
+        [s navigateTo:GnmNavigationTargetLast];
+        GNM_ASSERT_EQ_STR (selection (s), @"10,2-10,2");
+
         GNM_ASSERT (stray.count == 0, @"stray messages: %@", stray);
         wb = nil;
       }

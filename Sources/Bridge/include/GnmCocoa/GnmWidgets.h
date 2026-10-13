@@ -98,4 +98,27 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(WidgetSettings)
 - (BOOL)chooseWidgetEntry:(NSInteger)index forObject:(GnmSheetObject *)object error:(NSError **)error NS_SWIFT_NAME(chooseWidgetEntry(_:for:));
 @end
 
+/// The drawn shapes of the GTK object toolbar (gnm-so-line.h,
+/// gnm-so-filled.h): a line, an arrow (a line with a kite head at its
+/// end), a rectangle, an ellipse.
+typedef NS_ENUM(NSInteger, GnmShapeKind) {
+    GnmShapeKindNone = 0,
+    GnmShapeKindLine,
+    GnmShapeKindArrow,
+    GnmShapeKindRectangle,
+    GnmShapeKindEllipse,
+} NS_SWIFT_NAME(ShapeKind);
+
+@interface GnmSheetObject (Shapes)
+/// Which shape the object is, None for anything else.
+@property (nonatomic, readonly) GnmShapeKind shapeKind;
+@end
+
+@interface GnmSheet (Shapes)
+/// Insert a shape with the GTK's defaults (cmd_create_line, _arrow with
+/// `go_arrow_init_kite (8, 10, 3)`, _rectangle, _ellipse) over `frame`,
+/// as one undoable command.
+- (nullable GnmSheetObject *)insertShapeOfKind:(GnmShapeKind)kind frame:(CGRect)frame error:(NSError **)error NS_SWIFT_NAME(insertShape(ofKind:frame:));
+@end
+
 NS_ASSUME_NONNULL_END

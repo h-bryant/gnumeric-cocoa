@@ -1,6 +1,8 @@
 // Widget configuration as the dialogs in sheet-object-widget.c and
 // dialog-so-list.c read and apply it.
 #import "GnmPrivate.h"
+#include <gnm-so-line.h>
+#include <gnm-so-filled.h>
 #include <sheet-object-widget.h>
 #include <commands.h>
 #include <expr.h>
@@ -319,6 +321,67 @@ parse_link (NSString *text, Sheet *sheet, GnmExprTop const **out, GnmEngine *eng
     GnmSheetObject *wrapper = [self _insertCreatedObject:so frame:frame anchorMode:GNM_SO_ANCHOR_TWO_CELLS
                                              description:@"Could not insert the widget." error:error];
     g_object_unref (so);   /* the sheet and the command hold theirs */
+    return wrapper;
+}
+
+@end
+
+#pragma mark - Shapes
+
+@implementation GnmSheetObject (Shapes)
+
+- (GnmShapeKind)shapeKind
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    SheetObject *so = self.engineObject;
+    if (!so)
+        return GnmShapeKindNone;
+    if (GNM_IS_SO_LINE (so)) {
+        GOArrow *end = NULL;
+        g_object_get (G_OBJECT (so), "end-arrow", &end, NULL);
+        BOOL arrow = end && end->typ != GO_ARROW_NONE;
+        if (end)
+            g_boxed_free (GO_ARROW_TYPE, end);
+        return arrow ? GnmShapeKindArrow : GnmShapeKindLine;
+    }
+    if (GNM_IS_SO_FILLED (so)) {
+        gboolean oval = FALSE;
+        g_object_get (G_OBJECT (so), "is-oval", &oval, NULL);
+        return oval ? GnmShapeKindEllipse : GnmShapeKindRectangle;
+    }
+    return GnmShapeKindNone;
+}
+
+@end
+
+@implementation GnmSheet (Shapes)
+
+- (GnmSheetObject *)insertShapeOfKind:(GnmShapeKind)kind frame:(CGRect)frame error:(NSError **)error
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    SheetObject *so;
+    switch (kind) {
+    case GnmShapeKindLine:
+        so = g_object_new (GNM_SO_LINE_TYPE, NULL);
+        break;
+    case GnmShapeKindArrow: {
+        GOArrow arrow;
+        go_arrow_init_kite (&arrow, 8., 10., 3.);
+        so = g_object_new (GNM_SO_LINE_TYPE, "end-arrow", &arrow, NULL);
+        break;
+    }
+    case GnmShapeKindRectangle:
+        so = g_object_new (GNM_SO_FILLED_TYPE, NULL);
+        break;
+    case GnmShapeKindEllipse:
+        so = g_object_new (GNM_SO_FILLED_TYPE, "is-oval", TRUE, NULL);
+        break;
+    default:
+        return nil;
+    }
+    GnmSheetObject *wrapper = [self _insertCreatedObject:so frame:frame anchorMode:GNM_SO_ANCHOR_TWO_CELLS
+                                             description:@"Could not insert the shape." error:error];
+    g_object_unref (so);
     return wrapper;
 }
 

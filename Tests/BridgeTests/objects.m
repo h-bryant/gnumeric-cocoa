@@ -311,6 +311,26 @@ int main (void)
         [wb undo];
         GNM_ASSERT (!combo.isAttached, @"combo gone with the filter");
 
+        /* the object toolbar's shapes */
+        NSUInteger shapesBefore = s.sheetObjects.count;
+        GnmSheetObject *line = [s insertShapeOfKind:GnmShapeKindLine frame:CGRectMake (300, 300, 120, 60) error:&error];
+        GNM_ASSERT (line && line.shapeKind == GnmShapeKindLine, @"line: %@ %ld", error, (long) line.shapeKind);
+        GnmSheetObject *arrow = [s insertShapeOfKind:GnmShapeKindArrow frame:CGRectMake (300, 380, 120, 60) error:&error];
+        GNM_ASSERT (arrow && arrow.shapeKind == GnmShapeKindArrow, @"arrow: %@ %ld", error, (long) arrow.shapeKind);
+        GnmSheetObject *rect = [s insertShapeOfKind:GnmShapeKindRectangle frame:CGRectMake (450, 300, 120, 80) error:&error];
+        GNM_ASSERT (rect && rect.shapeKind == GnmShapeKindRectangle, @"rectangle: %@ %ld", error, (long) rect.shapeKind);
+        GnmSheetObject *oval = [s insertShapeOfKind:GnmShapeKindEllipse frame:CGRectMake (450, 400, 120, 80) error:&error];
+        GNM_ASSERT (oval && oval.shapeKind == GnmShapeKindEllipse, @"ellipse: %@ %ld", error, (long) oval.shapeKind);
+        GNM_ASSERT (s.sheetObjects.count == shapesBefore + 4, @"four shapes added: %lu", (unsigned long) s.sheetObjects.count);
+        GNM_ASSERT (CGRectEqualToRect (CGRectIntegral (oval.frame), CGRectIntegral (CGRectMake (450, 400, 120, 80))) || fabs (oval.frame.origin.x - 450) < 2,
+                    @"ellipse placed: %@", NSStringFromRect (oval.frame));
+        GNM_ASSERT (picture.shapeKind == GnmShapeKindNone, @"an image is no shape");
+        [wb undo];
+        GNM_ASSERT (s.sheetObjects.count == shapesBefore + 3, @"undo removes the last shape");
+        [wb undo]; [wb undo]; [wb undo];
+        GNM_ASSERT (s.sheetObjects.count == shapesBefore, @"all shapes undone");
+
+
         wb = nil; s = nil; objects = nil; chart = nil; second = nil; combo = nil;
         GNM_ASSERT (stray.count == 0, @"stray engine messages: %@", stray);
       }

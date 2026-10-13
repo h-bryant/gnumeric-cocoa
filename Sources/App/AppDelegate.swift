@@ -2336,6 +2336,41 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_SHAPES"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // The object toolbar's shapes at four cells, Go to Bottom
+                // and Last around a block, and the marching ants' timer
+                // after a copy; all left in the capture.
+                for (column, row, kind) in [(1, 1, "rectangle"), (4, 1, "ellipse"), (1, 8, "line"), (4, 8, "arrow")] {
+                    sheet.selectCell(atColumn: column, row: row)
+                    switch kind {
+                    case "rectangle": controller.insertRectangle(nil)
+                    case "ellipse": controller.insertEllipse(nil)
+                    case "line": controller.insertLine(nil)
+                    default: controller.insertArrow(nil)
+                    }
+                }
+                let kinds: String = sheet.sheetObjects.map { "\($0.shapeKind.rawValue)" }.joined(separator: ",")
+                NSLog("shapes: objects=%ld kinds=%@ undo=%@", sheet.sheetObjects.count, kinds, sheet.workbook?.undoLabel ?? "nil")
+                controller.gridView.select(objects: [])
+                for row in 12..<16 {
+                    for column in 7..<10 { try? sheet.setText("\(row)", atColumn: column, row: row, autocorrect: false) }
+                }
+                sheet.selectCell(atColumn: 8, row: 13)
+                controller.goToBottom(nil)
+                let bottom = sheet.selectedRange
+                controller.goToLast(nil)
+                let last = sheet.selectedRange
+                let goes: String = "bottom=\(bottom.start.column),\(bottom.start.row) last=\(last.start.column),\(last.start.row)"
+                NSLog("shapes: %@", goes)
+                sheet.selectRange(CellRange(start: CellCoordinate(column: 7, row: 12), end: CellCoordinate(column: 9, row: 15)),
+                                  editPosition: CellCoordinate(column: 7, row: 12))
+                controller.gridView.copy(nil)
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+                NSLog("shapes: ants frames=%ld marching=%d", sheet.marchingAntsFrames.count, controller.gridView.antsAreMarchingForTesting ? 1 : 0)
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FREEZE"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

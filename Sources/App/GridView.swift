@@ -548,16 +548,56 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
 
     /// The source of the last copy or cut, outlined with dashes (static for
     /// now; the GTK front end animates them).
+    /// The ants march while the clipboard holds a cut or copied range:
+    /// item-cursor.c steps its dash every 75 ms.
+    private var antsTimer: Timer?
+    private var antsPhase: CGFloat = 0
+    var antsAreMarchingForTesting: Bool { antsTimer != nil }
+
     private func drawMarchingAnts(of sheet: Sheet, dirtyRect: NSRect) {
-        for value in sheet.marchingAntsFrames {
+        let frames = sheet.marchingAntsFrames
+        updateAntsTimer(marching: !frames.isEmpty)
+        for value in frames {
             let frame = value.rectValue
             guard frame.intersects(dirtyRect) else { continue }
             let path = NSBezierPath(rect: frame.insetBy(dx: 0.5, dy: 0.5))
             path.lineWidth = 1
-            path.setLineDash([4, 3], count: 2, phase: 0)
+            path.setLineDash([4, 3], count: 2, phase: antsPhase)
             NSColor.labelColor.setStroke()
             path.stroke()
         }
+    }
+
+    private func updateAntsTimer(marching: Bool) {
+        if !marching {
+            antsTimer?.invalidate()
+            antsTimer = nil
+            return
+        }
+        guard antsTimer == nil else { return }
+        let timer = Timer(timeInterval: 0.075, repeats: true) { [weak self] timer in
+            guard let self else {
+                timer.invalidate()
+                return
+            }
+            MainActor.assumeIsolated { stepAnts() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        antsTimer = timer
+    }
+
+    private func stepAnts() {
+        guard let sheet, window?.isVisible == true else {
+            updateAntsTimer(marching: false)
+            return
+        }
+        let frames = sheet.marchingAntsFrames
+        guard !frames.isEmpty else {
+            updateAntsTimer(marching: false)
+            return
+        }
+        antsPhase = (antsPhase + 1).truncatingRemainder(dividingBy: 7)
+        for value in frames { setNeedsDisplay(value.rectValue.insetBy(dx: -2, dy: -2)) }
     }
 
     private func invalidateSelection(_ sheet: Sheet) {
@@ -1002,6 +1042,10 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
             return
         }
         sheet?.copySelection()
+        // The ants start marching at once (the GTK's cursor animates
+        // from the copy), not at the next redraw.
+        updateAntsTimer(marching: true)
+        needsDisplay = true
     }
 
     @objc func cut(_ sender: Any?) {
@@ -1013,6 +1057,8 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
             return
         }
         sheet?.cutSelection()
+        updateAntsTimer(marching: true)
+        needsDisplay = true
     }
 
     /// The engine's clipboard when it is current, else text from the system
