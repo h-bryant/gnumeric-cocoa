@@ -1958,6 +1958,22 @@
   heading afresh (`loadedSetup`, `chosenKeysForTesting`).
   `GNM_SNAPSHOT_SORTSETUP=1`.
 
+### 2026-10-13 (later): more Settings
+
+- `GnmPreferences` gained the Tools page's `autocompletes`,
+  `autocompleteMinimumCharacters`, `showsFunctionNameTooltips`,
+  `showsFunctionArgumentTooltips`, the new-workbook
+  `newWorkbookShowsFunctionMarkers` / `…ExtensionMarkers`
+  (`workbook_view_new` reads them), and `screenHorizontalDPI` /
+  `screenVerticalDPI`.  `completionForText:` now honors the autocomplete
+  preference and its minimum (it checked only the view's attribute),
+  which `preferences.m` covers along with the round trips.
+- The Settings window: Editing gained a "While typing" section
+  (autocompletion, tooltips), General the markers and a Screen section.
+  The header/footer font page was left out after a look at the engine:
+  only `gnumeric-conf.c` touches `printsetup/hf-font`, so the setting
+  changes nothing when printing.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and

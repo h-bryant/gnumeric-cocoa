@@ -53,6 +53,24 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Preferences)
 /// The replacement list (`autocorrect/replace`).
 @property (nonatomic) BOOL autocorrectsReplacements;
 
+// Editing tools (`core/gui/editing`): what the GTK Tools page sets.
+/// Whether typing completes from the column's texts above, and after
+/// how many characters (`autocomplete`, `autocomplete-min-chars`).
+@property (nonatomic) BOOL autocompletes;
+@property (nonatomic) NSInteger autocompleteMinimumCharacters;
+/// The function name and argument tooltips under the editor.
+@property (nonatomic) BOOL showsFunctionNameTooltips;
+@property (nonatomic) BOOL showsFunctionArgumentTooltips;
+
+// New workbooks' view defaults (`core/gui/cells`).
+@property (nonatomic) BOOL newWorkbookShowsFunctionMarkers;
+@property (nonatomic) BOOL newWorkbookShowsExtensionMarkers;
+
+// Screen (`core/gui/screen`): the engine's idea of the display, which
+// sizes columns and rows in pixels; sheets made afterwards take a change.
+@property (nonatomic) double screenHorizontalDPI;
+@property (nonatomic) double screenVerticalDPI;
+
 // Undo (`undo`).
 /// How many commands stay undoable.
 @property (nonatomic) NSInteger undoMaximumSteps;

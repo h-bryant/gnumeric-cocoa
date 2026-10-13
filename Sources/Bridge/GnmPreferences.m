@@ -33,6 +33,14 @@ GNM_PREF_INT (newWorkbookRowCount, setNewWorkbookRowCount, core_workbook_n_rows)
 GNM_PREF_INT (newWorkbookColumnCount, setNewWorkbookColumnCount, core_workbook_n_cols)
 GNM_PREF_DOUBLE (defaultZoom, setDefaultZoom, core_gui_window_zoom)
 GNM_PREF_INT (autosaveTime, setAutosaveTime, core_workbook_autosave_time)
+GNM_PREF_BOOL (autocompletes, setAutocompletes, core_gui_editing_autocomplete)
+GNM_PREF_INT (autocompleteMinimumCharacters, setAutocompleteMinimumCharacters, core_gui_editing_autocomplete_min_chars)
+GNM_PREF_BOOL (showsFunctionNameTooltips, setShowsFunctionNameTooltips, core_gui_editing_function_name_tooltips)
+GNM_PREF_BOOL (showsFunctionArgumentTooltips, setShowsFunctionArgumentTooltips, core_gui_editing_function_argument_tooltips)
+GNM_PREF_BOOL (newWorkbookShowsFunctionMarkers, setNewWorkbookShowsFunctionMarkers, core_gui_cells_function_markers)
+GNM_PREF_BOOL (newWorkbookShowsExtensionMarkers, setNewWorkbookShowsExtensionMarkers, core_gui_cells_extension_markers)
+GNM_PREF_DOUBLE (screenHorizontalDPI, setScreenHorizontalDPI, core_gui_screen_horizontaldpi)
+GNM_PREF_DOUBLE (screenVerticalDPI, setScreenVerticalDPI, core_gui_screen_verticaldpi)
 
 - (NSString *)defaultFontName { return string_from (gnm_conf_get_core_defaultfont_name ()); }
 - (void)setDefaultFontName:(NSString *)name { gnm_conf_set_core_defaultfont_name (name.UTF8String ?: ""); }

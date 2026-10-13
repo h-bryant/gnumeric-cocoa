@@ -20,6 +20,14 @@ final class PreferencesModel: ObservableObject {
     @Published var defaultFontBold: Bool { didSet { preferences.defaultFontBold = defaultFontBold } }
     @Published var defaultFontItalic: Bool { didSet { preferences.defaultFontItalic = defaultFontItalic } }
     @Published var enterMovesDirection: Preferences.Direction { didSet { preferences.enterMovesDirection = enterMovesDirection } }
+    @Published var autocompletes: Bool { didSet { preferences.autocompletes = autocompletes } }
+    @Published var autocompleteMinimumCharacters: Int { didSet { preferences.autocompleteMinimumCharacters = autocompleteMinimumCharacters } }
+    @Published var showsFunctionNameTooltips: Bool { didSet { preferences.showsFunctionNameTooltips = showsFunctionNameTooltips } }
+    @Published var showsFunctionArgumentTooltips: Bool { didSet { preferences.showsFunctionArgumentTooltips = showsFunctionArgumentTooltips } }
+    @Published var newWorkbookShowsFunctionMarkers: Bool { didSet { preferences.newWorkbookShowsFunctionMarkers = newWorkbookShowsFunctionMarkers } }
+    @Published var newWorkbookShowsExtensionMarkers: Bool { didSet { preferences.newWorkbookShowsExtensionMarkers = newWorkbookShowsExtensionMarkers } }
+    @Published var screenHorizontalDPI: Double { didSet { preferences.screenHorizontalDPI = screenHorizontalDPI } }
+    @Published var screenVerticalDPI: Double { didSet { preferences.screenVerticalDPI = screenVerticalDPI } }
     @Published var autocorrectsInitialCapitals: Bool { didSet { preferences.autocorrectsInitialCapitals = autocorrectsInitialCapitals } }
     @Published var autocorrectsFirstLetter: Bool { didSet { preferences.autocorrectsFirstLetter = autocorrectsFirstLetter } }
     @Published var autocorrectsNamesOfDays: Bool { didSet { preferences.autocorrectsNamesOfDays = autocorrectsNamesOfDays } }
@@ -47,6 +55,14 @@ final class PreferencesModel: ObservableObject {
         defaultFontBold = preferences.defaultFontBold
         defaultFontItalic = preferences.defaultFontItalic
         enterMovesDirection = preferences.enterMovesDirection
+        autocompletes = preferences.autocompletes
+        autocompleteMinimumCharacters = preferences.autocompleteMinimumCharacters
+        showsFunctionNameTooltips = preferences.showsFunctionNameTooltips
+        showsFunctionArgumentTooltips = preferences.showsFunctionArgumentTooltips
+        newWorkbookShowsFunctionMarkers = preferences.newWorkbookShowsFunctionMarkers
+        newWorkbookShowsExtensionMarkers = preferences.newWorkbookShowsExtensionMarkers
+        screenHorizontalDPI = preferences.screenHorizontalDPI
+        screenVerticalDPI = preferences.screenVerticalDPI
         autocorrectsInitialCapitals = preferences.autocorrectsInitialCapitals
         autocorrectsFirstLetter = preferences.autocorrectsFirstLetter
         autocorrectsNamesOfDays = preferences.autocorrectsNamesOfDays
@@ -114,6 +130,18 @@ struct PreferencesView: View {
                     }
                 }
                 Stepper("Zoom: \(model.defaultZoom)%", value: $model.defaultZoom, in: 10...500, step: 5)
+                Toggle("Mark cells with spreadsheet functions", isOn: $model.newWorkbookShowsFunctionMarkers)
+                Toggle("Mark cells with truncated content", isOn: $model.newWorkbookShowsExtensionMarkers)
+            }
+            Section("Screen") {
+                HStack {
+                    Text("Horizontal DPI:")
+                    TextField("", value: $model.screenHorizontalDPI, format: .number.precision(.fractionLength(0...1))).frame(width: 70)
+                    Text("Vertical DPI:")
+                    TextField("", value: $model.screenVerticalDPI, format: .number.precision(.fractionLength(0...1))).frame(width: 70)
+                }
+                Text("The engine sizes columns and rows in pixels from these; sheets opened afterwards take a change.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
@@ -128,6 +156,13 @@ struct PreferencesView: View {
                     Text("Right").tag(Preferences.Direction.right)
                     Text("Left").tag(Preferences.Direction.left)
                 }
+            }
+            Section("While typing") {
+                Toggle("Autocomplete from the column's texts", isOn: $model.autocompletes)
+                Stepper("After \(model.autocompleteMinimumCharacters) characters", value: $model.autocompleteMinimumCharacters, in: 1...20)
+                    .disabled(!model.autocompletes)
+                Toggle("Show function name tooltips", isOn: $model.showsFunctionNameTooltips)
+                Toggle("Show function argument tooltips", isOn: $model.showsFunctionArgumentTooltips)
             }
             Section("Auto Correct") {
                 Toggle("Correct TWo INitial CApitals", isOn: $model.autocorrectsInitialCapitals)

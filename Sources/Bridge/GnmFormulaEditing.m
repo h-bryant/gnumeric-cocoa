@@ -219,6 +219,10 @@ cb_complete_match (GnmComplete *complete, char const *text, gpointer closure)
     WorkbookView *wbv = self.workbook.workbookView;
     if (!sheet || !wbv || !wbv->do_auto_completion || text.length == 0)
         return nil;
+    /* the preferences (the GTK Tools page): off, or too few characters */
+    if (!gnm_conf_get_core_gui_editing_autocomplete ()
+        || (NSInteger) text.length < gnm_conf_get_core_gui_editing_autocomplete_min_chars ())
+        return nil;
     /* wbcg_edit_start: not for formulas */
     if (gnm_expr_char_start_p (text.UTF8String))
         return nil;

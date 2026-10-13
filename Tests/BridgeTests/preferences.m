@@ -41,6 +41,25 @@ int main (void)
         NSLog (@"defaults: font %@ %g, sheets %ld, undo %ld/%ld", p.defaultFontName, p.defaultFontSize,
                (long) p.newWorkbookSheetCount, (long) p.undoMaximumSteps, (long) p.undoMaximumSize);
 
+        /* the Tools, Screen, and Header/Footer keys */
+        GNM_ASSERT (p.autocompletes && p.autocompleteMinimumCharacters == 3 && p.showsFunctionNameTooltips && p.showsFunctionArgumentTooltips,
+                    @"editing tool defaults %d %ld %d %d", p.autocompletes, (long) p.autocompleteMinimumCharacters,
+                    p.showsFunctionNameTooltips, p.showsFunctionArgumentTooltips);
+        GNM_ASSERT (p.screenHorizontalDPI > 50 && p.screenVerticalDPI > 50, @"dpi %g %g", p.screenHorizontalDPI, p.screenVerticalDPI);
+        p.autocompletes = NO;
+        p.autocompleteMinimumCharacters = 5;
+        p.showsFunctionNameTooltips = NO;
+        p.newWorkbookShowsFunctionMarkers = YES;
+        p.screenHorizontalDPI = 110;
+        GNM_ASSERT (!p.autocompletes && p.autocompleteMinimumCharacters == 5 && !p.showsFunctionNameTooltips && p.newWorkbookShowsFunctionMarkers,
+                    @"editing tools set");
+        GNM_ASSERT (fabs (p.screenHorizontalDPI - 110) < 1e-9, @"dpi set %g", p.screenHorizontalDPI);
+        p.autocompletes = YES;
+        p.autocompleteMinimumCharacters = 3;
+        p.showsFunctionNameTooltips = YES;
+        p.newWorkbookShowsFunctionMarkers = NO;
+        p.screenHorizontalDPI = 96;
+
         /* round trips */
         p.xmlCompressionLevel = 0;
         GNM_ASSERT (p.xmlCompressionLevel == 0, @"compression 0");
@@ -95,6 +114,18 @@ int main (void)
         GNM_ASSERT (packedData.length > 2 && ((const unsigned char *) packedData.bytes)[0] == 0x1f
                     && ((const unsigned char *) packedData.bytes)[1] == 0x8b, @"level 9 is gzip");
         NSLog (@"plain %lu bytes, packed %lu bytes", (unsigned long) plainData.length, (unsigned long) packedData.length);
+        /* the Tools page's effect on autocompletion */
+        GnmSheet *ps = wb.sheets.firstObject;
+        GNM_ASSERT ([ps setText:@"hello" atColumn:0 row:0 autocorrect:NO error:&error], @"hello: %@", error);
+        GNM_ASSERT_EQ_STR ([ps completionForText:@"hel" atColumn:0 row:1] ?: @"", @"hello");
+        GNM_ASSERT ([ps completionForText:@"he" atColumn:0 row:1] == nil, @"two characters are under the default minimum");
+        p.autocompleteMinimumCharacters = 5;
+        GNM_ASSERT ([ps completionForText:@"hel" atColumn:0 row:1] == nil, @"under a raised minimum");
+        p.autocompleteMinimumCharacters = 3;
+        p.autocompletes = NO;
+        GNM_ASSERT ([ps completionForText:@"hel" atColumn:0 row:1] == nil, @"off by preference");
+        p.autocompletes = YES;
+        GNM_ASSERT_EQ_STR ([ps completionForText:@"hel" atColumn:0 row:1] ?: @"", @"hello");
         wb = nil;
 
         GNM_ASSERT (stray.count == 0, @"stray messages: %@", stray);

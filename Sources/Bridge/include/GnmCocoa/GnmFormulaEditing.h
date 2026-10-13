@@ -75,8 +75,9 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(FunctionTooltip)
 - (BOOL)enterArrayFormula:(NSString *)text error:(NSError **)error NS_SWIFT_NAME(enterArrayFormula(_:));
 /// The GTK autocompletion (`GnmCompleteSheet`): the nearest text above
 /// in the column, up to the first blank, that starts with what was
-/// typed; nil when there is none, when autocompletion is off in the
-/// preferences, or when fewer characters than their minimum were typed.
+/// typed; nil when there is none, when autocompletion is off (the
+/// view's attribute or the preference), or when fewer characters than
+/// the preference's minimum were typed.
 - (nullable NSString *)completionForText:(NSString *)text atColumn:(NSInteger)column row:(NSInteger)row NS_SWIFT_NAME(completion(for:atColumn:row:));
 @end
 

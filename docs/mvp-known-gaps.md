@@ -34,7 +34,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | EditPasteSpecial | ported | Edit → Paste Special… (⌘⇧V): what, operation, region transform, the four switches, Paste Link |
 | EditFind, EditReplace | ported | Edit → Find… (⌘F) and Find and Replace… (⌥⌘F), one floating panel with the GTK dialogs' options and the matches list (2026-10-12) |
 | EditRecalc | ported | Data → Recalculate (F9), `workbook_recalc_all` |
-| EditPreferences | partial | Gnumeric → Settings… (⌘,) with the GTK pages that have an effect here: files (compression), new workbooks, Return's direction, Auto Correct, undo, sorting, default font (2026-10-12); no header/footer font, screen DPI, autosave, or copy-and-paste pages |
+| EditPreferences | partial | Gnumeric → Settings… (⌘,) with the GTK pages that have an effect here: files (compression), new workbooks, Return's direction, Auto Correct, undo, sorting, default font (2026-10-12); 2026-10-13: the Tools page's autocompletion (on/off, minimum characters; the bridge now honors both) and function tooltips, the new-workbook function and extension markers, and the Screen DPI (sheets opened afterwards take a change); autosave is Tools → Auto Save…; not offered: the header/footer font (nothing in the engine reads `printsetup/hf-font`), copy-and-paste (X11 selections), transition keys and unfocused range selections (GTK grid behaviors), the function selector's recent list |
 | EditClearContent | ported | Delete key and Edit → Delete |
 | EditClearAll, EditClearFormats, EditClearComments | ported | Edit → Clear submenu |
 | EditClear*Filtered (4) | ported | Edit → Clear → "… Filtered Rows" (2026-10-12); as in GTK they skip the rows a filter hides |
