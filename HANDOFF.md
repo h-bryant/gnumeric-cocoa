@@ -379,8 +379,9 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    `sortSheetsAscending:`), and Tools → Plug-ins… (`GnmPlugins.h`,
    `PluginManagerDialog.swift`, `plugins.m`), and on 2026-10-13 Tools →
    Scenarios and Simulation… (`GnmScenarios.h`, `ScenariosDialog.swift`,
-   `SimulationDialog.swift`, `scenarios.m`).  Next, by usage: Format →
-   AutoFormat;
+   `SimulationDialog.swift`, `scenarios.m`), and Format → AutoFormat…
+   (`GnmAutoFormat.h`, `AutoFormatDialog.swift`, `autoformat.m`; engine
+   patch 0008).  Next, by usage:
    image and widget editors (`cmd_so_set_*`) later; the smaller Phase 3
    gaps (Insert/Delete Cells,
    Goto and the name box, the formula bar, autocomplete, drag and drop,

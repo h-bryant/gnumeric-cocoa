@@ -131,6 +131,7 @@ enum MainMenu {
         let formatMenu = NSMenu(title: "Format")
         formatMenu.addItem(withTitle: "Cells…", action: Selector(("formatCells:")), keyEquivalent: "1")
         formatMenu.addItem(withTitle: "Conditional Formatting…", action: Selector(("conditionalFormatting:")), keyEquivalent: "")
+        formatMenu.addItem(withTitle: "AutoFormat…", action: Selector(("autoFormat:")), keyEquivalent: "")
         formatMenu.addItem(.separator())
         formatMenu.addItem(withTitle: "Bold", action: Selector(("toggleBold:")), keyEquivalent: "b")
         formatMenu.addItem(withTitle: "Italic", action: Selector(("toggleItalic:")), keyEquivalent: "i")

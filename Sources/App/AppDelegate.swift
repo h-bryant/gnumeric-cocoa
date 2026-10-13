@@ -1757,6 +1757,43 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_AUTOFORMAT"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // AutoFormat: a 5x5 block of numbers, the dialog's second
+                // General template with its top edge off, captured to
+                // `-autoformat.png`, applied by OK, and left in the capture.
+                for r in 0..<5 {
+                    for c in 0..<5 { try? sheet.setText("\(r * 5 + c)", atColumn: c, row: r, autocorrect: false) }
+                }
+                sheet.selectRange(CellRange(start: CellCoordinate(column: 0, row: 0), end: CellCoordinate(column: 4, row: 4)),
+                                  editPosition: CellCoordinate(column: 0, row: 0))
+                controller.autoFormat(nil)
+                if let dialog = controller.autoFormatDialog {
+                    NSLog("autoformat: %ld categories (%@), %ld templates in the first", dialog.categories.count,
+                          dialog.categories.map(\.name).joined(separator: ","), dialog.templates.count)
+                    dialog.selectCategory(named: "General")
+                    dialog.select(row: min(1, dialog.templates.count - 1))
+                    dialog.setPart(\.bordersTopEdge, on: false)
+                    NSLog("autoformat: chosen '%@' by %@, top edge %d", dialog.selectedTemplate?.name ?? "nil", dialog.selectedTemplate?.author ?? "nil",
+                          dialog.selectedTemplate?.bordersTopEdge == true ? 1 : 0)
+                    if let content = dialog.window.contentView {
+                        content.layoutSubtreeIfNeeded()
+                        if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                            content.cacheDisplay(in: content.bounds, to: rep)
+                            let autoformatPath = (path as NSString).deletingPathExtension + "-autoformat.png"
+                            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: autoformatPath))
+                            NSLog("autoformat: captured %@ (%@)", autoformatPath, NSStringFromRect(content.bounds))
+                        }
+                    }
+                    dialog.apply(nil)
+                    NSLog("autoformat: applied, undo=%@ B1 bold=%@ fill=%@ dialog=%@", sheet.workbook?.undoLabel ?? "nil",
+                          sheet.formatOfCell(atColumn: 1, row: 0).bold ?? -1, sheet.formatOfCell(atColumn: 1, row: 0).fillsBackground ?? -1,
+                          controller.autoFormatDialog == nil ? "nil" : "open")
+                }
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FREEZE"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

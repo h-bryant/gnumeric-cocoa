@@ -15,5 +15,6 @@ deferred, not ruled out (`docs/decisions.md` ADR-011).
 | `0005-frequency-histogram-bin-double-free.patch` | The frequency and histogram tools put their bin range into `gnm_expr_new_constant`, which takes the value over, and then released it again in `finalize`, a double free once the run is undone and the command leaves the redo list. Hand the expression a `value_dup`. |
 | `0006-correlated-random-width.patch` | The correlated random generator referenced the uncorrelated row as three columns wide whatever the number of variables, so every correlated cell was `#VALUE!` unless the matrix was 3×3. Width from `rtool->variables`. |
 | `0007-shuffle-self-swap.patch` | The data shuffling tool swapped a randomly paired cell, column, or row with itself through `sheet_move_range`, whose zero-offset move is a CRITICAL assertion (the cells still end up right). Return before the moves when the pair is one and the same. |
+| `0008-autoformat-edge-filter-list.patch` | `gnm_auto_fmt_filter_edges` removed members from the list it was walking and read the freed node's `next`, a crash the first time an AutoFormat edge is turned off. Take the next node before the body. |
 
 Re-check each patch at every submodule re-pin (ADR-003).

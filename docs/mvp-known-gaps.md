@@ -88,7 +88,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | FormatCellsCond | ported | Format → Conditional Formatting… (2026-10-12): the GTK operators, x and y, an overlay of fill, text color, bold, italic, number format |
 | FormatMergeCells, FormatUnmergeCells | ported | Format menu, with Merge and Center (`patches/0002` fixes an engine double-unref there) |
 | FormatCellsFitHeight, FormatCellsFitWidth | bridge | `autofitSelectedCells(width:)`; the menu has the whole-column/row Autofit |
-| FormatAuto | no | Phase 5 |
+| FormatAuto | ported | 2026-10-13, see Format → AutoFormat… below |
 | FontBold, FontItalic, FontUnderline | ported | Format → Bold ⌘B, Italic ⌘I, Underline ⌘U (2026-10-12) |
 | FontStrikeThrough, FontDoubleUnderline, FontSuperscript, FontSubscript | partial | through the dialog only; no shortcuts or toolbar |
 | ColumnSize, RowSize, ColumnAutoSize, RowAutoSize, ColumnDefaultSize, RowDefaultSize | ported | Format → Column / Row (points); headers drag-resize and autofit on a boundary double-click |
@@ -102,6 +102,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | ToolsSolver | ported | Tools → Solver… (2026-10-12): parameters, model and algorithm, constraints, options, reports; Gnumeric's own solver, GLPK and lp_solve when installed; the run page as a progress sheet with the status, objective, elapsed time, and a Stop button (`GnmSolverRun`); no scenarios |
 | ToolsAutoCorrect, ToolsAutoSave, ToolsCompare | no | Phase 5 |
 | ToolsScenarios, ToolsScenarioAdd | ported | Tools → Scenarios → View… / Add… (2026-10-13): the Add dialog's checks, the manager's session (Show, Delete, Summary, OK commits "Scenario Show" and the deletions, Cancel restores and drops the report sheets); the summary report fills in the per-cell rows the GTK left as stubs and adds result cells (`GnmScenarios.h`, `ScenariosDialog.swift`, `scenarios.m`) |
+| Format → AutoFormat… | ported | 2026-10-13: the shipped template categories, a preview over the GTK demo table, the Settings menu's parts and edges as checkboxes, applied to the selection with `cmd_selection_autoformat` (`GnmAutoFormat.h`, `AutoFormatDialog.swift`, `autoformat.m`); engine patch 0008 for the edge filter's use after free |
 | ToolsSimulation | ported | Tools → Simulation… (2026-10-13): the dialog's fields, `simulation_tool`'s report to a new sheet or a range, the results of every round and the log in a second alert (`GnmSheet.runSimulation…`, `SimulationDialog.swift`) |
 | ToolsPlugins | ported | Tools → Plug-ins… (2026-10-12): the GTK dialog's list with activation checkboxes, details, the mark for deactivation, Activate All, the new-plugins preference, the directories with Add and Remove, Rescan (`GnmPlugins.h`, `PluginManagerDialog.swift`, `plugins.m`) |
 | ToolsGoalSeek | ported | Tools → Goal Seek… (2026-10-12) |

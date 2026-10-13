@@ -1595,6 +1595,32 @@
   Simulation…; `scenarios.m` is a new test program; the
   `GNM_SNAPSHOT_SCENARIO` hook drives both.
 
+## 2026-10-13: AutoFormat
+
+- `GnmAutoFormat.h`: `GnmAutoFormatCategory` over `GnmFTCategoryGroup`
+  (`gnm_ft_category_group_list_get`, "General" first as the GTK dialog
+  selects it; the templates read on first use with
+  `gnm_ft_category_group_get_templates_list`), `GnmAutoFormatTemplate`
+  over `GnmFT` (name, author, description; the Settings menu's parts and
+  edges as properties that invalidate the style hash; the 5 × 5 preview
+  through `gnm_ft_get_style` with the dimension set as `templates_load`
+  does, each cell as a `GnmCellFormat` plus its four borders' types and
+  colors), and `GnmSheet.applyAutoFormat:` (`cmd_selection_autoformat`
+  on a clone, "Autoformatting A1:E5").  The preview's fill-in merges
+  the defaults for parts turned off (`format_template_fillin_style`), so
+  a cell's `fillsBackground` (the pattern), not its background color,
+  says whether it is filled.
+- Patch 0008: `gnm_auto_fmt_filter_edges` removed members from the list
+  it was walking and read the freed node's `next`, a crash the first
+  time an edge was unchecked (the GTK dialog's Settings menu runs the
+  same code).  The engine in `build/prefix` has patches 0001–0008.
+- `AutoFormatDialog.swift`: the category pop-up, the template list, the
+  preview view drawing the GTK demo table with fills, fonts, alignment,
+  and borders, the info label, and the Apply and Edges checkboxes
+  (applied to every listed template, as `cb_check_item_toggled` does);
+  Format → AutoFormat…; `autoformat.m` is a new test program; the
+  `GNM_SNAPSHOT_AUTOFORMAT` hook drives it.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -1612,8 +1638,8 @@
    printing, formula range selection by mouse and keyboard, the font
    shortcuts, autocompletion, the function selector, and array formulas;
    and all 27 Statistics tools; next the rest of Phase 5 by usage
-   frequency: Format → AutoFormat, then the image and widget editors)
-   from
+   frequency: the image and widget editors, then the smaller Phase 3
+   gaps) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -1636,9 +1662,9 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-13: `main` at the scenarios and
-   simulation commit (after the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-13: `main` at the AutoFormat commit
+   (after scenarios and simulation, the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in
-   `build/prefix` has both patches applied.
+   `build/prefix` has patches 0001–0008 applied.

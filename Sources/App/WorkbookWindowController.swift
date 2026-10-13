@@ -552,7 +552,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             return workbook.sheets.contains { !$0.isVisible } && window?.attachedSheet == nil
         case #selector(manageSheets(_:)), #selector(pluginManager(_:)):
             return window?.attachedSheet == nil
-        case #selector(scenarioAdd(_:)), #selector(scenarioView(_:)), #selector(simulation(_:)):
+        case #selector(scenarioAdd(_:)), #selector(scenarioView(_:)), #selector(simulation(_:)), #selector(autoFormat(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(advancedFilter(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
@@ -1564,6 +1564,29 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     var manageSheetsDialog: ManageSheetsDialog?
     var pluginManagerDialog: PluginManagerDialog?
     var scenarioManagerDialog: ScenarioManagerDialog?
+    var autoFormatDialog: AutoFormatDialog?
+
+    /// Format → AutoFormat… (dialog_autoformat): a template applied to the
+    /// selection on OK.
+    @objc func autoFormat(_ sender: Any?) {
+        guard let window, let sheet = gridView.sheet, let engine = Engine.shared, autoFormatDialog == nil, window.attachedSheet == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let dialog = AutoFormatDialog(engine: engine)
+        autoFormatDialog = dialog
+        dialog.run(in: window) { [weak self] template in
+            guard let self else { return }
+            autoFormatDialog = nil
+            if let template {
+                do {
+                    try sheet.applyAutoFormat(template)
+                } catch {
+                    present(error)
+                }
+            }
+            gridView.needsDisplay = true
+            window.makeFirstResponder(gridView)
+        }
+    }
 
     /// Tools → Scenarios → Add… (dialog_scenario_add).
     @objc func scenarioAdd(_ sender: Any?) {

@@ -99,5 +99,6 @@
 - (void)testFilterVisibility { [self runProgram:@"filter_visibility"]; }
 - (void)testPlugins { [self runProgram:@"plugins"]; }
 - (void)testScenarios { [self runProgram:@"scenarios"]; }
+- (void)testAutoFormat { [self runProgram:@"autoformat"]; }
 
 @end

@@ -1,0 +1,26 @@
+Walk the member list safely while the autoformat edge filter removes from it.
+
+gnm_auto_fmt_filter_edges drops the members that style an edge the user
+turned off (the AutoFormat dialog's Settings menu) with g_slist_remove
+inside a for loop that then reads ptr->next from the freed node, a use
+after free that crashes the first time an edge is unchecked.  Found
+through the Cocoa front end on 2026-10-13; the GTK dialog runs the same
+code.  Take the next node before the body.
+
+--- a/src/format-template.c	2026-10-13 07:05:00
++++ b/src/format-template.c	2026-10-13 07:05:00
+@@ -775,12 +775,13 @@
+-	GSList *ptr;
++	GSList *ptr, *next;
+ 	GnmFT *ft = gnm_ft_clone (origft);
+ 	gboolean is_edge, l = FALSE, r = FALSE, t = FALSE, b = FALSE;
+ 
+-	for (ptr = ft->members; ptr != NULL ; ptr = ptr->next) {
++	for (ptr = ft->members; ptr != NULL ; ptr = next) {
+ 		GnmFTMember *member = ptr->data;
++		next = ptr->next;
+ 		if (member->direction != FREQ_DIRECTION_NONE)
+ 			continue;
+ 
+ 		is_edge = FALSE;
+ 		if (member->col.size == 1) {
