@@ -2338,6 +2338,26 @@
   GTK wording ("Place in:", "Tolerance:", "At least:"), and the titles
   with no GTK counterpart.
 
+### 2026-10-13 (later): ready for a public repository
+
+- Henry decided to distribute unsigned for now and to make the
+  repository public.  Three preparations: the README rewritten for a
+  public reader (what it is, the unsigned-launch instructions, building
+  from source, the layout, the license, and a request for a report from
+  a Mac without Homebrew); the app's user-visible name is now "Gnumeric
+  Cocoa" (the app menu, About, Hide, Quit, `CFBundleName`,
+  `CFBundleDisplayName`), with the Help items still naming Gnumeric,
+  whose manual and website they open, so the port does not present
+  itself as the GNOME project's own; and the version is 0.2.0
+  (`CFBundleShortVersionString`, build 2), the number the release and
+  its tag should carry.  The executable and the `.app` keep the name
+  `GnumericCocoa`.
+- Localization is "good enough for now" by Henry's decision; its row in
+  the gap table stays partial (the app's own sentences).
+- Not done here: the tag (`git tag v0.2.0` on the release commit), the
+  release zip (`scripts/bundle.sh`, then zip `build/dist/GnumericCocoa.app`),
+  and the push, all Henry's.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -2378,8 +2398,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-13: `main` at the loose-matches-and-
-   aliases commit (after the dialog rows and SwiftUI, the stock labels and dialog chrome, the toolbar and buttons, the menu titles, the engine's messages, right-to-left sheets, the bundled
+3. The state at the end of 2026-10-13: `main` at the public-repository
+   preparations commit (after the loose matches and aliases, the dialog rows and SwiftUI, the stock labels and dialog chrome, the toolbar and buttons, the menu titles, the engine's messages, right-to-left sheets, the bundled
    licenses, the relocatable bundle, the workbook properties, multi-line editing, drag and drop, the toolbar, the widget editors, AutoFormat, scenarios and simulation, the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,

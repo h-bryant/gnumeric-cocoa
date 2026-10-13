@@ -12,17 +12,17 @@ enum MainMenu {
         let menuBar = NSMenu()
 
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: L("About Gnumeric"), action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(withTitle: L("About Gnumeric Cocoa"), action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: L("Settings…"), action: Selector(("showSettings:")), keyEquivalent: ",")
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: L("Hide Gnumeric"), action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        appMenu.addItem(withTitle: L("Hide Gnumeric Cocoa"), action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         let hideOthers = appMenu.addItem(withTitle: L("Hide Others"), action: #selector(NSApplication.hideOtherApplications(_:)), keyEquivalent: "h")
         hideOthers.keyEquivalentModifierMask = [.command, .option]
         appMenu.addItem(withTitle: L("Show All"), action: #selector(NSApplication.unhideAllApplications(_:)), keyEquivalent: "")
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: L("Quit Gnumeric"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
-        menuBar.addItem(submenu(appMenu, title: "Gnumeric"))
+        appMenu.addItem(withTitle: L("Quit Gnumeric Cocoa"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menuBar.addItem(submenu(appMenu, title: "Gnumeric Cocoa"))
 
         let fileMenu = NSMenu(title: L("File"))
         fileMenu.addItem(withTitle: L("New"), action: #selector(NSDocumentController.newDocument(_:)), keyEquivalent: "n")

@@ -2733,6 +2733,9 @@ enum Snapshot {
                 let toolbarLabels: [String] = controller.window?.toolbar?.items.map { $0.label } ?? []
                 NSLog("menus: toolbar=%@", toolbarLabels.joined(separator: " | "))
                 let buttons: [String] = ["Cancel", "OK", "Yes", "Paste Link", "Delete Comment", "Save as Image…", "Fewer Decimals"].map { Localization.title($0) }
+                let about: String = NSApp.mainMenu?.items.first?.submenu?.items.first?.title ?? "nil"
+                NSLog("menus: about='%@' bundle='%@' version=%@", about, Bundle.main.infoDictionary?["CFBundleName"] as? String ?? "nil",
+                      Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "nil")
                 NSLog("menus: buttons=%@", buttons.joined(separator: " | "))
                 let chrome: [String] = ["Open…", "Save As…", "Angle:", "Case sensitive", "Goal Seek", "Number", "Alignment"].map { Localization.title($0) }
                 NSLog("menus: chrome=%@", chrome.joined(separator: " | "))
