@@ -377,8 +377,10 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    `formulaText:cursorAt:cycleReferenceIn:`), and Edit → Sheet → Manage
    Sheets… (`ManageSheetsDialog.swift`, `setSheet:protected:`,
    `sortSheetsAscending:`), and Tools → Plug-ins… (`GnmPlugins.h`,
-   `PluginManagerDialog.swift`, `plugins.m`).  Next, by usage: the
-   scenarios and simulation tools, Format → AutoFormat;
+   `PluginManagerDialog.swift`, `plugins.m`), and on 2026-10-13 Tools →
+   Scenarios and Simulation… (`GnmScenarios.h`, `ScenariosDialog.swift`,
+   `SimulationDialog.swift`, `scenarios.m`).  Next, by usage: Format →
+   AutoFormat;
    image and widget editors (`cmd_so_set_*`) later; the smaller Phase 3
    gaps (Insert/Delete Cells,
    Goto and the name box, the formula bar, autocomplete, drag and drop,

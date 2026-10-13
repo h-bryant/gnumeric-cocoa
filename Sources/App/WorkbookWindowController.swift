@@ -552,6 +552,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             return workbook.sheets.contains { !$0.isVisible } && window?.attachedSheet == nil
         case #selector(manageSheets(_:)), #selector(pluginManager(_:)):
             return window?.attachedSheet == nil
+        case #selector(scenarioAdd(_:)), #selector(scenarioView(_:)), #selector(simulation(_:)):
+            return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(advancedFilter(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(pasteSpecial(_:)):
@@ -1561,6 +1563,65 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     var namesDialog: NamesDialog?
     var manageSheetsDialog: ManageSheetsDialog?
     var pluginManagerDialog: PluginManagerDialog?
+    var scenarioManagerDialog: ScenarioManagerDialog?
+
+    /// Tools → Scenarios → Add… (dialog_scenario_add).
+    @objc func scenarioAdd(_ sender: Any?) {
+        guard let window, let sheet = gridView.sheet, window.attachedSheet == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let dialog = ScenarioAddDialog(sheet: sheet)
+        dialog.present(in: window) { [weak self] name, cells, comment in
+            guard let self else { return true }
+            do {
+                try sheet.addScenario(named: name, comment: comment, changingCells: cells)
+                return true
+            } catch {
+                present(error)
+                return false
+            }
+        }
+    }
+
+    /// Tools → Scenarios → View… (the GTK scenario manager).
+    @objc func scenarioView(_ sender: Any?) {
+        guard let window, let sheet = gridView.sheet, scenarioManagerDialog == nil, window.attachedSheet == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let dialog = ScenarioManagerDialog(sheet: sheet)
+        scenarioManagerDialog = dialog
+        dialog.run(in: window) { [weak self] _ in
+            guard let self else { return }
+            scenarioManagerDialog = nil
+            workbook.resendDelegateState()
+            gridView.needsDisplay = true
+            window.makeFirstResponder(gridView)
+        }
+    }
+
+    /// Tools → Simulation… (dialog_simulation): the run, then the results.
+    @objc func simulation(_ sender: Any?) {
+        guard let window, let sheet = gridView.sheet, window.attachedSheet == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let dialog = SimulationDialog(sheet: sheet)
+        dialog.present(in: window) { [weak self] request in
+            guard let self else { return true }
+            do {
+                let result = try sheet.runSimulation(inputs: request.inputs, outputs: request.outputs, iterations: request.iterations,
+                                                     firstRound: request.firstRound, lastRound: request.lastRound,
+                                                     maximumSeconds: request.maximumSeconds, output: request.output)
+                workbook.resendDelegateState()
+                gridView.needsDisplay = true
+                if SimulationDialog.headlessDriver != nil {
+                    SimulationDialog.presentResults(result, in: window)
+                } else {
+                    DispatchQueue.main.async { SimulationDialog.presentResults(result, in: window) }   // after this sheet is gone
+                }
+                return true
+            } catch {
+                present(error)
+                return false
+            }
+        }
+    }
 
     /// The GTK Plugin Manager as a sheet (Tools → Plug-ins…).
     @objc func pluginManager(_ sender: Any?) {

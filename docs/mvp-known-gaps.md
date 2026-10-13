@@ -100,7 +100,9 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | Action | Status | Notes / Phase |
 |---|---|---|
 | ToolsSolver | ported | Tools → Solver… (2026-10-12): parameters, model and algorithm, constraints, options, reports; Gnumeric's own solver, GLPK and lp_solve when installed; the run page as a progress sheet with the status, objective, elapsed time, and a Stop button (`GnmSolverRun`); no scenarios |
-| ToolsAutoCorrect, ToolsAutoSave, ToolsSimulation, ToolsCompare, ToolsScenarios, ToolsScenarioAdd | no | Phase 5 |
+| ToolsAutoCorrect, ToolsAutoSave, ToolsCompare | no | Phase 5 |
+| ToolsScenarios, ToolsScenarioAdd | ported | Tools → Scenarios → View… / Add… (2026-10-13): the Add dialog's checks, the manager's session (Show, Delete, Summary, OK commits "Scenario Show" and the deletions, Cancel restores and drops the report sheets); the summary report fills in the per-cell rows the GTK left as stubs and adds result cells (`GnmScenarios.h`, `ScenariosDialog.swift`, `scenarios.m`) |
+| ToolsSimulation | ported | Tools → Simulation… (2026-10-13): the dialog's fields, `simulation_tool`'s report to a new sheet or a range, the results of every round and the log in a second alert (`GnmSheet.runSimulation…`, `SimulationDialog.swift`) |
 | ToolsPlugins | ported | Tools → Plug-ins… (2026-10-12): the GTK dialog's list with activation checkboxes, details, the mark for deactivation, Activate All, the new-plugins preference, the directories with Add and Remove, Rescan (`GnmPlugins.h`, `PluginManagerDialog.swift`, `plugins.m`) |
 | ToolsGoalSeek | ported | Tools → Goal Seek… (2026-10-12) |
 | Statistics: Descriptive Statistics, Correlation, Covariance, Rank and Percentile, Regression, Two Means (t and z), Two Variances (F), ANOVA single factor, Sampling, Moving Average, Exponential Smoothing | ported | Tools → Statistics (2026-10-12): the GTK dialogs' Input, tool, and Output pages as alert sheets over `cmd_analysis_tool` |

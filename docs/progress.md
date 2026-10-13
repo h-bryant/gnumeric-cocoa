@@ -1563,7 +1563,39 @@
   a new test program (registered in `project.yml` and the XCTest
   list); the `GNM_SNAPSHOT_PLUGINS` hook drives the dialog.
 
-## How to resume (updated 2026-10-12)
+## 2026-10-13: Scenarios and the simulation tool
+
+- `GnmScenarios.h`: `GnmSheetScenario` (the engine's typedef is
+  `GnmScenario`, so the wrapper's name differs; it watches its scenario
+  with a weak pointer because the sheet owns and finalizes scenarios,
+  whose items are sheet dependents, so a wrapper's reference outliving
+  the sheet crashed in `dependent_unlink`), `GnmSheet (Scenarios)`
+  (`scenarios`, `addScenarioNamed:comment:changingCells:` with the Add
+  dialog's four refusals and `cmd_scenario_add`), and
+  `GnmScenarioManager`, the GTK dialog's session: `showScenario:`
+  (`gnm_scenario_apply`, the previous one restored first, then a recalc
+  the GTK gets from its idle), `deleteScenario:` marks,
+  `createSummaryWithResultCells:` writes the report, `finishWithError:`
+  runs `cmd_scenario_mngr` for the shown scenario and removes the
+  marked ones, `cancel` restores and deletes the session's report
+  sheets.  As in the GTK, Summary restores the sheet and forgets the
+  shown scenario.  The 1.12 summary's per-cell callbacks are empty
+  stubs; the bridge fills the rows in (changing cell, current value,
+  each scenario's value) and adds result cells (each scenario applied,
+  recalculated, read, restored).
+- `GnmSheet (Simulation) runSimulationWithInputs:…` is
+  `simulation_ok_clicked_cb` and `prepare_ranges` over `simulation_tool`
+  (the view's current sheet is focused first; the report goes through
+  the analysis output); `GnmSimulationResult` keeps every round's
+  `simstats_t` as `GnmSimulationStatistics`, the GTK's results text, and
+  its log lines.  Not undoable, as in the GTK.
+- `ScenariosDialog.swift` (the Add alert and the manager sheet window)
+  and `SimulationDialog.swift` (the alert, then a results alert with
+  every round's table); Tools → Scenarios ▸ View…, Add… and Tools →
+  Simulation…; `scenarios.m` is a new test program; the
+  `GNM_SNAPSHOT_SCENARIO` hook drives both.
+
+## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
    continue with Phase 4". `HANDOFF.md` §9 is the checklist: smoke tests,
@@ -1580,7 +1612,7 @@
    printing, formula range selection by mouse and keyboard, the font
    shortcuts, autocompletion, the function selector, and array formulas;
    and all 27 Statistics tools; next the rest of Phase 5 by usage
-   frequency: the scenarios and simulation tools, Format → AutoFormat)
+   frequency: Format → AutoFormat, then the image and widget editors)
    from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
@@ -1604,8 +1636,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-12: `main` at the Plugin Manager
-   commit (after Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-13: `main` at the scenarios and
+   simulation commit (after the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

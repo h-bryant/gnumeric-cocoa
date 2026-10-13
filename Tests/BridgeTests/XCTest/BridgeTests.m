@@ -98,5 +98,6 @@
 - (void)testOutline { [self runProgram:@"outline"]; }
 - (void)testFilterVisibility { [self runProgram:@"filter_visibility"]; }
 - (void)testPlugins { [self runProgram:@"plugins"]; }
+- (void)testScenarios { [self runProgram:@"scenarios"]; }
 
 @end

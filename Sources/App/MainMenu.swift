@@ -255,6 +255,12 @@ enum MainMenu {
         statisticsMenu.addItem(submenu(multipleMenu, title: "Multiple Sample Tests"))
         toolsMenu.addItem(submenu(statisticsMenu, title: "Statistics"))
         toolsMenu.addItem(.separator())
+        let scenariosMenu = NSMenu(title: "Scenarios")
+        scenariosMenu.addItem(withTitle: "View…", action: Selector(("scenarioView:")), keyEquivalent: "")
+        scenariosMenu.addItem(withTitle: "Add…", action: Selector(("scenarioAdd:")), keyEquivalent: "")
+        toolsMenu.addItem(submenu(scenariosMenu, title: "Scenarios"))
+        toolsMenu.addItem(withTitle: "Simulation…", action: Selector(("simulation:")), keyEquivalent: "")
+        toolsMenu.addItem(.separator())
         toolsMenu.addItem(withTitle: "Plug-ins…", action: Selector(("pluginManager:")), keyEquivalent: "")
         menuBar.addItem(submenu(toolsMenu, title: "Tools"))
 

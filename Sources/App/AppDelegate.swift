@@ -1674,6 +1674,89 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_SCENARIO"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // Scenarios: A1*A2 in B1; "Base" and "High" added through the
+                // dialog, "High" shown in the manager, a summary with B1 as
+                // the result cell, the manager captured to `-scenarios.png`,
+                // OK; then a simulation of D1+D2 with random inputs.
+                do {
+                    try sheet.setText("10", atColumn: 0, row: 0, autocorrect: false)
+                    try sheet.setText("5", atColumn: 0, row: 1, autocorrect: false)
+                    try sheet.setText("=A1*A2", atColumn: 1, row: 0, autocorrect: false)
+                } catch {
+                    NSLog("scenario: data failed: %@", error.localizedDescription)
+                }
+                ScenarioAddDialog.headlessDriver = { dialog in
+                    dialog.nameField.stringValue = "Base"
+                    dialog.cellsField.stringValue = "A1:A2"
+                    dialog.commentField.stringValue = "as now"
+                    return true
+                }
+                controller.scenarioAdd(nil)
+                try? sheet.setText("12", atColumn: 0, row: 0, autocorrect: false)
+                try? sheet.setText("8", atColumn: 0, row: 1, autocorrect: false)
+                ScenarioAddDialog.headlessDriver = { dialog in
+                    dialog.nameField.stringValue = "High"
+                    dialog.cellsField.stringValue = "A1:A2"
+                    return true
+                }
+                controller.scenarioAdd(nil)
+                ScenarioAddDialog.headlessDriver = nil
+                try? sheet.setText("10", atColumn: 0, row: 0, autocorrect: false)
+                try? sheet.setText("5", atColumn: 0, row: 1, autocorrect: false)
+                NSLog("scenario: %@ added, undo=%@", sheet.scenarios.map(\.name).joined(separator: ","), sheet.workbook?.undoLabel ?? "nil")
+                controller.scenarioView(nil)
+                if let dialog = controller.scenarioManagerDialog {
+                    // the summary first: as in the GTK it restores the sheet
+                    // and forgets the shown scenario
+                    dialog.setResultCellsForTesting("B1")
+                    dialog.summary(nil)
+                    if let report = dialog.lastSummarySheet {
+                        NSLog("scenario: summary '%@' row 6: %@ %@ %@ %@", report.name,
+                              report.displayTextOfCell(atColumn: 0, row: 6) ?? "nil", report.displayTextOfCell(atColumn: 1, row: 6) ?? "nil",
+                              report.displayTextOfCell(atColumn: 2, row: 6) ?? "nil", report.displayTextOfCell(atColumn: 3, row: 6) ?? "nil")
+                    }
+                    dialog.select(row: 1)
+                    dialog.show(nil)
+                    NSLog("scenario: shown %@ B1='%@'", dialog.manager.shownScenario?.name ?? "nil", sheet.displayTextOfCell(atColumn: 1, row: 0) ?? "nil")
+                    if let content = dialog.window.contentView {
+                        content.layoutSubtreeIfNeeded()
+                        if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                            content.cacheDisplay(in: content.bounds, to: rep)
+                            let scenariosPath = (path as NSString).deletingPathExtension + "-scenarios.png"
+                            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: scenariosPath))
+                            NSLog("scenario: captured %@ (%@)", scenariosPath, NSStringFromRect(content.bounds))
+                        }
+                    }
+                    dialog.finish(nil)
+                    NSLog("scenario: after OK B1='%@' undo=%@ sheets=%ld dialog=%@", sheet.displayTextOfCell(atColumn: 1, row: 0) ?? "nil",
+                          sheet.workbook?.undoLabel ?? "nil", sheet.workbook?.sheets.count ?? 0, controller.scenarioManagerDialog == nil ? "nil" : "open")
+                    sheet.workbook?.select(sheet)
+                }
+                do {
+                    try sheet.setText("=RAND()", atColumn: 3, row: 0, autocorrect: false)
+                    try sheet.setText("=10*RAND()", atColumn: 3, row: 1, autocorrect: false)
+                    try sheet.setText("=D1+D2", atColumn: 4, row: 0, autocorrect: false)
+                } catch {
+                    NSLog("scenario: simulation data failed: %@", error.localizedDescription)
+                }
+                SimulationDialog.headlessDriver = { dialog in
+                    dialog.inputsField.stringValue = "D1:D2"
+                    dialog.outputsField.stringValue = "E1"
+                    dialog.iterationsField.stringValue = "100"
+                    dialog.lastRoundField.stringValue = "2"
+                    return true
+                }
+                controller.simulation(nil)
+                SimulationDialog.headlessDriver = nil
+                NSLog("scenario: simulation results:\n%@", SimulationDialog.lastResultsText ?? "nil")
+                NSLog("scenario: sheets after simulation %@", sheet.workbook?.sheets.map(\.name).joined(separator: ",") ?? "nil")
+                sheet.workbook?.select(sheet)
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FREEZE"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {
