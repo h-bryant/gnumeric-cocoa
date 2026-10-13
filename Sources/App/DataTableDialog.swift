@@ -15,8 +15,8 @@ final class DataTableDialog {
     init() {
         alert.messageText = "Data Table"
         alert.informativeText = "The selection's first row and column hold the values; its top-left cell holds the formula."
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("OK"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         func label(_ text: String) -> NSTextField {
             let field = NSTextField(labelWithString: text)
             field.alignment = .right

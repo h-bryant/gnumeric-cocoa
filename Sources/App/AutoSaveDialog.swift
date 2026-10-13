@@ -16,8 +16,8 @@ final class AutoSaveDialog {
 
     init(seconds: Int, prompt promptFirst: Bool) {
         alert.messageText = "Auto Save"
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("OK"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         enabled.state = seconds > 0 ? .on : .off
         enabled.target = self
         enabled.action = #selector(enabledChanged(_:))

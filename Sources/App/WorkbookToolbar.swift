@@ -94,20 +94,20 @@ extension WorkbookWindowController: NSToolbarDelegate {
             popUp.target = self
             popUp.action = #selector(zoomChosen(_:))
             item.view = popUp
-            item.label = "Zoom"
-            item.toolTip = "Zoom"
+            item.label = Localization.title("Zoom")
+            item.toolTip = Localization.title("Zoom")
         case "fontFamily":
             let popUp = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 150, height: 24), pullsDown: false)
             popUp.addItems(withTitles: FormatCellsModel.fontFamilies)
             popUp.target = self
             popUp.action = #selector(fontFamilyChosen(_:))
             item.view = popUp
-            item.label = "Font"
-            item.toolTip = "Font"
+            item.label = Localization.title("Font")
+            item.toolTip = Localization.title("Font")
         case "objects":
             // The GTK object toolbar as one pull-down.
             let popUp = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 120, height: 24), pullsDown: true)
-            popUp.addItem(withTitle: "Objects")
+            popUp.addItem(withTitle: Localization.title("Objects"))
             for (tag, title) in Self.objectToolbarEntries {
                 let menuItem = NSMenuItem(title: title, action: #selector(objectKindChosen(_:)), keyEquivalent: "")
                 menuItem.target = self
@@ -115,11 +115,11 @@ extension WorkbookWindowController: NSToolbarDelegate {
                 popUp.menu?.addItem(menuItem)
             }
             item.view = popUp
-            item.label = "Objects"
-            item.toolTip = "Insert a shape or a widget"
+            item.label = Localization.title("Objects")
+            item.toolTip = Localization.title("Insert a shape or a widget")
         case "borders":
             let popUp = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 150, height: 24), pullsDown: true)
-            popUp.addItem(withTitle: "Borders")
+            popUp.addItem(withTitle: Localization.title("Borders"))
             for preset in Sheet.allBorderPresets {
                 let menuItem = NSMenuItem(title: Sheet.nameOfBorderPreset(Sheet.BorderPreset(rawValue: preset.intValue) ?? .none), action: #selector(borderPresetChosen(_:)), keyEquivalent: "")
                 menuItem.target = self
@@ -127,8 +127,8 @@ extension WorkbookWindowController: NSToolbarDelegate {
                 popUp.menu?.addItem(menuItem)
             }
             item.view = popUp
-            item.label = "Borders"
-            item.toolTip = "Borders"
+            item.label = Localization.title("Borders")
+            item.toolTip = Localization.title("Borders")
         case "textColor", "fillColor":
             let well = NSColorWell(frame: NSRect(x: 0, y: 0, width: 40, height: 24))
             well.isContinuous = false
@@ -136,7 +136,7 @@ extension WorkbookWindowController: NSToolbarDelegate {
             well.target = self
             well.action = itemIdentifier.rawValue == "textColor" ? #selector(textColorChosen(_:)) : #selector(fillColorChosen(_:))
             item.view = well
-            item.label = itemIdentifier.rawValue == "textColor" ? "Text Color" : "Fill Color"
+            item.label = Localization.title(itemIdentifier.rawValue == "textColor" ? "Text Color" : "Fill Color")
             item.toolTip = item.label
         case "fontSize":
             let combo = NSComboBox(frame: NSRect(x: 0, y: 0, width: 60, height: 24))
@@ -145,12 +145,12 @@ extension WorkbookWindowController: NSToolbarDelegate {
             combo.action = #selector(fontSizeChosen(_:))
             combo.delegate = self
             item.view = combo
-            item.label = "Size"
-            item.toolTip = "Font size"
+            item.label = Localization.title("Size")
+            item.toolTip = Localization.title("Font size")
         default:
             guard let spec = Self.toolbarSpecs.first(where: { $0.identifier == itemIdentifier.rawValue }) else { return nil }
-            item.label = spec.label
-            item.toolTip = spec.label
+            item.label = Localization.title(spec.label)
+            item.toolTip = Localization.title(spec.label)
             let image = NSImage(systemSymbolName: spec.symbol, accessibilityDescription: spec.label)
                 ?? NSImage(systemSymbolName: "questionmark", accessibilityDescription: spec.label)
             if spec.toggles {

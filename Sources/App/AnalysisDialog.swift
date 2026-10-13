@@ -191,8 +191,8 @@ final class AnalysisDialog {
     init(tool: Tool, sheet: Sheet) {
         self.tool = tool
         alert.messageText = tool.title
-        alert.addButton(withTitle: "Run")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("Run"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         let selection = sheet.rangeNames(inList: sheet.selectionText)?.joined(separator: ", ") ?? ""
         inputField.stringValue = selection
         xField.stringValue = selection

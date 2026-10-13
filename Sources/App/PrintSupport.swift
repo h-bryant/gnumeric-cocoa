@@ -107,8 +107,8 @@ final class PageSetupDialog: NSObject {
         papers = PrintSettings.paperDisplayNames.map { (name: $0.key, display: $0.value) }.sorted { $0.display < $1.display }
         super.init()
         alert.messageText = "Page Setup"
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("OK"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         paper.addItems(withTitles: papers.map(\.display))
         if let index = papers.firstIndex(where: { $0.name == settings.paperName }) { paper.selectItem(at: index) }
         orientation.addItems(withTitles: ["Portrait", "Landscape"])

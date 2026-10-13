@@ -13,9 +13,9 @@ final class ChartEditorWindow: NSObject, NSOutlineViewDataSource, NSOutlineViewD
     private let outline = NSOutlineView()
     private let preview: PreviewView
     private let addButton = NSPopUpButton(frame: .zero, pullsDown: true)
-    private let removeButton = NSButton(title: "Remove", target: nil, action: nil)
-    private let upButton = NSButton(title: "↑", target: nil, action: nil)
-    private let downButton = NSButton(title: "↓", target: nil, action: nil)
+    private let removeButton = NSButton(title: Localization.title("Remove"), target: nil, action: nil)
+    private let upButton = NSButton(title: Localization.title("↑"), target: nil, action: nil)
+    private let downButton = NSButton(title: Localization.title("↓"), target: nil, action: nil)
     private let formScroll = NSScrollView()
     private let form = NSStackView()
     private var handlers: [NSControl: () -> Void] = [:]
@@ -119,9 +119,9 @@ final class ChartEditorWindow: NSObject, NSOutlineViewDataSource, NSOutlineViewD
             outlineScroll.heightAnchor.constraint(equalTo: left.heightAnchor, constant: -40),
         ])
 
-        let cancel = NSButton(title: "Cancel", target: self, action: #selector(cancelPressed(_:)))
+        let cancel = NSButton(title: Localization.title("Cancel"), target: self, action: #selector(cancelPressed(_:)))
         cancel.keyEquivalent = "\u{1b}"
-        let apply = NSButton(title: "Apply", target: self, action: #selector(applyPressed(_:)))
+        let apply = NSButton(title: Localization.title("Apply"), target: self, action: #selector(applyPressed(_:)))
         apply.keyEquivalent = "\r"
         let buttons = NSStackView(views: [NSView(), cancel, apply])
         buttons.orientation = .horizontal
@@ -281,7 +281,7 @@ final class ChartEditorWindow: NSObject, NSOutlineViewDataSource, NSOutlineViewD
         form.addArrangedSubview(title)
         form.addArrangedSubview(subtitle)
         if node.role == "Plot" {
-            let change = NSButton(title: "Change Type…", target: self, action: #selector(changeTypePressed(_:)))
+            let change = NSButton(title: Localization.title("Change Type…"), target: self, action: #selector(changeTypePressed(_:)))
             form.addArrangedSubview(change)
         }
 

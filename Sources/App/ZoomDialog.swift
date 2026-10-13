@@ -16,8 +16,8 @@ final class ZoomDialog {
 
     init(sheet: Sheet) {
         alert.messageText = "Zoom"
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("OK"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         percentField.addItems(withObjectValues: Self.presets.map { "\($0)%" })
         percentField.stringValue = "\(Int((sheet.zoomFactor * 100).rounded()))%"
         percentField.widthAnchor.constraint(equalToConstant: 110).isActive = true

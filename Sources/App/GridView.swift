@@ -1160,10 +1160,10 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
             }
             let menu = NSMenu(title: "Cell")
             if sheet.comment(atColumn: cell.column, row: cell.row) != nil {
-                menu.addItem(withTitle: "Edit Comment…", action: #selector(insertComment(_:)), keyEquivalent: "")
-                menu.addItem(withTitle: "Delete Comment", action: #selector(deleteComment(_:)), keyEquivalent: "")
+                menu.addItem(withTitle: Localization.title("Edit Comment…"), action: #selector(insertComment(_:)), keyEquivalent: "")
+                menu.addItem(withTitle: Localization.title("Delete Comment"), action: #selector(deleteComment(_:)), keyEquivalent: "")
             } else {
-                menu.addItem(withTitle: "Insert Comment…", action: #selector(insertComment(_:)), keyEquivalent: "")
+                menu.addItem(withTitle: Localization.title("Insert Comment…"), action: #selector(insertComment(_:)), keyEquivalent: "")
             }
             return menu
         }
@@ -1172,20 +1172,20 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         }
         let menu = NSMenu(title: "Object")
         if object.typeName == "SheetObjectGraph" {
-            menu.addItem(withTitle: "Properties…", action: #selector(editObjectProperties(_:)), keyEquivalent: "")
+            menu.addItem(withTitle: Localization.title("Properties…"), action: #selector(editObjectProperties(_:)), keyEquivalent: "")
         }
         if !sheet.imageFormats(for: object).isEmpty {
-            menu.addItem(withTitle: "Save as Image…", action: #selector(saveObjectAsImage(_:)), keyEquivalent: "")
+            menu.addItem(withTitle: Localization.title("Save as Image…"), action: #selector(saveObjectAsImage(_:)), keyEquivalent: "")
         }
         if menu.items.count > 0 {
             menu.addItem(.separator())
         }
-        menu.addItem(withTitle: "Delete", action: #selector(deleteObjects(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: Localization.title("Delete"), action: #selector(deleteObjects(_:)), keyEquivalent: "")
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Pull to Front", action: #selector(pullObjectToFront(_:)), keyEquivalent: "")
-        menu.addItem(withTitle: "Pull Forward", action: #selector(pullObjectForward(_:)), keyEquivalent: "")
-        menu.addItem(withTitle: "Push Backward", action: #selector(pushObjectBackward(_:)), keyEquivalent: "")
-        menu.addItem(withTitle: "Push to Back", action: #selector(pushObjectToBack(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: Localization.title("Pull to Front"), action: #selector(pullObjectToFront(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: Localization.title("Pull Forward"), action: #selector(pullObjectForward(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: Localization.title("Push Backward"), action: #selector(pushObjectBackward(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: Localization.title("Push to Back"), action: #selector(pushObjectToBack(_:)), keyEquivalent: "")
         return menu
     }
 

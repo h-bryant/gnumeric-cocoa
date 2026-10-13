@@ -69,8 +69,8 @@ final class SortDialog: NSObject {
         locale.addItems(withObjectValues: Self.locales.map { $0.isEmpty ? "(current)" : $0 })
         locale.stringValue = "(current)"
         locale.widthAnchor.constraint(equalToConstant: 160).isActive = true
-        alert.addButton(withTitle: "Sort")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("Sort"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         var cells: [[NSView]] = [
             [NSTextField(labelWithString: "Direction:"), direction, NSView()],
             [NSView(), header, NSView()],

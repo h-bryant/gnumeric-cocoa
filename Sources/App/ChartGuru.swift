@@ -22,7 +22,7 @@ final class ChartGuru: NSObject, NSTableViewDataSource, NSTableViewDelegate {
     private let summary = NSTextField(wrappingLabelWithString: "")
     private let layout = NSPopUpButton(frame: .zero, pullsDown: false)
     private let shared = NSButton(checkboxWithTitle: "Use the first series as the shared abscissa", target: nil, action: nil)
-    private let insertButton = NSButton(title: "Insert", target: nil, action: nil)
+    private let insertButton = NSButton(title: Localization.title("Insert"), target: nil, action: nil)
     private var images: [String: NSImage] = [:]
     private var completion: ((Choice?) -> Void)?
 
@@ -115,7 +115,7 @@ final class ChartGuru: NSObject, NSTableViewDataSource, NSTableViewDelegate {
         options.spacing = 8
         options.isHidden = typeOnly
 
-        let cancel = NSButton(title: "Cancel", target: self, action: #selector(cancelPressed(_:)))
+        let cancel = NSButton(title: Localization.title("Cancel"), target: self, action: #selector(cancelPressed(_:)))
         cancel.keyEquivalent = "\u{1b}"
         insertButton.title = typeOnly ? "Change" : "Insert"
         insertButton.target = self

@@ -22,8 +22,8 @@ final class ConditionalFormatDialog: NSObject, NSTableViewDataSource, NSTableVie
     private let italicCheck = NSButton(checkboxWithTitle: "Italic", target: nil, action: nil)
     private let formatCheck = NSButton(checkboxWithTitle: "Number format:", target: nil, action: nil)
     private let formatField = NSTextField()
-    private let replaceButton = NSButton(title: "Replace", target: nil, action: nil)
-    private let removeButton = NSButton(title: "Remove", target: nil, action: nil)
+    private let replaceButton = NSButton(title: Localization.title("Replace"), target: nil, action: nil)
+    private let removeButton = NSButton(title: Localization.title("Remove"), target: nil, action: nil)
     private let status = NSTextField(labelWithString: "")
     private(set) var conditions: [ConditionalFormat]
     private var completion: (@MainActor ([ConditionalFormat]?) -> Void)?
@@ -102,15 +102,15 @@ final class ConditionalFormatDialog: NSObject, NSTableViewDataSource, NSTableVie
         grid.column(at: 1).xPlacement = .fill
         for index in 0..<grid.numberOfRows { grid.row(at: index).yPlacement = .center }
 
-        let addButton = NSButton(title: "Add", target: self, action: #selector(add(_:)))
+        let addButton = NSButton(title: Localization.title("Add"), target: self, action: #selector(add(_:)))
         replaceButton.target = self
         replaceButton.action = #selector(replace(_:))
         removeButton.target = self
         removeButton.action = #selector(remove(_:))
-        let clearButton = NSButton(title: "Clear All", target: self, action: #selector(clearAll(_:)))
-        let cancelButton = NSButton(title: "Cancel", target: self, action: #selector(cancel(_:)))
+        let clearButton = NSButton(title: Localization.title("Clear All"), target: self, action: #selector(clearAll(_:)))
+        let cancelButton = NSButton(title: Localization.title("Cancel"), target: self, action: #selector(cancel(_:)))
         cancelButton.keyEquivalent = "\u{1b}"
-        let okButton = NSButton(title: "OK", target: self, action: #selector(accept(_:)))
+        let okButton = NSButton(title: Localization.title("OK"), target: self, action: #selector(accept(_:)))
         okButton.keyEquivalent = "\r"
         status.textColor = .secondaryLabelColor
         status.font = .systemFont(ofSize: NSFont.smallSystemFontSize)

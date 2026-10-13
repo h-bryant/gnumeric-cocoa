@@ -30,9 +30,9 @@ final class HyperlinkDialog: NSObject {
         super.init()
         alert.messageText = "Hyperlink"
         alert.informativeText = "A link on the selected cells; a click follows it."
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "Cancel")
-        if hasLink { alert.addButton(withTitle: "Remove") }
+        alert.addButton(withTitle: Localization.title("OK"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
+        if hasLink { alert.addButton(withTitle: Localization.title("Remove")) }
         kind.addItems(withTitles: ["Internal Link", "External Link", "Email Link", "Web Link"])
         kind.selectItem(at: 3)
         defaultTip.state = .on

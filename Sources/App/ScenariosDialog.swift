@@ -16,8 +16,8 @@ final class ScenarioAddDialog {
     init(sheet: Sheet) {
         alert.messageText = "Add Scenario"
         alert.informativeText = "The changing cells keep their current values under this name."
-        alert.addButton(withTitle: "Add")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("Add"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         cellsField.stringValue = sheet.rangeNames(inList: sheet.selectionText)?.first ?? ""
         for field in [nameField, cellsField, commentField] { field.widthAnchor.constraint(greaterThanOrEqualToConstant: 240).isActive = true }
         func label(_ text: String) -> NSTextField {
@@ -60,9 +60,9 @@ final class ScenarioManagerDialog: NSObject, NSTableViewDataSource, NSTableViewD
     private let table = NSTableView()
     private let details = NSTextField(wrappingLabelWithString: "")
     private let resultsField = NSTextField(string: "")
-    private let showButton = NSButton(title: "Show", target: nil, action: nil)
-    private let deleteButton = NSButton(title: "Delete", target: nil, action: nil)
-    private let summaryButton = NSButton(title: "Summary", target: nil, action: nil)
+    private let showButton = NSButton(title: Localization.title("Show"), target: nil, action: nil)
+    private let deleteButton = NSButton(title: Localization.title("Delete"), target: nil, action: nil)
+    private let summaryButton = NSButton(title: Localization.title("Summary"), target: nil, action: nil)
     private let status = NSTextField(labelWithString: "")
     private(set) var scenarios: [Scenario] = []
     private var completion: (@MainActor (Bool) -> Void)?
@@ -113,9 +113,9 @@ final class ScenarioManagerDialog: NSObject, NSTableViewDataSource, NSTableViewD
         status.textColor = .secondaryLabelColor
         status.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
         status.lineBreakMode = .byTruncatingTail
-        let okButton = NSButton(title: "OK", target: self, action: #selector(finish(_:)))
+        let okButton = NSButton(title: Localization.title("OK"), target: self, action: #selector(finish(_:)))
         okButton.keyEquivalent = "\r"
-        let cancelButton = NSButton(title: "Cancel", target: self, action: #selector(cancel(_:)))
+        let cancelButton = NSButton(title: Localization.title("Cancel"), target: self, action: #selector(cancel(_:)))
         cancelButton.keyEquivalent = "\u{1b}"
         let buttons = NSStackView(views: [status, NSView(), cancelButton, okButton])
         buttons.orientation = .horizontal

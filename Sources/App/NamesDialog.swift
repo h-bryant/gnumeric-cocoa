@@ -14,8 +14,8 @@ final class NamesDialog: NSObject, NSTableViewDataSource, NSTableViewDelegate {
     private let nameField = NSTextField()
     private let scopePopUp = NSPopUpButton(frame: .zero, pullsDown: false)
     private let expressionField = NSTextField()
-    private let addButton = NSButton(title: "Add", target: nil, action: nil)
-    private let removeButton = NSButton(title: "Remove", target: nil, action: nil)
+    private let addButton = NSButton(title: Localization.title("Add"), target: nil, action: nil)
+    private let removeButton = NSButton(title: Localization.title("Remove"), target: nil, action: nil)
     private let status = NSTextField(labelWithString: "")
     private(set) var names: [DefinedName] = []
     private var completion: (@MainActor () -> Void)?
@@ -63,9 +63,9 @@ final class NamesDialog: NSObject, NSTableViewDataSource, NSTableViewDelegate {
         addButton.action = #selector(add(_:))
         removeButton.target = self
         removeButton.action = #selector(remove(_:))
-        let closeButton = NSButton(title: "Close", target: self, action: #selector(close(_:)))
+        let closeButton = NSButton(title: Localization.title("Close"), target: self, action: #selector(close(_:)))
         closeButton.keyEquivalent = "\u{1b}"
-        let newButton = NSButton(title: "New", target: self, action: #selector(clearFields(_:)))
+        let newButton = NSButton(title: Localization.title("New"), target: self, action: #selector(clearFields(_:)))
 
         func label(_ text: String) -> NSTextField {
             let field = NSTextField(labelWithString: text)
@@ -231,8 +231,8 @@ final class NamesDialog: NSObject, NSTableViewDataSource, NSTableViewDelegate {
             let alert = NSAlert()
             alert.messageText = "The defined name “\(name.name)” is in use."
             alert.informativeText = "Cells or other names refer to it; they will show an error without it. Remove it anyway?"
-            alert.addButton(withTitle: "Remove")
-            alert.addButton(withTitle: "Cancel")
+            alert.addButton(withTitle: Localization.title("Remove"))
+            alert.addButton(withTitle: Localization.title("Cancel"))
             alert.beginSheetModal(for: window) { [weak self] response in
                 guard response == .alertFirstButtonReturn else { return }
                 self?.performRemove(name)

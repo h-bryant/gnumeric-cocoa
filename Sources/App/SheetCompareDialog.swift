@@ -55,7 +55,7 @@ final class SheetCompareDialog: NSObject, NSOutlineViewDataSource, NSOutlineView
             popUp.widthAnchor.constraint(greaterThanOrEqualToConstant: 180).isActive = true
             sheetPopUps[index].widthAnchor.constraint(greaterThanOrEqualToConstant: 140).isActive = true
         }
-        let compareButton = NSButton(title: "Compare", target: self, action: #selector(compare(_:)))
+        let compareButton = NSButton(title: Localization.title("Compare"), target: self, action: #selector(compare(_:)))
         compareButton.keyEquivalent = "\r"
         let top = NSStackView(views: [grid, NSView(), compareButton])
         top.orientation = .horizontal
@@ -82,7 +82,7 @@ final class SheetCompareDialog: NSObject, NSOutlineViewDataSource, NSOutlineView
         status.textColor = .secondaryLabelColor
         status.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
         status.lineBreakMode = .byTruncatingTail
-        let closeButton = NSButton(title: "Close", target: self, action: #selector(close(_:)))
+        let closeButton = NSButton(title: Localization.title("Close"), target: self, action: #selector(close(_:)))
         closeButton.keyEquivalent = "\u{1b}"
         let bottom = NSStackView(views: [status, NSView(), closeButton])
         bottom.orientation = .horizontal

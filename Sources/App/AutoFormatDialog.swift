@@ -94,9 +94,9 @@ final class AutoFormatDialog: NSObject, NSTableViewDataSource, NSTableViewDelega
         status.textColor = .secondaryLabelColor
         status.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
         status.lineBreakMode = .byTruncatingTail
-        let okButton = NSButton(title: "OK", target: self, action: #selector(apply(_:)))
+        let okButton = NSButton(title: Localization.title("OK"), target: self, action: #selector(apply(_:)))
         okButton.keyEquivalent = "\r"
-        let cancelButton = NSButton(title: "Cancel", target: self, action: #selector(cancel(_:)))
+        let cancelButton = NSButton(title: Localization.title("Cancel"), target: self, action: #selector(cancel(_:)))
         cancelButton.keyEquivalent = "\u{1b}"
         let buttons = NSStackView(views: [status, NSView(), cancelButton, okButton])
         buttons.orientation = .horizontal

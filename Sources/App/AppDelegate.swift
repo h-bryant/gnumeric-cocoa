@@ -2730,6 +2730,10 @@ enum Snapshot {
                 let breakItem = NSMenuItem(title: "", action: #selector(WorkbookWindowController.toggleColumnPageBreak(_:)), keyEquivalent: "")
                 _ = controller.validateUserInterfaceItem(breakItem)
                 NSLog("menus: pagebreak='%@'", breakItem.title)
+                let toolbarLabels: [String] = controller.window?.toolbar?.items.map { $0.label } ?? []
+                NSLog("menus: toolbar=%@", toolbarLabels.joined(separator: " | "))
+                let buttons: [String] = ["Cancel", "OK", "Yes", "Paste Link", "Delete Comment", "Save as Image…", "Fewer Decimals"].map { Localization.title($0) }
+                NSLog("menus: buttons=%@", buttons.joined(separator: " | "))
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }

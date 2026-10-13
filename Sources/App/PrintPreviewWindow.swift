@@ -13,8 +13,8 @@ final class PrintPreviewController: NSObject, NSWindowDelegate {
     private let scroll = NSScrollView()
     private let pageLabel = NSTextField(labelWithString: "")
     private let zoomPopUp = NSPopUpButton(frame: .zero, pullsDown: false)
-    private let previousButton = NSButton(title: "Previous", target: nil, action: nil)
-    private let nextButton = NSButton(title: "Next", target: nil, action: nil)
+    private let previousButton = NSButton(title: Localization.title("Previous"), target: nil, action: nil)
+    private let nextButton = NSButton(title: Localization.title("Next"), target: nil, action: nil)
     /// The zoom choices: nil fits the page width.
     static let zoomChoices: [(String, CGFloat?)] = [("Fit Width", nil), ("50%", 0.5), ("75%", 0.75), ("100%", 1), ("150%", 1.5), ("200%", 2)]
     private(set) var job: PrintJob?
@@ -48,8 +48,8 @@ final class PrintPreviewController: NSObject, NSWindowDelegate {
         zoomPopUp.addItems(withTitles: Self.zoomChoices.map(\.0))
         zoomPopUp.target = self
         zoomPopUp.action = #selector(zoomChosen(_:))
-        let setupButton = NSButton(title: "Page Setup…", target: self, action: #selector(pageSetup(_:)))
-        let printButton = NSButton(title: "Print…", target: self, action: #selector(print(_:)))
+        let setupButton = NSButton(title: Localization.title("Page Setup…"), target: self, action: #selector(pageSetup(_:)))
+        let printButton = NSButton(title: Localization.title("Print…"), target: self, action: #selector(print(_:)))
         printButton.keyEquivalent = "\r"
         let bar = NSStackView(views: [previousButton, nextButton, pageLabel, NSView(), zoomPopUp, setupButton, printButton])
         bar.orientation = .horizontal

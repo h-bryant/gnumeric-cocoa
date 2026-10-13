@@ -14,8 +14,8 @@ final class ShuffleDialog {
 
     init(sheet: Sheet) {
         alert.messageText = "Data Shuffling"
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("OK"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         rangeField.stringValue = sheet.rangeNames(inList: sheet.selectionText)?.first ?? ""
         rangeField.widthAnchor.constraint(greaterThanOrEqualToConstant: 220).isActive = true
         method.addItems(withTitles: ["Columns", "Rows", "Area"])

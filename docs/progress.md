@@ -2248,6 +2248,32 @@
 - Still English: the dialogs, the toolbar labels, the cell context
   menu, and the standard macOS items.
 
+### 2026-10-13 (later): the toolbar, the context menus, and the buttons follow too
+
+- `Localization.title` now also tries a title as a message id with a
+  mnemonic on its first letter ("Cancel" → "_Cancel" → "Abbrechen") and
+  drops a translation's ellipsis where the app's title has none (a
+  toolbar label from a menu item's message).  Eighteen more aliases map
+  the toolbar's wording (Fewer Decimals → "Decrease Precision", Sort A→Z
+  → "Sort Ascending", Across → "_Center Across Selection", …) and the
+  context menus' (Delete Comment → "_Remove Comments", Save as Image… →
+  "_Save As Image", Paste Link → "Paste _Link").
+- Through it now: the toolbar labels and tool tips
+  (`WorkbookToolbar`), the Objects and Borders pull-downs' entries, the
+  grid's cell and object context menus, and every `addButton(withTitle:)`
+  and `NSButton(title:)` in the app (152 sites).
+- `GNM_SNAPSHOT_MENUS=1` under German: 325 of 365 titles changed, the
+  toolbar reads Neu | Open | Speichern | Drucken | … | Genauigkeit
+  erhöhen | …, the buttons Abbrechen | OK | Ja | Link einfügen |
+  Kommentare entfernen | Bild speichern unter…; under English 0 of 365.
+- Still English: the dialogs' own labels, tabs, and messages, the
+  SwiftUI Settings window, and Text Color and Fill Color on the toolbar
+  (no GTK message).  Open stays English because the GTK's stock labels
+  ("_Open", "_Save", "_Undo", … from gui-util.h) sit under the message
+  context "Stock label", which `dgettext` does not see; a lookup with
+  the context (`g_dpgettext2`) would localize them and the standard
+  macOS items too: the next step.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -2288,8 +2314,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-13: `main` at the menu-titles-follow-
-   the-language commit (after the engine's messages, right-to-left sheets, the bundled
+3. The state at the end of 2026-10-13: `main` at the toolbar-and-buttons-
+   follow-the-language commit (after the menu titles, the engine's messages, right-to-left sheets, the bundled
    licenses, the relocatable bundle, the workbook properties, multi-line editing, drag and drop, the toolbar, the widget editors, AutoFormat, scenarios and simulation, the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,

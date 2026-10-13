@@ -24,8 +24,8 @@ final class TabulateDialog {
 
     init(sheet: Sheet) {
         alert.messageText = "Tabulate Dependency"
-        alert.addButton(withTitle: "Tabulate")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("Tabulate"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         func label(_ text: String) -> NSTextField {
             let field = NSTextField(labelWithString: text)
             field.alignment = .right

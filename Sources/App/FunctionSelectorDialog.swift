@@ -29,7 +29,7 @@ final class FunctionSelectorDialog: NSObject, NSTableViewDataSource, NSTableView
         super.init()
         alert.messageText = helpOnly ? "Functions" : "Insert Function"
         alert.addButton(withTitle: helpOnly ? "Close" : "Insert")
-        if !helpOnly { alert.addButton(withTitle: "Cancel") }
+        if !helpOnly { alert.addButton(withTitle: Localization.title("Cancel")) }
         groupPopUp.addItems(withTitles: ["All functions"] + groups.map(\.name))
         groupPopUp.target = self
         groupPopUp.action = #selector(filterChanged(_:))

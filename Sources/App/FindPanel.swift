@@ -29,10 +29,10 @@ final class FindPanel: NSObject, NSTableViewDataSource, NSTableViewDelegate, NST
     private let errorBehavior = NSPopUpButton(frame: .zero, pullsDown: false)
     private let table = NSTableView()
     private let status = NSTextField(labelWithString: "")
-    private let previousButton = NSButton(title: "Previous", target: nil, action: nil)
-    private let nextButton = NSButton(title: "Next", target: nil, action: nil)
-    private let replaceButton = NSButton(title: "Replace", target: nil, action: nil)
-    private let replaceAllButton = NSButton(title: "Replace All", target: nil, action: nil)
+    private let previousButton = NSButton(title: Localization.title("Previous"), target: nil, action: nil)
+    private let nextButton = NSButton(title: Localization.title("Next"), target: nil, action: nil)
+    private let replaceButton = NSButton(title: Localization.title("Replace"), target: nil, action: nil)
+    private let replaceAllButton = NSButton(title: Localization.title("Replace All"), target: nil, action: nil)
 
     private(set) var matches: [SearchMatch] = []
     private var revealing = false
@@ -105,7 +105,7 @@ final class FindPanel: NSObject, NSTableViewDataSource, NSTableViewDelegate, NST
         replaceButton.action = #selector(replaceCurrent(_:))
         replaceAllButton.target = self
         replaceAllButton.action = #selector(replaceAll(_:))
-        let findAllButton = NSButton(title: "Find All", target: self, action: #selector(findAll(_:)))
+        let findAllButton = NSButton(title: Localization.title("Find All"), target: self, action: #selector(findAll(_:)))
         findAllButton.keyEquivalent = "\r"
 
         func label(_ text: String) -> NSTextField {
@@ -440,9 +440,9 @@ final class FindPanel: NSObject, NSTableViewDataSource, NSTableViewDelegate, NST
         let alert = NSAlert()
         alert.messageText = query.isComment ? "Replace in this comment?" : "Replace in this cell?"
         alert.informativeText = "\(query.location)\n\nReplacing:  \(query.currentText)\nBy:  \(query.replacementText)"
-        alert.addButton(withTitle: "Replace")
-        alert.addButton(withTitle: "Skip")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("Replace"))
+        alert.addButton(withTitle: Localization.title("Skip"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         alert.showsSuppressionButton = true
         alert.suppressionButton?.title = "Do not ask again"
         let response = alert.runModal()

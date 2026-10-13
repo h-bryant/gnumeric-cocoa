@@ -202,8 +202,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         guard window.attachedSheet == nil else { return }
         let alert = NSAlert()
         alert.messageText = "Do you want to save the workbook \(document.displayName)?"
-        alert.addButton(withTitle: "Yes")
-        alert.addButton(withTitle: "No")
+        alert.addButton(withTitle: Localization.title("Yes"))
+        alert.addButton(withTitle: Localization.title("No"))
         alert.beginSheetModal(for: window) { response in
             guard response == .alertFirstButtonReturn else { return }
             save()
@@ -551,8 +551,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         let alert = NSAlert()
         alert.messageText = title
         alert.informativeText = message
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("OK"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 120, height: 24))
         let formatter = NumberFormatter()
         formatter.minimum = 0
@@ -892,9 +892,9 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         guard let window, gridView.sheet != nil else { return }
         let alert = NSAlert()
         alert.messageText = "Paste Special"
-        alert.addButton(withTitle: "Paste")
-        alert.addButton(withTitle: "Paste Link")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("Paste"))
+        alert.addButton(withTitle: Localization.title("Paste Link"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         let what = NSPopUpButton(frame: .zero, pullsDown: false)
         let whatChoices: [(String, PasteOptions)] = [
             ("All", .allCells), ("Contents", .contents), ("As Values", .asValues), ("Formats", .formats), ("Comments", .comments)]
@@ -996,8 +996,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         let alert = NSAlert()
         alert.messageText = "Rename Sheet"
         alert.informativeText = "A name for the sheet \"\(current.name)\"."
-        alert.addButton(withTitle: "Rename")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("Rename"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 220, height: 24))
         field.stringValue = current.name
         alert.accessoryView = field
@@ -1017,8 +1017,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         let alert = NSAlert()
         alert.messageText = "Resize Sheet"
         alert.informativeText = "Sizes are powers of two. A sheet cannot shrink below its data."
-        alert.addButton(withTitle: "Resize")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("Resize"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         func sizes(from minimum: Int, to maximum: Int, current: Int) -> NSPopUpButton {
             let popUp = NSPopUpButton(frame: .zero, pullsDown: false)
             var n = minimum
@@ -1060,8 +1060,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         let alert = NSAlert()
         alert.messageText = "Tab Color"
         alert.informativeText = "Colors of the tab for the sheet \"\(sheet.name)\"."
-        alert.addButton(withTitle: "Set")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("Set"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         func well(_ color: CGColor?, none: NSButton) -> NSColorWell {
             let well = TabColorWell(frame: NSRect(x: 0, y: 0, width: 60, height: 24))
             well.widthAnchor.constraint(equalToConstant: 60).isActive = true
@@ -1161,8 +1161,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         let alert = NSAlert()
         alert.messageText = "Go To"
         alert.informativeText = "A cell such as C10, a range such as B2:D4, a sheet-qualified reference such as Sheet2!A1, or a defined name."
-        alert.addButton(withTitle: "Go")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("Go"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 240, height: 24))
         field.placeholderString = "Reference or name"
         alert.accessoryView = field
@@ -1186,7 +1186,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         alert.informativeText = insert ? "Insert empty cells the size of the selection, or whole rows or columns."
                                        : "Delete the selected cells, or their whole rows or columns."
         alert.addButton(withTitle: insert ? "Insert" : "Delete")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("Cancel"))
         let titles = insert ? ["Shift cells right", "Shift cells down", "Entire rows", "Entire columns"]
                             : ["Shift cells left", "Shift cells up", "Entire rows", "Entire columns"]
         let radios = titles.map { NSButton(radioButtonWithTitle: $0, target: nil, action: nil) }
@@ -1250,8 +1250,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         let alert = NSAlert()
         alert.messageText = "Fill Series"
         alert.informativeText = "Fill the selection with a series from the start value. Leave the step empty to spread the series to the stop value over the selection."
-        alert.addButton(withTitle: "Fill")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("Fill"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         let direction = NSPopUpButton(frame: .zero, pullsDown: false)
         direction.addItems(withTitles: ["In columns (down)", "In rows (across)"])
         direction.selectItem(at: preferRows ? 1 : 0)
@@ -1343,8 +1343,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         let alert = NSAlert()
         alert.messageText = "Goal Seek"
         alert.informativeText = "Change one cell until the formula in another reaches a value."
-        alert.addButton(withTitle: "Seek")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("Seek"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         let setCell = NSTextField(string: sheet.name(ofColumn: edit.column) + sheet.name(ofRow: edit.row))
         let toValue = NSTextField(string: "0")
         let changeCell = NSTextField(string: "")
@@ -1589,8 +1589,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         let alert = NSAlert()
         let what = workbook.lastExporterWritesSingleSheet ? "the current sheet of this workbook" : "this workbook"
         alert.messageText = "Do you want to export \(what) to the location “\(url.path)” using the “\(workbook.lastExporterDescription ?? "")” exporter?"
-        alert.addButton(withTitle: "Yes")
-        alert.addButton(withTitle: "No")
+        alert.addButton(withTitle: Localization.title("Yes"))
+        alert.addButton(withTitle: Localization.title("No"))
         alert.beginSheetModal(for: window) { response in
             guard response == .alertFirstButtonReturn else { return }
             run()
@@ -1921,8 +1921,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         let alert = NSAlert()
         alert.messageText = "Unhide Sheet"
         alert.informativeText = "Choose the sheet to show again."
-        alert.addButton(withTitle: "Unhide")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("Unhide"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         let popUp = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 240, height: 26), pullsDown: false)
         popUp.addItems(withTitles: hidden.map(\.name))
         alert.accessoryView = popUp
@@ -1954,9 +1954,9 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         }
         let alert = NSAlert()
         alert.messageText = "\(operation) rows or columns?"
-        alert.addButton(withTitle: "Columns")
-        alert.addButton(withTitle: "Rows")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("Columns"))
+        alert.addButton(withTitle: Localization.title("Rows"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         alert.beginSheetModal(for: window) { response in
             switch response {
             case .alertFirstButtonReturn: run(true)
@@ -2190,8 +2190,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             return
         }
         alert.informativeText = "The name goes into the cell as a formula, or into the formula being edited."
-        alert.addButton(withTitle: "Insert")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("Insert"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         let popUp = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 260, height: 26), pullsDown: false)
         for name in names {
             popUp.addItem(withTitle: name.scope == nil ? name.name : "\(name.name)  (\(name.scope!.name))")
@@ -2212,10 +2212,10 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         let existing = sheet.comment(atColumn: cell.column, row: cell.row)
         let alert = NSAlert()
         alert.messageText = (existing == nil ? "Comment for " : "Edit the comment for ") + sheet.name(ofColumn: cell.column) + sheet.name(ofRow: cell.row)
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("OK"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         if existing != nil {
-            alert.addButton(withTitle: "Remove")
+            alert.addButton(withTitle: Localization.title("Remove"))
         }
         let author = NSTextField(string: existing?.author ?? NSFullUserName())
         author.placeholderString = "Author"
@@ -2576,8 +2576,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         guard let window else { return }
         let current = choices.current
         let alert = NSAlert()
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("OK"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         let condition: () -> FilterCondition
         if custom {
             alert.messageText = "Custom Filter"
@@ -2725,22 +2725,22 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         switch action {
         case .stop:
             alert.alertStyle = .critical
-            alert.addButton(withTitle: "Discard")
-            alert.addButton(withTitle: "Re-Edit")
+            alert.addButton(withTitle: Localization.title("Discard"))
+            alert.addButton(withTitle: Localization.title("Re-Edit"))
             return alert.runModal() == .alertFirstButtonReturn ? .discard : .edit
         case .warning:
             alert.alertStyle = .warning
-            alert.addButton(withTitle: "Discard")
-            alert.addButton(withTitle: "Accept")
+            alert.addButton(withTitle: Localization.title("Discard"))
+            alert.addButton(withTitle: Localization.title("Accept"))
             return alert.runModal() == .alertFirstButtonReturn ? .discard : .valid
         case .parseError:
             alert.alertStyle = .critical
-            alert.addButton(withTitle: "Accept")
-            alert.addButton(withTitle: "Re-Edit")
+            alert.addButton(withTitle: Localization.title("Accept"))
+            alert.addButton(withTitle: Localization.title("Re-Edit"))
             return alert.runModal() == .alertFirstButtonReturn ? .valid : .edit
         default:
             alert.alertStyle = .informational
-            alert.addButton(withTitle: "OK")
+            alert.addButton(withTitle: Localization.title("OK"))
             alert.runModal()
             return .valid
         }

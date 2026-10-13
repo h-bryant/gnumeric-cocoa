@@ -18,8 +18,8 @@ final class AdvancedFilterDialog {
 
     init(sheet: Sheet) {
         alert.messageText = "Advanced Filter"
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("OK"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         listField.stringValue = sheet.rangeNames(inList: sheet.selectionText)?.joined(separator: ", ") ?? ""
         destination.addItems(withTitles: ["Filter in-place", "Copy to range:", "New sheet"])
         func label(_ text: String) -> NSTextField {

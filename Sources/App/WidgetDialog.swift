@@ -26,8 +26,8 @@ final class WidgetDialog {
     init(settings: WidgetSettings) {
         self.settings = settings
         alert.messageText = settings.title
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("OK"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         func label(_ text: String) -> NSTextField {
             let field = NSTextField(labelWithString: text)
             field.alignment = .right

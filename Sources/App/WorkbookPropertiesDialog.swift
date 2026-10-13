@@ -23,8 +23,8 @@ final class WorkbookAttributesDialog {
     init(workbook: Workbook) {
         alert.messageText = "Workbook Properties"
         alert.informativeText = "What this workbook's windows show; saved with the file."
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("OK"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         horizontalScrollbar.state = workbook.showsHorizontalScrollbar ? .on : .off
         verticalScrollbar.state = workbook.showsVerticalScrollbar ? .on : .off
         sheetTabs.state = workbook.showsSheetTabs ? .on : .off
@@ -88,8 +88,8 @@ final class DocumentPropertiesDialog: NSObject {
     init(workbook: Workbook, fileURL: URL?) {
         super.init()
         alert.messageText = "Document Properties"
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("OK"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         let tabs = NSTabView(frame: NSRect(x: 0, y: 0, width: 460, height: 360))
         tabs.addTabViewItem(Self.tab("Description", view: descriptionGrid(workbook)))
         tabs.addTabViewItem(Self.tab("Statistics", view: statisticsGrid(workbook, fileURL: fileURL)))
@@ -210,8 +210,8 @@ final class DocumentPropertiesDialog: NSObject {
         let entry = NSStackView(views: [propertyNameField, propertyValueField, propertyTypePopUp])
         entry.orientation = .horizontal
         entry.spacing = 6
-        let addButton = NSButton(title: "Add", target: self, action: #selector(addProperty(_:)))
-        let removeButton = NSButton(title: "Remove", target: self, action: #selector(removeProperty(_:)))
+        let addButton = NSButton(title: Localization.title("Add"), target: self, action: #selector(addProperty(_:)))
+        let removeButton = NSButton(title: Localization.title("Remove"), target: self, action: #selector(removeProperty(_:)))
         let buttons = NSStackView(views: [addButton, removeButton, NSView()])
         buttons.orientation = .horizontal
         buttons.spacing = 6

@@ -16,10 +16,10 @@ final class PluginManagerDialog: NSObject, NSTableViewDataSource, NSTableViewDel
     private let details = NSTextField(wrappingLabelWithString: "")
     private let markBox = NSButton(checkboxWithTitle: "Deactivate at the next start", target: nil, action: nil)
     private let newPluginsBox = NSButton(checkboxWithTitle: "Activate new plugins found at a start", target: nil, action: nil)
-    private let activateAllButton = NSButton(title: "Activate All", target: nil, action: nil)
-    private let addDirectoryButton = NSButton(title: "Add…", target: nil, action: nil)
-    private let removeDirectoryButton = NSButton(title: "Remove", target: nil, action: nil)
-    private let rescanButton = NSButton(title: "Rescan", target: nil, action: nil)
+    private let activateAllButton = NSButton(title: Localization.title("Activate All"), target: nil, action: nil)
+    private let addDirectoryButton = NSButton(title: Localization.title("Add…"), target: nil, action: nil)
+    private let removeDirectoryButton = NSButton(title: Localization.title("Remove"), target: nil, action: nil)
+    private let rescanButton = NSButton(title: Localization.title("Rescan"), target: nil, action: nil)
     private let status = NSTextField(labelWithString: "")
     private(set) var plugins: [Plugin] = []
     /// The directories listed: the system ones first, then the extra ones.
@@ -100,7 +100,7 @@ final class PluginManagerDialog: NSObject, NSTableViewDataSource, NSTableViewDel
         status.textColor = .secondaryLabelColor
         status.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
         status.lineBreakMode = .byTruncatingTail
-        let closeButton = NSButton(title: "Close", target: self, action: #selector(close(_:)))
+        let closeButton = NSButton(title: Localization.title("Close"), target: self, action: #selector(close(_:)))
         closeButton.keyEquivalent = "\u{1b}"
         let buttons = NSStackView(views: [status, NSView(), closeButton])
         buttons.orientation = .horizontal
@@ -291,8 +291,8 @@ final class PluginManagerDialog: NSObject, NSTableViewDataSource, NSTableViewDel
         let alert = NSAlert()
         alert.messageText = "The following extra plugins must be activated in order to activate this one:"
         alert.informativeText = dependencies.joined(separator: "\n") + "\n\nDo you want to activate this plugin together with its dependencies?"
-        alert.addButton(withTitle: "Activate")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("Activate"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         alert.beginSheetModal(for: window) { [weak self] response in
             if response == .alertFirstButtonReturn { activate() } else { self?.reload(selecting: plugin) }
         }

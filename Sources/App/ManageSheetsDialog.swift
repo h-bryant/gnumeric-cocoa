@@ -14,17 +14,17 @@ final class ManageSheetsDialog: NSObject, NSTableViewDataSource, NSTableViewDele
     private let table = NSTableView()
     private let backgroundWell = NSColorWell()
     private let textWell = NSColorWell()
-    private let clearBackgroundButton = NSButton(title: "Clear", target: nil, action: nil)
-    private let clearTextButton = NSButton(title: "Clear", target: nil, action: nil)
-    private let insertButton = NSButton(title: "Insert", target: nil, action: nil)
-    private let appendButton = NSButton(title: "Append", target: nil, action: nil)
-    private let duplicateButton = NSButton(title: "Duplicate", target: nil, action: nil)
-    private let removeButton = NSButton(title: "Remove", target: nil, action: nil)
-    private let upButton = NSButton(title: "Up", target: nil, action: nil)
-    private let downButton = NSButton(title: "Down", target: nil, action: nil)
-    private let sortAscendingButton = NSButton(title: "Sort A → Z", target: nil, action: nil)
-    private let sortDescendingButton = NSButton(title: "Sort Z → A", target: nil, action: nil)
-    private let undoButton = NSButton(title: "Undo", target: nil, action: nil)
+    private let clearBackgroundButton = NSButton(title: Localization.title("Clear"), target: nil, action: nil)
+    private let clearTextButton = NSButton(title: Localization.title("Clear"), target: nil, action: nil)
+    private let insertButton = NSButton(title: Localization.title("Insert"), target: nil, action: nil)
+    private let appendButton = NSButton(title: Localization.title("Append"), target: nil, action: nil)
+    private let duplicateButton = NSButton(title: Localization.title("Duplicate"), target: nil, action: nil)
+    private let removeButton = NSButton(title: Localization.title("Remove"), target: nil, action: nil)
+    private let upButton = NSButton(title: Localization.title("Up"), target: nil, action: nil)
+    private let downButton = NSButton(title: Localization.title("Down"), target: nil, action: nil)
+    private let sortAscendingButton = NSButton(title: Localization.title("Sort A → Z"), target: nil, action: nil)
+    private let sortDescendingButton = NSButton(title: Localization.title("Sort Z → A"), target: nil, action: nil)
+    private let undoButton = NSButton(title: Localization.title("Undo"), target: nil, action: nil)
     private let status = NSTextField(labelWithString: "")
     private(set) var sheets: [Sheet] = []
     private var completion: (@MainActor () -> Void)?
@@ -97,7 +97,7 @@ final class ManageSheetsDialog: NSObject, NSTableViewDataSource, NSTableViewDele
         status.textColor = .secondaryLabelColor
         status.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
         status.lineBreakMode = .byTruncatingTail
-        let closeButton = NSButton(title: "Close", target: self, action: #selector(close(_:)))
+        let closeButton = NSButton(title: Localization.title("Close"), target: self, action: #selector(close(_:)))
         closeButton.keyEquivalent = "\u{1b}"
         let buttons = NSStackView(views: [undoButton, status, NSView(), closeButton])
         buttons.orientation = .horizontal

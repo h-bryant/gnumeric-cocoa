@@ -35,8 +35,8 @@ final class SimulationDialog {
     init(sheet: Sheet) {
         alert.messageText = "Risk Simulation"
         alert.informativeText = "The inputs are recomputed each iteration; the outputs' statistics make the report."
-        alert.addButton(withTitle: "Run")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("Run"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         inputsField.stringValue = sheet.rangeNames(inList: sheet.selectionText)?.first ?? ""
         for field in [inputsField, outputsField, outputRangeField] { field.widthAnchor.constraint(greaterThanOrEqualToConstant: 200).isActive = true }
         for field in [iterationsField, firstRoundField, lastRoundField, maxTimeField] {
@@ -115,7 +115,7 @@ final class SimulationDialog {
         let alert = NSAlert()
         alert.messageText = "Simulation Results"
         alert.informativeText = "The report is on its sheet; this is the summary of each round."
-        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: Localization.title("OK"))
         let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: 520, height: 260))
         let textView = NSTextView(frame: scroll.bounds)
         textView.isEditable = false

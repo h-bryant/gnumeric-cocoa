@@ -15,10 +15,10 @@ final class MergeDialog: NSObject, NSTableViewDataSource, NSTableViewDelegate, N
     let dataField = NSTextField(string: "")
     let fieldField = NSTextField(string: "")
     private let table = NSTableView()
-    private let addButton = NSButton(title: "Add", target: nil, action: nil)
-    private let changeButton = NSButton(title: "Change", target: nil, action: nil)
-    private let deleteButton = NSButton(title: "Delete", target: nil, action: nil)
-    private let mergeButton = NSButton(title: "Merge", target: nil, action: nil)
+    private let addButton = NSButton(title: Localization.title("Add"), target: nil, action: nil)
+    private let changeButton = NSButton(title: Localization.title("Change"), target: nil, action: nil)
+    private let deleteButton = NSButton(title: Localization.title("Delete"), target: nil, action: nil)
+    private let mergeButton = NSButton(title: Localization.title("Merge"), target: nil, action: nil)
     private let status = NSTextField(wrappingLabelWithString: "")
     /// The list's rows: a data range and the field cell it fills.
     private(set) var rows: [(data: String, field: String)] = []
@@ -82,7 +82,7 @@ final class MergeDialog: NSObject, NSTableViewDataSource, NSTableViewDelegate, N
         mergeButton.target = self
         mergeButton.action = #selector(merge(_:))
         mergeButton.keyEquivalent = "\r"
-        let cancelButton = NSButton(title: "Cancel", target: self, action: #selector(cancel(_:)))
+        let cancelButton = NSButton(title: Localization.title("Cancel"), target: self, action: #selector(cancel(_:)))
         cancelButton.keyEquivalent = "\u{1b}"
         let buttons = NSStackView(views: [NSView(), cancelButton, mergeButton])
         buttons.orientation = .horizontal
@@ -136,8 +136,8 @@ final class MergeDialog: NSObject, NSTableViewDataSource, NSTableViewDelegate, N
         if sheet.mergeDataLengths(data, shortest: &shortest, longest: &longest), shortest < longest, Self.headlessDriver == nil {
             let alert = NSAlert()
             alert.messageText = "The data columns range in length from \(shortest) to \(longest). Shall we trim the lengths to \(shortest) and proceed?"
-            alert.addButton(withTitle: "Yes")
-            alert.addButton(withTitle: "No")
+            alert.addButton(withTitle: Localization.title("Yes"))
+            alert.addButton(withTitle: Localization.title("No"))
             alert.beginSheetModal(for: window) { [self] response in
                 guard response == .alertFirstButtonReturn else { return }
                 runMerge(fields: fields, data: data, trim: true)

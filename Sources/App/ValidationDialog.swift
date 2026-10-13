@@ -34,8 +34,8 @@ final class ValidationDialog: NSObject {
         super.init()
         alert.messageText = "Data Validation"
         alert.informativeText = "What the selected cells accept, and the message shown while one is selected."
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: Localization.title("OK"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
         kind.addItems(withTitles: Self.kinds.map { Validation.label(for: $0) })
         op.addItems(withTitles: Self.operators.map { Validation.label(for: $0) })
         action.addItems(withTitles: Self.actions.map { Validation.label(for: $0) })

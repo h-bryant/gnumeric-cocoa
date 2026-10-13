@@ -39,9 +39,9 @@ final class SolverDialog: NSObject, NSTableViewDataSource, NSTableViewDelegate {
         super.init()
         alert.messageText = "Solver"
         alert.informativeText = "Change the input cells so the target cell is as large or as small as the constraints allow."
-        alert.addButton(withTitle: "Solve")
-        alert.addButton(withTitle: "Cancel")
-        alert.addButton(withTitle: "Save")
+        alert.addButton(withTitle: Localization.title("Solve"))
+        alert.addButton(withTitle: Localization.title("Cancel"))
+        alert.addButton(withTitle: Localization.title("Save"))
         goal.addItems(withTitles: ["Max", "Min"])
         model.addItems(withTitles: ["Linear (LP/MILP)", "Quadratic (QP/MIQP)", "Non-linear"])
         algorithm.addItems(withTitles: algorithms.map(\.name))
@@ -109,9 +109,9 @@ final class SolverDialog: NSObject, NSTableViewDataSource, NSTableViewDelegate {
         scroll.borderType = .bezelBorder
         scroll.heightAnchor.constraint(equalToConstant: 90).isActive = true
         scroll.widthAnchor.constraint(greaterThanOrEqualToConstant: 320).isActive = true
-        let add = NSButton(title: "Add", target: self, action: #selector(addRule(_:)))
-        let change = NSButton(title: "Change", target: self, action: #selector(changeRule(_:)))
-        let delete = NSButton(title: "Delete", target: self, action: #selector(deleteRule(_:)))
+        let add = NSButton(title: Localization.title("Add"), target: self, action: #selector(addRule(_:)))
+        let change = NSButton(title: Localization.title("Change"), target: self, action: #selector(changeRule(_:)))
+        let delete = NSButton(title: Localization.title("Delete"), target: self, action: #selector(deleteRule(_:)))
         let rows: [[NSView]] = [
             [heading("Parameters"), NSGridCell.emptyContentView],
             [label("Set target cell:"), row([targetField, label("Equal to:"), goal])],
