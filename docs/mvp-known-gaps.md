@@ -73,7 +73,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | SheetInsert | ported | Edit → Sheet → Insert |
 | ChartGuru | ported | Insert → Chart… (2026-10-12): every goffice plot type with its sample image, series from the selection, the two guru options; the later pages are the chart editor (double-click, Properties…, Format → Object Properties…): object tree with add, remove, reorder, live preview, every object's data expressions, properties, and style, Change Type… for a plot; not in it: error bars, gradient and image fills, manual positions |
 | InsertImage | ported | Insert → Image… (2026-10-12), and PNG or TIFF pasted from other applications |
-| InsertComponent, InsertShapedComponent, NewGOComponent, GOComponentFromFile | no | Phase 4; goffice components (equations, embedded documents) |
+| InsertComponent, InsertShapedComponent, NewGOComponent, GOComponentFromFile | no | left out by decision on 2026-10-13: goffice components (Lasem equations, embedded documents) need component plugins that Homebrew's goffice does not ship (only the plot and regression plugins are installed), so the GTK itself greys these items out here (`go_components_get_mime_types () != NULL`), and their editors are the plugins' GTK widgets; a file with a component still loads, its object drawing nothing without the plugin, as in the GTK; render-only support would be the cheap follow-up if Lasem were installed |
 | InsertFormula (function selector) | ported | Insert → Function… (2026-10-12): groups, search, summaries, arguments; no formula guru |
 | InsertNames | ported | Insert → Name… puts a name into the cell editor (2026-10-12) |
 | InsertComment | ported | Insert → Comment…, an alert sheet with author and text (2026-10-12) |

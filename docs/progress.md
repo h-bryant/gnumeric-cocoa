@@ -2046,6 +2046,17 @@
   The Excel reader loads pivot definitions into slicer objects; whether
   the writer puts them back is unverified.
 
+### 2026-10-13 (later): goffice components left out
+
+- Henry chose to leave Insert → Component out.  Components (Lasem
+  equations, embedded documents) come from goffice component plugins,
+  and Homebrew's goffice installs none (only `plot_*`, `reg_*`, and
+  `smoothing`), so the GTK's own items would be insensitive on this
+  machine (`go_components_get_mime_types () != NULL`); their editors
+  are the plugins' GTK widgets.  A file carrying a component loads
+  with an object that draws nothing without its plugin, as in the GTK.
+  Render-only support is the follow-up should Lasem ever be installed.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
