@@ -50,6 +50,8 @@
     c.textColor = self.textColor;
     c.fillsBackground = self.fillsBackground;
     c.backgroundColor = self.backgroundColor;
+    c.contentsLocked = self.contentsLocked;
+    c.contentsHidden = self.contentsHidden;
     for (NSNumber *edge in _borderStyles)
         [c setBorderStyle:_borderStyles[edge].integerValue
                     color:[self borderColorForEdge:edge.integerValue]
@@ -157,6 +159,10 @@ gnm_cocoa_format_from_selection (Sheet const *sheet, GnmRange const *range)
         f.underline = @(gnm_style_get_font_uline (style));
     if (!conflicts (mask, MSTYLE_FONT_STRIKETHROUGH))
         f.strikethrough = @(gnm_style_get_font_strike (style));
+    if (!conflicts (mask, MSTYLE_CONTENTS_LOCKED))
+        f.contentsLocked = @(gnm_style_get_contents_locked (style));
+    if (!conflicts (mask, MSTYLE_CONTENTS_HIDDEN))
+        f.contentsHidden = @(gnm_style_get_contents_hidden (style));
     if (!conflicts (mask, MSTYLE_FONT_COLOR)) {
         CGColorRef c = gnm_cocoa_cgcolor_from_go (gnm_style_get_font_color (style)->go_color);
         f.textColor = c;
@@ -210,6 +216,10 @@ gnm_cocoa_format_from_style (GnmStyle const *style)
         f.underline = @(gnm_style_get_font_uline (style));
     if (gnm_style_is_element_set (style, MSTYLE_FONT_STRIKETHROUGH))
         f.strikethrough = @(gnm_style_get_font_strike (style));
+    if (gnm_style_is_element_set (style, MSTYLE_CONTENTS_LOCKED))
+        f.contentsLocked = @(gnm_style_get_contents_locked (style));
+    if (gnm_style_is_element_set (style, MSTYLE_CONTENTS_HIDDEN))
+        f.contentsHidden = @(gnm_style_get_contents_hidden (style));
     if (gnm_style_is_element_set (style, MSTYLE_FONT_COLOR)) {
         CGColorRef c = gnm_cocoa_cgcolor_from_go (gnm_style_get_font_color (style)->go_color);
         f.textColor = c;
@@ -253,6 +263,10 @@ gnm_cocoa_format_to_engine (GnmCellFormat *f, GnmStyle **style_out, GnmBorder *b
         gnm_style_set_font_uline (style, (GnmUnderline) f.underline.integerValue);
     if (f.strikethrough)
         gnm_style_set_font_strike (style, f.strikethrough.boolValue);
+    if (f.contentsLocked)
+        gnm_style_set_contents_locked (style, f.contentsLocked.boolValue);
+    if (f.contentsHidden)
+        gnm_style_set_contents_hidden (style, f.contentsHidden.boolValue);
     if (f.textColor)
         gnm_style_set_font_color (style, gnm_color_new_go (gnm_cocoa_go_from_cgcolor (f.textColor)));
     if (f.fillsBackground) {
@@ -279,3 +293,29 @@ gnm_cocoa_format_to_engine (GnmCellFormat *f, GnmStyle **style_out, GnmBorder *b
     }
     *style_out = style;
 }
+
+@implementation GnmSheet (Protection)
+
+- (NSString *)lockMessageForCellsInRange:(GnmCellRange)range
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    Sheet *sheet = self.engineSheet;
+    WorkbookView *wbv = self.workbook.workbookView;
+    if (!sheet || !wbv || !(wbv->is_protected || sheet->is_protected))
+        return nil;
+    GnmRange r;
+    range_init (&r, (int) range.start.column, (int) range.start.row, (int) range.end.column, (int) range.end.row);
+    for (int i = r.start.row; i <= r.end.row; i++)
+        for (int j = r.start.col; j <= r.end.col; j++)
+            if (gnm_style_get_contents_locked (sheet_style_get (sheet, j, i))) {
+                char *name = global_range_name (sheet, &r);
+                NSString *text = [NSString stringWithFormat:wbv->is_protected
+                                  ? @"%s is locked. Unprotect the workbook to enable editing."
+                                  : @"%s is locked. Unprotect the sheet to enable editing.", name];
+                g_free (name);
+                return text;
+            }
+    return nil;
+}
+
+@end

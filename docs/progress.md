@@ -1895,6 +1895,23 @@
   old place and, when the new one is in another workbook, that too
   (find_and_focus avoids the same view).  `GNM_SNAPSHOT_COMPARE=1`.
 
+### 2026-10-13 (later): the Format Cells Protection page
+
+- `GnmCellFormat.contentsLocked` / `contentsHidden`
+  (`MSTYLE_CONTENTS_LOCKED` / `_HIDDEN`, read and applied with the
+  rest; cells start locked, as in the GTK) and `GnmSheet
+  lockMessageForCellsInRange:`, `cmd_cell_range_is_locked_effective`'s
+  check and text.  The engine's `cmd_set_text` checks no lock: the GTK
+  refuses in wbcg_edit_finish, so `GridView.commitEditing` asks first
+  and keeps the editor open with the message.  `format.m` covers the
+  properties, the message, and the undos.
+- `FormatCellsModel` gained `contentsLocked`, `contentsHidden`, and
+  `sheetProtected` (applied through `setSheet:protected:` when toggled,
+  `applyFormatCells`); `FormatCellsView` a Protection tab with the GTK's
+  Lock, Hide, note, and Protect worksheet.  Hidden formulas have no
+  effect in the GTK's UI (only the file keeps them), so none here.
+  `GNM_SNAPSHOT_PROTECT=1`.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and

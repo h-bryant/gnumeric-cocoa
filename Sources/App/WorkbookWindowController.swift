@@ -554,7 +554,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         if gridView.isEditing { gridView.cancelEditing() }
         let range = sheet.selectedRange
         let multi = range.start.column != range.end.column || range.start.row != range.end.row
-        let model = FormatCellsModel(format: sheet.formatOfSelection, isMultiCell: multi)
+        let model = FormatCellsModel(format: sheet.formatOfSelection, isMultiCell: multi, sheetProtected: sheet.isProtected)
         let hosting = NSHostingController(rootView: FormatCellsView(model: model) { [weak self] accepted in
             self?.finishFormatCells(accepted: accepted, model: model)
         })
@@ -570,8 +570,17 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             window?.endSheet(sheetWindow)
         }
         guard accepted, let sheet = gridView.sheet else { return }
+        applyFormatCells(model, to: sheet)
+    }
+
+    /// The dialog's OK (cb_fmt_dialog_dialog_apply): the style changes,
+    /// then the sheet's protection when its box was toggled.
+    func applyFormatCells(_ model: FormatCellsModel, to sheet: Sheet) {
         do {
-            try sheet.apply(model.changes())
+            if !model.touched.isEmpty { try sheet.apply(model.changes()) }
+            if model.sheetProtectedChanged, model.sheetProtected != sheet.isProtected {
+                try workbook.setSheet(sheet, protected: model.sheetProtected)
+            }
         } catch {
             present(error)
         }

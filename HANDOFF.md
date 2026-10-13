@@ -393,10 +393,12 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    Clear → Hyperlinks, Select → Next Object, the Format → Font submenu,
    page breaks with Show Print Area, the Help menu, File → Send To…, and
    Tools → Auto Correct… and Auto Save…, Data → Merge… (engine patch
-   0009), and Tools → Compare Sheets… (`GnmCompare.h`,
-   `SheetCompareDialog.swift`).  Next, by usage: what
-   `docs/mvp-known-gaps.md` still lists as "no" (ViewNew, data
-   slicers, goffice components).
+   0009), Tools → Compare Sheets… (`GnmCompare.h`,
+   `SheetCompareDialog.swift`), and the Format Cells Protection page.
+   Next, by usage: the "partial" rows of `docs/mvp-known-gaps.md`
+   (status bar fields, the object toolbar, a print preview window, the
+   marching ants) and the "no" rows (ViewNew, data slicers, goffice
+   components).
 6. Headless checks for all of it: `GNM_SNAPSHOT=out.png scripts/run-app.sh
    file` plus `GNM_SNAPSHOT_TYPE`, `_FORMAT`, `_PHASE3`, `_FREEZE`,
    `_SHEETS`, `_FILTER`, `_OBJECTS`, `_CHART`, `_EDITOR`, `_EVERYDAY`, `_FIND`, `_PREFS`, `_TEXT`, `_IMPORT`, `_COMMENT`, `_NAMES`, `_FILL`, `_GOAL`, `_COND`, `_STATS`, `_VALID`, `_LINK`, `_SOLVE`, `_PRINT`, `_FORMULA`, `_FUNC`, `_ZOOM` (`docs/build.md`); compare `out.png` with

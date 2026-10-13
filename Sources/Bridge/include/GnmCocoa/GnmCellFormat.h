@@ -104,6 +104,13 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(CellFormat)
 @property (nonatomic, copy, nullable) NSNumber *fillsBackground;
 @property (nonatomic, nullable) CGColorRef backgroundColor;
 
+/// The Protection page: a locked cell refuses edits and a hidden one
+/// keeps its formula to itself, both only while the sheet is protected
+/// (`MSTYLE_CONTENTS_LOCKED`, `MSTYLE_CONTENTS_HIDDEN`; cells start
+/// locked, as in the GTK).
+@property (nonatomic, copy, nullable) NSNumber *contentsLocked;   // BOOL
+@property (nonatomic, copy, nullable) NSNumber *contentsHidden;   // BOOL
+
 /// Border per edge; nil style means unset.  `GnmBorderLineStyleNone`
 /// removes the border.  A nil color with a style means black.
 - (nullable NSNumber *)borderStyleForEdge:(GnmBorderEdge)edge NS_SWIFT_NAME(borderStyle(edge:));

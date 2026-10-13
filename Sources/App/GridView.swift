@@ -671,6 +671,16 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         default:
             break
         }
+        // The lock check of wbcg_edit_finish: a locked cell of a
+        // protected sheet keeps the editor open with the message.
+        let target = CellRange(start: cell, end: cell)
+        if let message = sheet.lockMessage(forCellsIn: target) {
+            presentError?(NSError(domain: GnmErrorDomain, code: GnmError.Code.commandFailed.rawValue,
+                                  userInfo: [NSLocalizedDescriptionKey: "Set Text", NSLocalizedRecoverySuggestionErrorKey: message]))
+            sheet.selectCell(atColumn: cell.column, row: cell.row)
+            beginEditing(initialText: text)
+            return
+        }
         do {
             try sheet.setText(text, atColumn: cell.column, row: cell.row, autocorrect: true)
         } catch {

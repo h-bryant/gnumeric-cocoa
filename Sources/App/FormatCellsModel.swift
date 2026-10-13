@@ -12,6 +12,7 @@ final class FormatCellsModel {
         case numberFormat, horizontalAlignment, verticalAlignment, wrapsText
         case fontName, fontSize, bold, italic, underline, strikethrough, textColor
         case fill, backgroundColor, border(BorderEdge)
+        case contentsLocked, contentsHidden
     }
 
     /// Number format categories offered by the Number tab.
@@ -96,6 +97,13 @@ final class FormatCellsModel {
     /// Border line per edge; `.none` with the edge touched removes it.
     var borders: [BorderEdge: BorderLineStyle] = [:]
     var borderColor: NSColor = .black
+
+    // The Protection page (fmt_dialog_init_protection_page).
+    var contentsLocked: Bool { didSet { touched.insert(.contentsLocked) } }
+    var contentsHidden: Bool { didSet { touched.insert(.contentsHidden) } }
+    /// The sheet's protection, applied apart from the style when changed.
+    var sheetProtected: Bool { didSet { sheetProtectedChanged = true } }
+    private(set) var sheetProtectedChanged = false
     func setBorder(_ style: BorderLineStyle, edge: BorderEdge) {
         borders[edge] = style
         touched.insert(.border(edge))
@@ -107,11 +115,17 @@ final class FormatCellsModel {
         return generic + installed.filter { !generic.contains($0) }
     }()
 
-    init(format: CellFormat, isMultiCell: Bool) {
+    init(format: CellFormat, isMultiCell: Bool, sheetProtected: Bool = false) {
         // Observed properties cannot be touched before every stored property
         // is set, so the mixed set is built locally first.
         var mixedKeys = Set<Key>()
         self.isMultiCell = isMultiCell
+        self.sheetProtected = sheetProtected
+        // The GTK shows an unchecked box for a mixed selection.
+        contentsLocked = format.contentsLockedValue ?? false
+        contentsHidden = format.contentsHiddenValue ?? false
+        if format.contentsLocked == nil { mixedKeys.insert(.contentsLocked) }
+        if format.contentsHidden == nil { mixedKeys.insert(.contentsHidden) }
 
         let code = format.numberFormat ?? "General"
         var cat = Category(family: CellFormat.family(ofNumberFormat: code))
@@ -196,6 +210,8 @@ final class FormatCellsModel {
         if touched.contains(.italic) { f.italicValue = italic }
         if touched.contains(.underline) { f.underlineValue = underline }
         if touched.contains(.strikethrough) { f.strikethroughValue = strikethrough }
+        if touched.contains(.contentsLocked) { f.contentsLockedValue = contentsLocked }
+        if touched.contains(.contentsHidden) { f.contentsHiddenValue = contentsHidden }
         if touched.contains(.textColor) { f.textColor = textColor.cgColor }
         if touched.contains(.fill) {
             f.fillsBackgroundValue = fillsBackground

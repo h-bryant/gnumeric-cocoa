@@ -373,6 +373,12 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 /// Apply the set properties of `format` to the selection as one undoable
 /// command (`cmd_selection_format`).
 - (BOOL)applyFormat:(GnmCellFormat *)format error:(NSError **)error NS_SWIFT_NAME(apply(_:));
+/// The GTK's refusal when an edit would touch a locked cell of a
+/// protected sheet or workbook (`cmd_cell_range_is_locked_effective`,
+/// checked as the edit is accepted in wbcg_edit_finish): "Sheet1!A1 is
+/// locked. Unprotect the sheet to enable editing."; nil when the cells
+/// may be edited.  The engine's `cmd_set_text` makes no such check.
+- (nullable NSString *)lockMessageForCellsInRange:(GnmCellRange)range NS_SWIFT_NAME(lockMessage(forCellsIn:));
 /// Hide or show the selected columns or rows (`cmd_selection_colrow_hide`).
 - (BOOL)setSelectedColumns:(BOOL)columns hidden:(BOOL)hidden error:(NSError **)error NS_SWIFT_NAME(setSelected(columns:hidden:));
 

@@ -2298,6 +2298,44 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_PROTECT"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // The Protection page: B2 unlocked through the model, the
+                // sheet protected; an edit of B2 goes through, one of A1 is
+                // refused (the error logged, not shown); then unprotected.
+                try? sheet.setText("locked", atColumn: 0, row: 0, autocorrect: false)
+                sheet.selectCell(atColumn: 1, row: 1)
+                let model = FormatCellsModel(format: sheet.formatOfSelection, isMultiCell: false, sheetProtected: sheet.isProtected)
+                let before: String = "locked=\(model.contentsLocked) hidden=\(model.contentsHidden) protected=\(model.sheetProtected)"
+                model.contentsLocked = false
+                model.sheetProtected = true
+                controller.applyFormatCells(model, to: sheet)
+                let b2 = sheet.formatOfCell(atColumn: 1, row: 1)
+                let after: String = "B2 locked=\(b2.contentsLockedValue ?? true) protected=\(sheet.isProtected) undo=\(sheet.workbook?.undoLabel ?? "nil")"
+                NSLog("protect: %@ -> %@", before, after)
+                // Typing into B2 commits; typing into A1 is refused with the
+                // message, the editor staying open (the alert is logged).
+                let grid = controller.gridView
+                let presenter = grid.presentError
+                var refused = "none"
+                grid.presentError = { error in refused = (error as NSError).localizedRecoverySuggestion ?? error.localizedDescription }
+                sheet.selectCell(atColumn: 1, row: 1)
+                grid.beginEditing(initialText: "free")
+                grid.commitEditing(text: "free", movement: .none)
+                let b2Text: String = sheet.displayTextOfCell(atColumn: 1, row: 1) ?? "nil"
+                sheet.selectCell(atColumn: 0, row: 0)
+                grid.beginEditing(initialText: "no")
+                grid.commitEditing(text: "no", movement: .none)
+                let stillEditing = grid.isEditing
+                let a1Text: String = sheet.displayTextOfCell(atColumn: 0, row: 0) ?? "nil"
+                grid.cancelEditing()
+                grid.presentError = presenter
+                NSLog("protect: B2='%@' refusal='%@' editing=%d A1='%@'", b2Text, refused, stillEditing ? 1 : 0, a1Text)
+                try? sheet.workbook?.setSheet(sheet, protected: false)
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FREEZE"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

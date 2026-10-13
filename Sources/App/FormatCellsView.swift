@@ -15,6 +15,7 @@ struct FormatCellsView: View {
                 fontTab.tabItem { Text("Font") }
                 borderTab.tabItem { Text("Border") }
                 fillTab.tabItem { Text("Fill") }
+                protectionTab.tabItem { Text("Protection") }
             }
             .frame(minHeight: 320)
             HStack {
@@ -181,6 +182,25 @@ struct FormatCellsView: View {
     }
 
     // MARK: Fill
+
+    /// The GTK Protection page: Lock, Hide, the note, Protect worksheet.
+    private var protectionTab: some View {
+        Form {
+            HStack {
+                Toggle("Lock", isOn: $model.contentsLocked)
+                mixedNote(.contentsLocked)
+            }
+            HStack {
+                Toggle("Hide", isOn: $model.contentsHidden)
+                mixedNote(.contentsHidden)
+            }
+            Text("Locking cells or hiding formulæ only affects protected worksheets.")
+                .font(.caption).foregroundStyle(.secondary)
+            Divider()
+            Toggle("Protect worksheet", isOn: $model.sheetProtected)
+        }
+        .padding()
+    }
 
     private var fillTab: some View {
         Form {

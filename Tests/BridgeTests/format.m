@@ -68,6 +68,7 @@ int main (void)
         GNM_ASSERT (f.bold.boolValue && f.italic.boolValue, @"bold italic applied");
         GNM_ASSERT (f.horizontalAlignment.integerValue == GnmHorizontalAlignmentCenter, @"centered");
         GNM_ASSERT (color_is (f.backgroundColor, 1, 1, 0), @"yellow fill read back");
+        GNM_ASSERT (f.contentsLocked.boolValue && !f.contentsHidden.boolValue, @"cells start locked and not hidden");
         GNM_ASSERT (color_is (f.textColor, 1, 0, 0), @"red text read back");
         GNM_ASSERT ([f borderStyleForEdge:GnmBorderEdgeBottom].integerValue == GnmBorderLineStyleThick, @"thick bottom border");
         GNM_ASSERT ([f borderStyleForEdge:GnmBorderEdgeLeft].integerValue == GnmBorderLineStyleDashed, @"dashed left border");
@@ -87,6 +88,27 @@ int main (void)
         GNM_ASSERT ([s applyFormat:change error:&error], @"clear fill: %@", error);
         GNM_ASSERT (!s.formatOfSelection.fillsBackground.boolValue, @"fill removed");
         [wb undo];
+
+        /* the Protection page: B6:B7 unlocked and hidden, then the sheet protected */
+        [s selectRange:GnmCellRangeMake (1, 5, 1, 6) editPosition:GnmCellCoordinateMake (1, 5)];
+        GnmCellFormat *protection = [[GnmCellFormat alloc] init];
+        protection.contentsLocked = @NO;
+        protection.contentsHidden = @YES;
+        GNM_ASSERT ([s applyFormat:protection error:&error], @"protection: %@", error);
+        f = s.formatOfSelection;
+        GNM_ASSERT (!f.contentsLocked.boolValue && f.contentsHidden.boolValue, @"unlocked and hidden read back");
+        GNM_ASSERT ([s lockMessageForCellsInRange:GnmCellRangeMake (0, 0, 0, 0)] == nil, @"nothing locked while unprotected");
+        GNM_ASSERT ([wb setSheet:s protected:YES error:&error], @"protect: %@", error);
+        GNM_ASSERT (s.isProtected, @"protected");
+        GNM_ASSERT ([s lockMessageForCellsInRange:GnmCellRangeMake (1, 5, 1, 6)] == nil, @"the unlocked cells may be edited");
+        NSString *lockMessage = [s lockMessageForCellsInRange:GnmCellRangeMake (0, 0, 1, 6)];
+        GNM_ASSERT_EQ_STR (lockMessage ?: @"", @"Sheet1!A1:B7 is locked. Unprotect the sheet to enable editing.");
+        GNM_ASSERT ([wb setSheet:s protected:NO error:&error], @"unprotect: %@", error);
+        GNM_ASSERT ([s lockMessageForCellsInRange:GnmCellRangeMake (0, 0, 1, 6)] == nil, @"editable again");
+        [wb undo];   /* the unprotect */
+        [wb undo];   /* the protect */
+        [wb undo];   /* the protection format */
+        GNM_ASSERT (!s.isProtected && s.formatOfSelection.contentsLocked.boolValue, @"back to locked and unprotected");
 
         /* format helpers */
         GNM_ASSERT ([GnmCellFormat familyOfNumberFormat:@"0.00%"] == GnmNumberFormatFamilyPercentage, @"percentage family");

@@ -85,7 +85,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 
 | Action | Status | Notes / Phase |
 |---|---|---|
-| FormatCells | partial | number, alignment, font, border, fill; the validation and input message pages are Data → Validation… and the conditional page Format → Conditional Formatting… (2026-10-12); no protection page; no format preview |
+| FormatCells | partial | number, alignment, font, border, fill; the validation and input message pages are Data → Validation… and the conditional page Format → Conditional Formatting… (2026-10-12); the Protection page (Lock, Hide, Protect worksheet) since 2026-10-13, with wbcg_edit_finish's refusal of edits to locked cells of a protected sheet (`lockMessage(forCellsIn:)`; the engine's `cmd_set_text` checks nothing); hidden formulas have no effect in the GTK's UI either; no format preview |
 | FormatCellsCond | ported | Format → Conditional Formatting… (2026-10-12): the GTK operators, x and y, an overlay of fill, text color, bold, italic, number format |
 | FormatMergeCells, FormatUnmergeCells | ported | Format menu, with Merge and Center (`patches/0002` fixes an engine double-unref there) |
 | FormatCellsFitHeight, FormatCellsFitWidth | bridge | `autofitSelectedCells(width:)`; the menu has the whole-column/row Autofit |

@@ -31,6 +31,14 @@ extension CellFormat {
         get { strikethrough?.boolValue }
         set { strikethrough = newValue.map { NSNumber(value: $0) } }
     }
+    var contentsLockedValue: Bool? {
+        get { contentsLocked?.boolValue }
+        set { contentsLocked = newValue.map { NSNumber(value: $0) } }
+    }
+    var contentsHiddenValue: Bool? {
+        get { contentsHidden?.boolValue }
+        set { contentsHidden = newValue.map { NSNumber(value: $0) } }
+    }
     var fontSizeValue: Double? {
         get { fontSize?.doubleValue }
         set { fontSize = newValue.map { NSNumber(value: $0) } }
