@@ -131,15 +131,25 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         addSubview(editor)
         editor.onCommit = { [weak self] text, movement in self?.commitEditing(text: text, movement: movement) }
         editor.onCancel = { [weak self] in self?.cancelEditing() }
+        editor.onArrow = { [weak self] columns, rows, extend, jump in
+            self?.moveFormulaRange(columns: columns, rows: rows, extend: extend, jump: jump) ?? false
+        }
+        editor.onArrayCommit = { [weak self] text in self?.commitArrayFormula(text: text) }
         editor.onTextChange = { [weak self] text in
             guard let self else { return }
             handleAutocomplete(text)
-            if formulaRangeAnchor == nil, formulaRange != nil, let shown = formulaRangeText,
-               (editor.stringValue as NSString).length < shown.location + shown.length
-                || (editor.stringValue as NSString).substring(with: shown) != sheet?.name(of: formulaRange!) {
-                formulaRange = nil
-                formulaRangeText = nil
-                needsDisplay = true
+            // gee_update_env: typing stops the range selection when the text
+            // can no longer take a range at the cursor (after ")", in plain
+            // text); otherwise the next range goes where the cursor now is.
+            if formulaRangeAnchor == nil, formulaRange != nil {
+                if let replace = formulaReplacement() {
+                    formulaRangeText = replace
+                } else {
+                    formulaRange = nil
+                    formulaRangeText = nil
+                    formulaRangeBase = nil
+                    needsDisplay = true
+                }
             }
             editingTextDidChange?(text)
         }
@@ -402,6 +412,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         autocompleting = false
         formulaRangeAnchor = nil
         formulaRangeText = nil
+        formulaRangeBase = nil
         if formulaRange != nil {
             formulaRange = nil
             needsDisplay = true
@@ -463,6 +474,29 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         case .left: move(columns: -1, rows: 0, extend: false)
         case .right: move(columns: 1, rows: 0, extend: false)
         default: move(columns: 0, rows: 1, extend: false)
+        }
+    }
+
+    /// Return with Shift and Control or Command (the GTK's Ctrl+Shift+Return):
+    /// the text as an array formula over the selection, through the cell's
+    /// validation as a plain commit; a refusal reopens the editor.
+    func commitArrayFormula(text: String) {
+        guard let sheet, let cell = editingCell else { return }
+        endEditingSession()
+        switch sheet.validateText(text, atColumn: cell.column, row: cell.row) {
+        case .edit:
+            beginEditing(initialText: text)
+            return
+        case .discard:
+            return
+        default:
+            break
+        }
+        do {
+            try sheet.enterArrayFormula(text)
+        } catch {
+            presentError?(error)
+            beginEditing(initialText: text)
         }
     }
 
@@ -973,12 +1007,16 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
 
     // MARK: Formula range selection
 
-    /// While a formula is typed, a click or drag on the grid puts the
-    /// clicked range into the text (scg_rangesel_* and the GTK entry's
-    /// find_range); the range stays outlined until the text changes.
+    /// While a formula is typed, a click or drag on the grid, or an arrow
+    /// key, puts a range into the text (scg_rangesel_* and the GTK entry's
+    /// find_range); the range stays outlined until the text can no longer
+    /// take one at the cursor.
     private var formulaRangeAnchor: CellCoordinate?
     private var formulaRangeText: NSRange?
     private var formulaRange: CellRange?
+    /// The range's base corner (scg->rangesel.base_corner): where the
+    /// keyboard moves from, the other corner extending.
+    private var formulaRangeBase: CellCoordinate?
 
     /// For the headless checks: the outlined range.
     var formulaRangeShown: CellRange? { formulaRange }
@@ -1012,6 +1050,31 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         editor.currentEditor()?.selectedRange = NSRange(location: replace.location + name.utf16.count, length: 0)
         editingTextDidChange?(editor.stringValue)
         needsDisplay = true
+    }
+
+    /// An arrow key while a formula can take a range (scg_rangesel_move and
+    /// scg_rangesel_extend): the first step goes from the cell being
+    /// edited, later ones from the range's base corner; Shift moves the
+    /// far corner, ⌘ jumps to the edge of the data.  False when the text
+    /// cannot take a range, so the key keeps its meaning in the text.
+    func moveFormulaRange(columns: Int, rows: Int, extend: Bool, jump: Bool) -> Bool {
+        guard let sheet, let cell = editingCell else { return false }
+        let active = formulaRange != nil && formulaRangeText != nil
+        guard let replace = active ? formulaRangeText : formulaReplacement() else { return false }
+        let base = (active ? formulaRangeBase : nil) ?? cell
+        let range: CellRange
+        let target: CellCoordinate
+        if extend, active, let shown = formulaRange {
+            target = sheet.cell(farCorner(of: shown, from: base), movedByColumns: columns, rows: rows, base: base, jumpingToBoundary: jump)
+            range = Self.range(from: base, to: target)
+        } else {
+            target = sheet.cell(base, movedByColumns: columns, rows: rows, base: base, jumpingToBoundary: jump)
+            range = CellRange(start: target, end: target)
+        }
+        formulaRangeBase = range.start == target && range.end == target ? target : base
+        takeFormulaRange(range, replacing: replace)
+        scrollToVisible(sheet.frameOfCell(atColumn: target.column, row: target.row).insetBy(dx: -2, dy: -2))
+        return true
     }
 
     /// The outline of the range being put into the formula.
@@ -1390,6 +1453,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         if event.clickCount == 1, let replace = formulaReplacement() {
             let cell = CellCoordinate(column: sheet.column(atX: point.x), row: sheet.row(atY: point.y))
             formulaRangeAnchor = cell
+            formulaRangeBase = cell
             takeFormulaRange(CellRange(start: cell, end: cell), replacing: replace)
             return
         }
@@ -1701,12 +1765,15 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     override func deleteBackward(_ sender: Any?) { clearSelectionValues() }
     override func deleteForward(_ sender: Any?) { clearSelectionValues() }
 
-    private func move(columns dc: Int, rows dr: Int, extend: Bool) {
+    /// scg_cursor_move / scg_cursor_extend; `jump` is the GTK's Ctrl+arrow,
+    /// to the edge of the run of filled or of empty cells.
+    private func move(columns dc: Int, rows dr: Int, extend: Bool, jump: Bool = false) {
         guard let sheet else { return }
         let edit = sheet.editPosition
         let anchor = extend ? (dragAnchor ?? edit) : edit
         var target = extend ? farCorner(of: sheet.selectedRange, from: anchor) : edit
-        target = step(target, columns: dc, rows: dr, in: sheet)
+        target = jump ? sheet.cell(target, movedByColumns: dc, rows: dr, base: anchor, jumpingToBoundary: true)
+                      : step(target, columns: dc, rows: dr, in: sheet)
         if extend {
             dragAnchor = anchor
             sheet.selectRange(Self.range(from: anchor, to: target), editPosition: anchor)
@@ -1754,14 +1821,24 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     override func moveRightAndModifySelection(_ sender: Any?) { move(columns: 1, rows: 0, extend: true) }
     override func pageDown(_ sender: Any?) { move(columns: 0, rows: pageRows, extend: false) }
     override func pageUp(_ sender: Any?) { move(columns: 0, rows: -pageRows, extend: false) }
-    override func moveToBeginningOfLine(_ sender: Any?) {
+    // ⌘-arrows jump to the edge of the data (the GTK's Ctrl+arrow), Shift
+    // extending; Home goes to the row's first column.
+    override func moveToBeginningOfLine(_ sender: Any?) { move(columns: -1, rows: 0, extend: false, jump: true) }
+    override func moveToLeftEndOfLine(_ sender: Any?) { move(columns: -1, rows: 0, extend: false, jump: true) }
+    override func moveToEndOfLine(_ sender: Any?) { move(columns: 1, rows: 0, extend: false, jump: true) }
+    override func moveToRightEndOfLine(_ sender: Any?) { move(columns: 1, rows: 0, extend: false, jump: true) }
+    override func moveToBeginningOfDocument(_ sender: Any?) { move(columns: 0, rows: -1, extend: false, jump: true) }
+    override func moveToEndOfDocument(_ sender: Any?) { move(columns: 0, rows: 1, extend: false, jump: true) }
+    override func moveToBeginningOfLineAndModifySelection(_ sender: Any?) { move(columns: -1, rows: 0, extend: true, jump: true) }
+    override func moveToLeftEndOfLineAndModifySelection(_ sender: Any?) { move(columns: -1, rows: 0, extend: true, jump: true) }
+    override func moveToEndOfLineAndModifySelection(_ sender: Any?) { move(columns: 1, rows: 0, extend: true, jump: true) }
+    override func moveToRightEndOfLineAndModifySelection(_ sender: Any?) { move(columns: 1, rows: 0, extend: true, jump: true) }
+    override func moveToBeginningOfDocumentAndModifySelection(_ sender: Any?) { move(columns: 0, rows: -1, extend: true, jump: true) }
+    override func moveToEndOfDocumentAndModifySelection(_ sender: Any?) { move(columns: 0, rows: 1, extend: true, jump: true) }
+    override func scrollToBeginningOfDocument(_ sender: Any?) {
         guard let sheet else { return }
         sheet.selectCell(atColumn: 0, row: sheet.editPosition.row)
         scrollToVisible(sheet.frameOfCell(atColumn: 0, row: sheet.editPosition.row))
-    }
-    override func moveToBeginningOfDocument(_ sender: Any?) {
-        sheet?.selectCell(atColumn: 0, row: 0)
-        scroll(.zero)
     }
     override func insertTab(_ sender: Any?) {
         if selectedObjects.isEmpty { move(columns: 1, rows: 0, extend: false) } else { selectNextObject(reverse: false) }

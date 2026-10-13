@@ -1246,6 +1246,46 @@
   ("app" under "apple" completes with the tail selected, then SUM
   inserted through the dialog, captured to `-func.png`).
 
+## 2026-10-12: Keyboard range selection, array formulas, ⌘-arrow jumps
+
+- `GnmSheet.cell:movedByColumns:rows:base:jumpingToBoundary:` wraps
+  `sheet_find_boundary_horizontal/vertical`: a step skips hidden columns
+  and rows and whole merges and stops at the sheet's edges; a jump (the
+  GTK's Ctrl+arrow) goes to the edge of the run of filled or of empty
+  cells, past the end of the data to the sheet's last row or column.
+- `GnmSheet.enterArrayFormula:` ports `wbcg_edit_finish`'s
+  `WBC_EDIT_ACCEPT_ARRAY` branch: the split-region, merges-or-arrays,
+  and lock checks, the formula test (a value in the cell's format or a
+  lone "-" is not one), the parse at the selection's top left, then
+  `cmd_area_set_array_expr` ("Inserting array expression in E1:E3");
+  a non-formula or several selected ranges fall back to
+  `cmd_area_set_text`, as there.  Changing one cell of the array alone
+  is refused by the engine ("splits an array").
+- `CellEditorField` now lends its own field editor through
+  `CellEditorCell.fieldEditor(for:)`, so Return with Shift and Control
+  or Command is seen before the text system makes it a newline
+  (`onArrayCommit`); arrow selectors (plain, Shift, and the ⌘ forms
+  `moveToBeginningOfDocument`, `moveToLeftEndOfLine`, …) are offered to
+  `onArrow` first.
+- `GridView.moveFormulaRange`: `scg_rangesel_move` and
+  `scg_rangesel_extend`.  Without a range yet, the first arrow steps from
+  the cell being edited; later ones from the range's base corner; Shift
+  moves the far corner; ⌘ jumps.  Typing follows `gee_update_env`: when
+  the text can no longer take a range at the cursor (after ")") the
+  selection ends and Up and Down commit again; otherwise the next range
+  goes where the cursor now is.  `commitArrayFormula` runs the cell's
+  validation as a plain commit does, then `enterArrayFormula`.
+- On the grid, ⌘← ⌘→ ⌘↑ ⌘↓ (and with Shift) now jump to the edge of the
+  data through the same helper, replacing the earlier ⌘← = first column
+  and ⌘↑ = A1; Home (`scrollToBeginningOfDocument`) goes to the row's
+  first column.  Henry should confirm this on screen; no key reaches A1
+  now except Go To.
+- `formula_range.m` covers the moves, the array over E1:E3, the refusals,
+  undo, and the text fallback; `GNM_SNAPSHOT_FORMULA=1` sends the keys
+  as `NSEvent`s through the window ("=MAX(" in A6: Right → B6, ⌘Up → B3,
+  ⇧⌘Up → B1:B3, ")" ends the selection, Up commits; "=B1:B3*2" over
+  A7:A9 by ⇧⌘Return).
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -1260,12 +1300,12 @@
    options, the text import assistant, cell comments, defined names,
    Fill Series, Text to Columns, Goal Seek, conditional formatting, and
    twelve analysis tools, data validation, hyperlinks, the Solver,
-   printing, formula range selection by mouse, the font shortcuts,
-   autocompletion, and the function selector; next the rest of Phase 5
-   by usage frequency: the remaining statistics, keyboard range
-   selection, array formulas
+   printing, formula range selection by mouse and keyboard, the font
+   shortcuts, autocompletion, the function selector, and array formulas;
+   next the rest of Phase 5 by usage frequency: the remaining statistics
    (frequencies, histograms, the non-parametric tests, two-factor
-   ANOVA, Fourier, Kaplan-Meier, principal components)) from
+   ANOVA, Fourier, Kaplan-Meier, principal components), a Stop button
+   for long solves, the editor in the cell's own font) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -1289,7 +1329,7 @@
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
 3. The state at the end of 2026-10-12: `main` at the autocompletion and
-   function selector commit (after formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+   keyboard range selection commit (after the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

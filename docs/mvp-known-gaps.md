@@ -50,7 +50,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | EditSelectAll | ported | ⌘A and the header corner |
 | EditSelectColumn, EditSelectRow | ported | header clicks and Edit → Select |
 | EditSelectArray, EditSelectDepends, EditSelectInputs, EditSelectObject | no | Phase 3/4 |
-| EditGotoTop/Bottom/First/Last, EditGoto | partial | Home and ⌘↑ work; Edit → Go To… (⌃G) and the name box take a reference or a name (2026-10-12); no Top/Bottom/First/Last items |
+| EditGotoTop/Bottom/First/Last, EditGoto | partial | ⌘-arrows jump to the edge of the data (the GTK's Ctrl+arrow, Shift extending) and Home goes to the row's first column (2026-10-12); Edit → Go To… (⌃G) and the name box take a reference or a name; no Top/Bottom/First/Last items, no key for A1 |
 
 ## View
 
@@ -140,7 +140,9 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | Formula bar: multi-line editing, function tooltips | no | Phase 3 |
 | In-cell editor: range selection by mouse while typing a formula | ported | 2026-10-12: a click or drag puts the reference where the GTK entry would (`GnmFormulaEditing`) |
 | In-cell editor: autocomplete | ported | 2026-10-12: the column's nearest text above fills in with the tail selected |
-| In-cell editor: cell's own font and alignment, range selection by keyboard while typing a formula, array formulas (Ctrl-Shift-Enter) | no | Phase 3 |
+| In-cell editor: range selection by keyboard while typing a formula | ported | 2026-10-12: arrows move the reference from the edited cell, Shift extends it, ⌘ jumps to the data's edge (`scg_rangesel_move/extend`); typing that leaves no place for a range ends it (`gee_update_env`) |
+| In-cell editor: array formulas (Ctrl-Shift-Enter) | ported | 2026-10-12: ⇧⌘Return or ⌃⇧Return enters the text as an array over the selection (`GnmSheet.enterArrayFormula`, `cmd_area_set_array_expr`); a non-formula or several ranges fill as text, as the GTK does |
+| In-cell editor: cell's own font and alignment | no | Phase 3 |
 | Cell comments (display, tooltips) | ported | the red corner marker and a tool tip with author and text (2026-10-12) |
 | Hyperlinks (activation) | ported | a click follows the link (2026-10-12): internal ones through the engine's selection, the others through NSWorkspace; the tip is the tool tip |
 | Sheet objects: selection handles, move, resize, context menus, editing, form widgets | partial | 2026-10-12: click to select, handles, drag to move and resize (Option symmetric, Shift snaps), Delete, arrows nudge, Tab cycles, context menu with Properties… (charts), Save as Image… (charts and images, with the format and resolution), Delete, and the stacking order, cut, copy, and paste (a PNG goes to other applications), the chart editor; no editors for images and widgets, no live preview while dragging, widgets draw but do not act |

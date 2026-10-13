@@ -143,7 +143,9 @@ small linear program through the dialog, captured to `-solve.png`, the
 solution in the cells), and printing (landscape with grid lines and a
 header through the Page Setup dialog, captured to `-print.png`, the
 first page drawn to `-page1.png`), formula range selection ("=SUM(" in
-A5 takes B1:B3 from the grid, then Bold), and autocompletion with the
+A5 takes B1:B3 from the grid, then Bold; "=MAX(" in A6 takes B1:B3 by
+Right, ⌘Up, and ⇧⌘Up sent as key events, ")" ends the selection, Up
+commits; "=B1:B3*2" over A7:A9 by ⇧⌘Return), and autocompletion with the
 function selector ("app" under "apple" completes; SUM inserted through
 the dialog, captured to `-func.png`) before the
 capture (`AppDelegate.swift`, `Snapshot`). The typing hook saves as a

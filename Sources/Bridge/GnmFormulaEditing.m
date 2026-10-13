@@ -5,6 +5,7 @@
 // public.
 #import "GnmPrivate.h"
 #include <complete-sheet.h>
+#include <expr.h>
 
 static gboolean
 is_operand (char const *text, GnmLexerItem const *gli)
@@ -197,6 +198,74 @@ cb_complete_match (GnmComplete *complete, char const *text, gpointer closure)
     GnmRange r;
     range_init (&r, (int) range.start.column, (int) range.start.row, (int) range.end.column, (int) range.end.row);
     return GnmString (range_as_string (&r));
+}
+
+- (GnmCellCoordinate)cell:(GnmCellCoordinate)from movedByColumns:(NSInteger)columns rows:(NSInteger)rows
+                     base:(GnmCellCoordinate)base jumpingToBoundary:(BOOL)jump
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    Sheet *sheet = self.engineSheet;
+    if (!sheet)
+        return from;
+    GnmCellCoordinate to = from;
+    /* scg_rangesel_move / scg_cursor_move: a jump steps one cell at a time */
+    if (columns != 0)
+        to.column = sheet_find_boundary_horizontal (sheet, (int) from.column, (int) from.row, (int) base.row,
+                                                    (int) columns, jump && (columns == 1 || columns == -1));
+    if (rows != 0)
+        to.row = sheet_find_boundary_vertical (sheet, (int) to.column, (int) from.row, (int) base.column,
+                                               (int) rows, jump && (rows == 1 || rows == -1));
+    return to;
+}
+
+- (BOOL)enterArrayFormula:(NSString *)text error:(NSError **)error
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    Sheet *sheet = self.engineSheet;
+    GnmWorkbook *workbook = self.workbook;
+    SheetView *sv = self.sheetView;
+    if (!sheet || !workbook || sv == NULL)
+        return NO;
+    const char *txt = text.UTF8String;
+    return [workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        GSList *selection = selection_get_ranges (sv, FALSE);
+        /* wbcg_edit_finish: an array needs a single range; the checks it
+         * makes before any command */
+        gboolean array = selection != NULL && selection->next == NULL;
+        if (sheet_ranges_split_region (sheet, selection, GO_CMD_CONTEXT (wbc), "Set Text")
+            || (array && sheet_range_contains_merges_or_arrays (sheet, selection->data, GO_CMD_CONTEXT (wbc), "Set Text", TRUE, FALSE))
+            || cmd_selection_is_locked_effective (sheet, selection, wbc, "Set Text")) {
+            range_fragment_free (selection);
+            return TRUE;
+        }
+        /* a formula only when the text is not a value in the cell's format,
+         * and not a lone "-" */
+        char const *expr_txt = NULL;
+        GnmCellPos const *pos = &sv->edit_pos;
+        GOFormat const *fmt = gnm_style_get_format (sheet_style_get (sheet, pos->col, pos->row));
+        GnmValue *value = format_match (txt, fmt, sheet_date_conv (sheet));
+        if (value == NULL)
+            expr_txt = gnm_expr_char_start_p (txt);
+        else
+            value_release (value);
+        if (expr_txt != NULL && (*expr_txt == '\0' || strcmp (expr_txt, "-") == 0))
+            expr_txt = NULL;
+        GnmExprTop const *texpr = NULL;
+        if (array && expr_txt) {
+            GnmParsePos pp;
+            GnmRange const *r = selection->data;
+            parse_pos_init (&pp, sheet->workbook, sheet, r->start.col, r->start.row);
+            texpr = gnm_expr_parse_str (expr_txt, &pp, GNM_EXPR_PARSE_DEFAULT, sheet_get_conventions (sheet), NULL);
+        }
+        range_fragment_free (selection);
+        gboolean failed;
+        if (texpr) {
+            failed = cmd_area_set_array_expr (wbc, sv, texpr);
+            gnm_expr_top_unref (texpr);
+        } else
+            failed = cmd_area_set_text (wbc, sv, txt, NULL);
+        return failed;
+    } description:@"Could not enter the array formula." error:error];
 }
 
 @end

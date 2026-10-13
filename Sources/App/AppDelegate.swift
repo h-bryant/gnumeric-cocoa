@@ -539,6 +539,44 @@ enum Snapshot {
                       sheet.enteredTextOfCell(atColumn: 0, row: 4) ?? "nil")
                 controller.toggleBold(nil)
                 NSLog("formula: bold=%@ undo=%@", sheet.formatOfSelection.bold ?? -1, sheet.workbook?.undoLabel ?? "nil")
+                // Keyboard range selection as key events through the field
+                // editor: "=MAX(" in A6, Right (B6), ⌘Up (the data's edge,
+                // B3), Shift+⌘Up (B1:B3), ")" and Return; then an array
+                // formula over A7:A9 by Shift+⌘Return.
+                func key(_ code: UInt16, _ character: String, _ flags: NSEvent.ModifierFlags) {
+                    if let event = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: flags, timestamp: ProcessInfo.processInfo.systemUptime,
+                                                   windowNumber: window.windowNumber, context: nil, characters: character,
+                                                   charactersIgnoringModifiers: character, isARepeat: false, keyCode: code) {
+                        window.sendEvent(event)
+                    }
+                }
+                let up = String(UnicodeScalar(NSUpArrowFunctionKey)!), right = String(UnicodeScalar(NSRightArrowFunctionKey)!)
+                sheet.selectCell(atColumn: 0, row: 5)
+                controller.gridView.beginEditing(initialText: "=MAX(")
+                key(124, right, [])
+                NSLog("formula: Right -> '%@'", controller.gridView.editorTextForTesting)
+                key(126, up, [.command])
+                NSLog("formula: ⌘Up -> '%@'", controller.gridView.editorTextForTesting)
+                key(126, up, [.command, .shift])
+                NSLog("formula: ⇧⌘Up -> '%@' outlined=%@", controller.gridView.editorTextForTesting,
+                      controller.gridView.formulaRangeShown.map { "\($0.start.column),\($0.start.row)-\($0.end.column),\($0.end.row)" } ?? "nil")
+                key(29, ")", [])
+                NSLog("formula: ) -> '%@' outlined=%@ fieldEditor=%@", controller.gridView.editorTextForTesting,
+                      controller.gridView.formulaRangeShown.map { "\($0.start.column),\($0.start.row)-\($0.end.column),\($0.end.row)" } ?? "nil",
+                      String(describing: type(of: window.firstResponder as AnyObject)))
+                key(126, up, [])   // no range to take after ")": Up commits upward
+                NSLog("formula: Up -> '%@' A6='%@' entered '%@' editing=%d edit=%ld,%ld", controller.gridView.editorTextForTesting,
+                      sheet.displayTextOfCell(atColumn: 0, row: 5) ?? "nil",
+                      sheet.enteredTextOfCell(atColumn: 0, row: 5) ?? "nil", controller.gridView.isEditing ? 1 : 0,
+                      sheet.editPosition.column, sheet.editPosition.row)
+                sheet.selectRange(CellRange(start: CellCoordinate(column: 0, row: 6), end: CellCoordinate(column: 0, row: 8)),
+                                  editPosition: CellCoordinate(column: 0, row: 6))
+                controller.gridView.beginEditing(initialText: "=B1:B3*2")
+                key(36, "\r", [.command, .shift])
+                NSLog("formula: array A7..A9 = '%@' '%@' '%@' entered '%@' undo=%@ editing=%d",
+                      sheet.displayTextOfCell(atColumn: 0, row: 6) ?? "nil", sheet.displayTextOfCell(atColumn: 0, row: 7) ?? "nil",
+                      sheet.displayTextOfCell(atColumn: 0, row: 8) ?? "nil", sheet.enteredTextOfCell(atColumn: 0, row: 7) ?? "nil",
+                      sheet.workbook?.undoLabel ?? "nil", controller.gridView.isEditing ? 1 : 0)
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }

@@ -166,8 +166,7 @@ Status 2026-10-11: cell editor, formula bar editing, undo/redo on the engine's
 stack, Delete, the engine's clipboard (region copy/cut/paste with marching
 ants, text import from other applications), and saving `.gnumeric`,
 uncompressed `.xml`, and `.xlsx` through `NSDocument` exist
-(`docs/progress.md`). Not yet: autocomplete, keyboard range selection inside
-formulas, the editor in the cell's own font.
+(`docs/progress.md`). Not yet: the editor in the cell's own font.
 
 ### Phase 2b — MVP completion
 
@@ -352,10 +351,13 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    (`GnmFormulaEditing.h`, `GridView.takeFormulaRange`,
    `formula_range.m`), the font shortcuts, autocompletion, and the
    function selector (Insert → Function…; `GnmFunctions.h`,
-   `FunctionSelectorDialog.swift`, `functions.m`) followed. Next, by
-   usage: keyboard range selection and array formulas in the editor,
-   the remaining statistics on the analysis pattern, a Stop button and
-   progress for long solver runs;
+   `FunctionSelectorDialog.swift`, `functions.m`) followed, then
+   keyboard range selection in the editor (arrows, Shift, ⌘ for the
+   data's edge), array formulas (⇧⌘Return or ⌃⇧Return;
+   `GnmSheet.enterArrayFormula`), and ⌘-arrow jumps on the grid
+   (`sheet_find_boundary_*`). Next, by usage: the remaining statistics
+   on the analysis pattern, a Stop button and progress for long solver
+   runs, the editor in the cell's own font;
    image and widget editors (`cmd_so_set_*`) later; the smaller Phase 3
    gaps (Insert/Delete Cells,
    Goto and the name box, the formula bar, autocomplete, drag and drop,
