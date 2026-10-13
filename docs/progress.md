@@ -1536,6 +1536,33 @@
   drives the dialog and writes it to `-manage.png` (as with the names
   dialog, buttons and labels are missing from such captures).
 
+## 2026-10-12: Plugin Manager
+
+- `GnmPlugins.h`: `GnmPlugin` wraps a `GOPlugin` (a reference held;
+  identifier, name, summary, directory, active, `canDeactivate`,
+  marked for deactivation, dependency identifiers, service
+  descriptions) and `GnmEngine (Plugins)` is dialog-plugin-manager.c's
+  engine side: `availablePlugins` collated by name, `activatePlugin:`
+  and `deactivatePlugin:` (`go_plugin_activate` / `_deactivate`; a
+  `GOErrorInfo` becomes an error with the GTK heading and the details
+  as the recovery suggestion), `inactiveDependencyNamesOfPlugin:` for
+  the dialog's question, `setPlugin:markedForDeactivation:`,
+  `activateAllPluginsWithError:` (`go_plugin_db_activate_plugin_list`),
+  `activatesNewPlugins`, `systemPluginDirectories` (the engine's
+  `lib/plugins`, the user's, goffice's, `GNUMERIC_PLUGIN_PATH`),
+  `extraPluginDirectories` (the preference), and `rescanPluginsWithError:`.
+  Engine fact: `go_plugins_get_plugin_dir` is goffice's own plugin
+  directory, not Gnumeric's (`gnm_sys_lib_dir ()/plugins`).  The
+  engine's `shutdown` already stores the active list for the next
+  start; plugins marked for deactivation are left out of it by goffice.
+- `PluginManagerDialog.swift` (Tools → Plug-ins…): the list with
+  checkboxes (an active plugin in use keeps its box disabled, the GTK's
+  "switchable"), the details label, the mark checkbox, Activate All,
+  the new-plugins checkbox, the directories table with Add… (an open
+  panel), Remove (extra directories only), and Rescan.  `plugins.m` is
+  a new test program (registered in `project.yml` and the XCTest
+  list); the `GNM_SNAPSHOT_PLUGINS` hook drives the dialog.
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -1553,8 +1580,8 @@
    printing, formula range selection by mouse and keyboard, the font
    shortcuts, autocompletion, the function selector, and array formulas;
    and all 27 Statistics tools; next the rest of Phase 5 by usage
-   frequency: a plugin manager, the scenarios and simulation tools,
-   Format → AutoFormat) from
+   frequency: the scenarios and simulation tools, Format → AutoFormat)
+   from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -1577,8 +1604,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-12: `main` at the Manage Sheets
-   commit (after function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-12: `main` at the Plugin Manager
+   commit (after Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

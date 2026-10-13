@@ -1634,6 +1634,46 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_PLUGINS"] != nil,
+               let controller = window.windowController as? WorkbookWindowController {
+                // Plugin Manager: the time series plugin activated through
+                // its checkbox and deactivated again, a directory added and
+                // removed, a rescan, the window captured to `-plugins.png`.
+                controller.pluginManager(nil)
+                if let dialog = controller.pluginManagerDialog {
+                    let identifier = "Gnumeric_fnTimeSeriesAnalysis"
+                    NSLog("plugins: %ld listed, %ld active", dialog.plugins.count, dialog.plugins.filter(\.isActive).count)
+                    dialog.select(pluginWithIdentifier: identifier)
+                    if let row = dialog.plugins.firstIndex(where: { $0.identifier == identifier }) {
+                        let before = dialog.plugins[row].isActive
+                        dialog.toggleActive(row: row)
+                        let after = dialog.plugins[row].isActive
+                        dialog.toggleActive(row: row)
+                        NSLog("plugins: TSA %@ -> %@ -> %@", before ? "active" : "inactive", after ? "active" : "inactive",
+                              dialog.plugins[row].isActive ? "active" : "inactive")
+                        dialog.toggleActive(row: row)
+                    }
+                    dialog.addDirectory("/tmp/no-plugins-here")   // what the Add… panel would hand over
+                    NSLog("plugins: %ld directories after add, extra=%@", dialog.directories.count,
+                          Engine.shared?.extraPluginDirectories.joined(separator: ",") ?? "nil")
+                    dialog.rescan(nil)
+                    if let content = dialog.window.contentView {
+                        content.layoutSubtreeIfNeeded()
+                        if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                            content.cacheDisplay(in: content.bounds, to: rep)
+                            let pluginsPath = (path as NSString).deletingPathExtension + "-plugins.png"
+                            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: pluginsPath))
+                            NSLog("plugins: captured %@ (%@)", pluginsPath, NSStringFromRect(content.bounds))
+                        }
+                    }
+                    Engine.shared?.extraPluginDirectories = Engine.shared?.extraPluginDirectories.filter { $0 != "/tmp/no-plugins-here" } ?? []
+                    NSLog("plugins: extra after remove=%@", Engine.shared?.extraPluginDirectories.joined(separator: ",") ?? "nil")
+                    dialog.close(nil)
+                    NSLog("plugins: closed, dialog=%@", controller.pluginManagerDialog == nil ? "nil" : "open")
+                }
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FREEZE"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

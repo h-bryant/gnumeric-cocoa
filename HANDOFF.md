@@ -376,7 +376,8 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    cycling (`functionTooltipForText:cursorAt:`,
    `formulaText:cursorAt:cycleReferenceIn:`), and Edit → Sheet → Manage
    Sheets… (`ManageSheetsDialog.swift`, `setSheet:protected:`,
-   `sortSheetsAscending:`).  Next, by usage: a plugin manager, the
+   `sortSheetsAscending:`), and Tools → Plug-ins… (`GnmPlugins.h`,
+   `PluginManagerDialog.swift`, `plugins.m`).  Next, by usage: the
    scenarios and simulation tools, Format → AutoFormat;
    image and widget editors (`cmd_so_set_*`) later; the smaller Phase 3
    gaps (Insert/Delete Cells,

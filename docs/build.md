@@ -109,7 +109,7 @@ GNM_SNAPSHOT=/tmp/grid.png scripts/run-app.sh upstream/gnumeric/samples/format-t
 `GNM_SNAPSHOT_VALID=1`, `GNM_SNAPSHOT_LINK=1`, `GNM_SNAPSHOT_SOLVE=1`,
 `GNM_SNAPSHOT_PRINT=1`, `GNM_SNAPSHOT_FORMULA=1`, `GNM_SNAPSHOT_FUNC=1`,
 `GNM_SNAPSHOT_SHEET=1`, `GNM_SNAPSHOT_WHATIF=1`, `GNM_SNAPSHOT_OUTLINE=1`,
-`GNM_SNAPSHOT_ADVFILTER=1`, and `GNM_SNAPSHOT_MANAGE=1`
+`GNM_SNAPSHOT_ADVFILTER=1`, `GNM_SNAPSHOT_MANAGE=1`, and `GNM_SNAPSHOT_PLUGINS=1`
 exercise zoom, editing and saving, the Format Cells model, the Phase 3
 commands, frozen panes, sheet management, the autofilter with the Sort
 command, a sheet resize, and a tab color, the sheet objects (select, move,
@@ -168,8 +168,10 @@ Qty > 4 in place through its dialog, captured to `-advfilter.png`, then
 copied to G1; a second sheet hidden and shown again), and Manage Sheets
 (a sheet appended and renamed through the table, the first locked, hidden,
 and colored, the list sorted and the sort undone, an empty name refused,
-the window captured to `-manage.png`) before the capture
-(`AppDelegate.swift`, `Snapshot`). The typing hook saves as a
+the window captured to `-manage.png`), and the Plugin Manager (the time
+series plugin activated and deactivated through its checkbox, a directory
+added and removed, a rescan, the window captured to `-plugins.png`) before
+the capture (`AppDelegate.swift`, `Snapshot`). The typing hook saves as a
 Save As next to the snapshot; with `GNM_SNAPSHOT_SAVE_INPLACE=1` it saves
 the opened file in place instead (give it a copy). Should a quit ever go
 nowhere again (an alert sheet on the window did that once,

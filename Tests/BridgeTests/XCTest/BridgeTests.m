@@ -97,5 +97,6 @@
 - (void)testWhatIf { [self runProgram:@"whatif"]; }
 - (void)testOutline { [self runProgram:@"outline"]; }
 - (void)testFilterVisibility { [self runProgram:@"filter_visibility"]; }
+- (void)testPlugins { [self runProgram:@"plugins"]; }
 
 @end

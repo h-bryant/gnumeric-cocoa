@@ -550,7 +550,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             return gridView.sheet != nil && workbook.sheets.filter({ $0.isVisible }).count > 1
         case #selector(unhideSheet(_:)):
             return workbook.sheets.contains { !$0.isVisible } && window?.attachedSheet == nil
-        case #selector(manageSheets(_:)):
+        case #selector(manageSheets(_:)), #selector(pluginManager(_:)):
             return window?.attachedSheet == nil
         case #selector(advancedFilter(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
@@ -1560,6 +1560,20 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
 
     var namesDialog: NamesDialog?
     var manageSheetsDialog: ManageSheetsDialog?
+    var pluginManagerDialog: PluginManagerDialog?
+
+    /// The GTK Plugin Manager as a sheet (Tools → Plug-ins…).
+    @objc func pluginManager(_ sender: Any?) {
+        guard let window, let engine = Engine.shared, pluginManagerDialog == nil, window.attachedSheet == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let dialog = PluginManagerDialog(engine: engine)
+        pluginManagerDialog = dialog
+        dialog.run(in: window) { [weak self] in
+            guard let self else { return }
+            pluginManagerDialog = nil
+            window.makeFirstResponder(gridView)
+        }
+    }
 
     /// The GTK Manage Sheets dialog as a sheet; its changes are engine
     /// commands applied at once.

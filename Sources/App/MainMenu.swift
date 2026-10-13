@@ -254,6 +254,8 @@ enum MainMenu {
         multipleMenu.addItem(submenu(contingencyMenu, title: "Contingency Table"))
         statisticsMenu.addItem(submenu(multipleMenu, title: "Multiple Sample Tests"))
         toolsMenu.addItem(submenu(statisticsMenu, title: "Statistics"))
+        toolsMenu.addItem(.separator())
+        toolsMenu.addItem(withTitle: "Plug-ins…", action: Selector(("pluginManager:")), keyEquivalent: "")
         menuBar.addItem(submenu(toolsMenu, title: "Tools"))
 
         let windowMenu = NSMenu(title: "Window")

@@ -100,7 +100,8 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | Action | Status | Notes / Phase |
 |---|---|---|
 | ToolsSolver | ported | Tools → Solver… (2026-10-12): parameters, model and algorithm, constraints, options, reports; Gnumeric's own solver, GLPK and lp_solve when installed; the run page as a progress sheet with the status, objective, elapsed time, and a Stop button (`GnmSolverRun`); no scenarios |
-| ToolsAutoCorrect, ToolsAutoSave, ToolsSimulation, ToolsCompare, ToolsPlugins, ToolsScenarios, ToolsScenarioAdd | no | Phase 5 |
+| ToolsAutoCorrect, ToolsAutoSave, ToolsSimulation, ToolsCompare, ToolsScenarios, ToolsScenarioAdd | no | Phase 5 |
+| ToolsPlugins | ported | Tools → Plug-ins… (2026-10-12): the GTK dialog's list with activation checkboxes, details, the mark for deactivation, Activate All, the new-plugins preference, the directories with Add and Remove, Rescan (`GnmPlugins.h`, `PluginManagerDialog.swift`, `plugins.m`) |
 | ToolsGoalSeek | ported | Tools → Goal Seek… (2026-10-12) |
 | Statistics: Descriptive Statistics, Correlation, Covariance, Rank and Percentile, Regression, Two Means (t and z), Two Variances (F), ANOVA single factor, Sampling, Moving Average, Exponential Smoothing | ported | Tools → Statistics (2026-10-12): the GTK dialogs' Input, tool, and Output pages as alert sheets over `cmd_analysis_tool` |
 | The other Statistics items: Frequency Tables, Histogram, Fourier, Principal Components, Kaplan-Meier, Normality Tests, Claims About a Mean, the one- and two-sample sign and Wilcoxon signed rank tests, Wilcoxon-Mann-Whitney, two-factor ANOVA, the contingency table tests | ported | 2026-10-12 on the same pattern; the Statistics menu now has the GTK's groups and submenus; a tool's required function plugins are activated on demand (Fourier's time series plugin is inactive by default); Kaplan-Meier groups are typed as "name from to; …" rather than a table; engine patch 0005 for the frequency and histogram tools' double free |
@@ -157,6 +158,6 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | Sheet tab context menu, tab colors | partial | context menu 2026-10-11; Tab Color… 2026-10-12 shows the background as a swatch before the name (the text color is kept in the file, not shown) |
 | Printing and page setup | ported | 2026-10-12: `NSPrintOperation` over `PrintView`, the engine's `print-cell.c` and a port of print.c's pagination and page drawing in `GnmPrinting.m` |
 | Preferences window | partial | see EditPreferences (2026-10-12) |
-| Plugin manager | no | Phase 5 |
+| Plugin manager | ported | 2026-10-12, see ToolsPlugins above |
 | Localization of the UI (the engine's messages follow the process locale) | no | Phase 7 |
 | Bundled distribution (dylibs, plugins, schemas inside the `.app`) | no | Phase 6 |

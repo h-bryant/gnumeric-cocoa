@@ -29,6 +29,7 @@
 #import <GnmCocoa/GnmFunctions.h>
 #import <GnmCocoa/GnmWhatIf.h>
 #import <GnmCocoa/GnmOutline.h>
+#import <GnmCocoa/GnmPlugins.h>
 #import <GnmCocoa/GnmSearch.h>
 #import <GnmCocoa/GnmTextExport.h>
 #import <GnmCocoa/GnmTextImport.h>
