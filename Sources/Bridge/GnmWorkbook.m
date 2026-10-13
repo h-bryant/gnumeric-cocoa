@@ -438,6 +438,52 @@ GSF_CLASS_FULL (GnmCocoaWorkbookControl, gnm_cocoa_workbook_control,
     } description:@"Could not rename the sheet." error:error];
 }
 
+- (BOOL)setSheet:(GnmSheet *)sheet protected:(BOOL)protected error:(NSError **)error
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    Sheet *target = sheet.engineSheet;
+    if (target == NULL)
+        return NO;
+    if (target->is_protected == (protected != NO))
+        return YES;
+    /* cb_toggled_lock */
+    return [self _reorganizeSheetsWith:^{
+        g_object_set (G_OBJECT (target), "protected", protected ? TRUE : FALSE, NULL);
+    } undoFocus:target error:error];
+}
+
+/* sort_asc_desc: the sheets by their names' collation keys */
+typedef struct { Sheet *sheet; char *key; } SheetSortEntry;
+
+static gint
+sheet_sort_entry_cmp (gconstpointer a, gconstpointer b)
+{
+    return strcmp (((SheetSortEntry const *) a)->key, ((SheetSortEntry const *) b)->key);
+}
+
+- (BOOL)sortSheetsAscending:(BOOL)ascending error:(NSError **)error
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    int count = workbook_sheet_count (_wb);
+    GArray *entries = g_array_sized_new (FALSE, FALSE, sizeof (SheetSortEntry), (guint) count);
+    for (int i = 0; i < count; i++) {
+        Sheet *sheet = workbook_sheet_by_index (_wb, i);
+        SheetSortEntry entry = { sheet, g_utf8_collate_key (sheet->name_unquoted, -1) };
+        g_array_append_val (entries, entry);
+    }
+    g_array_sort (entries, sheet_sort_entry_cmp);
+    BOOL ok = [self _reorganizeSheetsWith:^{
+        for (int n = 0; n < count; n++) {
+            SheetSortEntry *entry = &g_array_index (entries, SheetSortEntry, ascending ? n : count - 1 - n);
+            workbook_sheet_move (entry->sheet, n - entry->sheet->index_in_wb);
+        }
+    } undoFocus:NULL error:error];
+    for (int i = 0; i < count; i++)
+        g_free (g_array_index (entries, SheetSortEntry, i).key);
+    g_array_free (entries, TRUE);
+    return ok;
+}
+
 - (BOOL)setSheet:(GnmSheet *)sheet visible:(BOOL)visible error:(NSError **)error
 {
     NSAssert (NSThread.isMainThread, @"engine access off the main thread");

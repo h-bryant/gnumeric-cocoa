@@ -550,6 +550,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             return gridView.sheet != nil && workbook.sheets.filter({ $0.isVisible }).count > 1
         case #selector(unhideSheet(_:)):
             return workbook.sheets.contains { !$0.isVisible } && window?.attachedSheet == nil
+        case #selector(manageSheets(_:)):
+            return window?.attachedSheet == nil
         case #selector(advancedFilter(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(pasteSpecial(_:)):
@@ -1557,6 +1559,23 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     // MARK: Names (Edit → Define Names…, Insert → Name…)
 
     var namesDialog: NamesDialog?
+    var manageSheetsDialog: ManageSheetsDialog?
+
+    /// The GTK Manage Sheets dialog as a sheet; its changes are engine
+    /// commands applied at once.
+    @objc func manageSheets(_ sender: Any?) {
+        guard let window, manageSheetsDialog == nil, window.attachedSheet == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let dialog = ManageSheetsDialog(workbook: workbook)
+        manageSheetsDialog = dialog
+        dialog.run(in: window) { [weak self] in
+            guard let self else { return }
+            manageSheetsDialog = nil
+            workbook.resendDelegateState()
+            gridView.needsDisplay = true
+            window.makeFirstResponder(gridView)
+        }
+    }
 
     @objc func defineNames(_ sender: Any?) {
         guard let window, let sheet = gridView.sheet, namesDialog == nil, window.attachedSheet == nil else { return }

@@ -274,6 +274,8 @@ enum MainMenu {
     /// The sheet commands: in Edit → Sheet and as the tab strip's context menu.
     static func sheetMenu() -> NSMenu {
         let menu = NSMenu(title: "Sheet")
+        menu.addItem(withTitle: "Manage Sheets…", action: Selector(("manageSheets:")), keyEquivalent: "")
+        menu.addItem(.separator())
         menu.addItem(withTitle: "Insert", action: Selector(("insertSheet:")), keyEquivalent: "")
         menu.addItem(withTitle: "Insert at End", action: Selector(("appendSheet:")), keyEquivalent: "")
         menu.addItem(withTitle: "Duplicate", action: Selector(("duplicateSheet:")), keyEquivalent: "")

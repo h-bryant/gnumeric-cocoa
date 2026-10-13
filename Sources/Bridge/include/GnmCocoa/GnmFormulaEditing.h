@@ -32,12 +32,15 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(FunctionTooltip)
 @property (nonatomic, readonly) NSRange completionRange;
 @end
 
-@interface GnmSheet (FormulaEditing)
+@interface GnmSheet (FunctionTooltips)
 /// The tooltip for text being edited with the insertion point at
 /// `cursor`, or nil when there is none: not a formula, the cursor at
 /// the start, no call around it, or the preferences (`function-
 /// argument-tooltips`, `function-name-tooltips`) off.
 - (nullable GnmFunctionTooltip *)functionTooltipForText:(NSString *)text cursorAt:(NSInteger)cursor NS_SWIFT_NAME(functionTooltip(for:cursorAt:));
+@end
+
+@interface GnmSheet (FormulaEditing)
 /// Whether text being edited, with the insertion point at `cursor`
 /// (UTF-16 offset), can take a cell reference from a click: it must be
 /// a formula, and the cursor must sit where an operand may go.  On YES,

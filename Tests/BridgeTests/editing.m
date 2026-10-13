@@ -391,6 +391,24 @@ int main (void)
         [wb redo];
         GNM_ASSERT (wb.sheets.count == sheetCount, @"removal redone");
         [wb selectSheet:s];
+        /* the Manage Sheets dialog's lock and sort */
+        GNM_ASSERT (!s.isProtected, @"unlocked to start");
+        GNM_ASSERT ([wb setSheet:s protected:YES error:&error] && s.isProtected, @"lock: %@", error);
+        [wb undo];
+        GNM_ASSERT (!s.isProtected, @"lock undone");
+        GnmSheet *zebra = [wb insertSheetBefore:nil error:&error];
+        GNM_ASSERT ([wb renameSheet:zebra to:@"Zebra" error:&error], @"rename: %@", error);
+        GnmSheet *apple = [wb insertSheetBefore:nil error:&error];
+        GNM_ASSERT ([wb renameSheet:apple to:@"apple" error:&error], @"rename: %@", error);
+        GNM_ASSERT ([wb sortSheetsAscending:YES error:&error], @"sort: %@", error);
+        NSArray *sortedNames = [wb.sheets valueForKey:@"name"];
+        NSLog (@"sheets sorted ascending: %@", [sortedNames componentsJoinedByString:@","]);
+        GNM_ASSERT (wb.sheets.firstObject == apple && wb.sheets.lastObject == zebra, @"collated, case-insensitively: %@", sortedNames);
+        GNM_ASSERT ([wb sortSheetsAscending:NO error:&error] && wb.sheets.firstObject == zebra && wb.sheets.lastObject == apple, @"descending: %@", [wb.sheets valueForKey:@"name"]);
+        [wb undo];
+        [wb undo];
+        GNM_ASSERT (wb.sheets.lastObject == apple && wb.sheets[wb.sheets.count - 2] == zebra, @"sorts undone: %@", [wb.sheets valueForKey:@"name"]);
+        GNM_ASSERT ([wb removeSheet:zebra error:&error] && [wb removeSheet:apple error:&error], @"remove: %@", error);
         /* the last sheet of a workbook stays (a fresh one: the engine's undo
          * stack keeps only a limited number of commands) */
         @autoreleasepool {

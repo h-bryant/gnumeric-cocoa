@@ -1516,6 +1516,26 @@
   `formula_range.m` and the `GNM_SNAPSHOT_FORMULA` hook (the grid with
   the "=avera" list is written to `-tooltip.png`) cover both.
 
+## 2026-10-12: Manage Sheets
+
+- `ManageSheetsDialog.swift` is dialog-sheet-order.c as a sheet window
+  (the NamesDialog pattern): a table with checkboxes for the lock,
+  visibility, and text direction, an editable name, the chosen sheet's
+  tab and text colors in wells with Clear buttons, and Insert, Append,
+  Duplicate, Remove, Up, Down, Sort A → Z, Sort Z → A, Undo, Close.  As
+  in the GTK every change is one engine command applied at once (the
+  bridge's existing insert, duplicate, remove, rename, move, visibility,
+  and tab color calls, plus the new `setSheet:protected:` over the
+  `protected` property and `sortSheetsAscending:` over
+  `g_utf8_collate_key` and `workbook_sheet_move`, both through
+  `_reorganizeSheetsWith:`); the direction toggle is
+  `toggleDisplayOption:` RightToLeft.  `GnmSheet.isProtected` is new.
+  Refusals (the last visible sheet, an empty or duplicate name) show in
+  the status line.  Edit → Sheet → Manage Sheets… (the tab context menu
+  too); `editing.m` tests lock and sort; the `GNM_SNAPSHOT_MANAGE` hook
+  drives the dialog and writes it to `-manage.png` (as with the names
+  dialog, buttons and labels are missing from such captures).
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -1533,8 +1553,8 @@
    printing, formula range selection by mouse and keyboard, the font
    shortcuts, autocompletion, the function selector, and array formulas;
    and all 27 Statistics tools; next the rest of Phase 5 by usage
-   frequency: a Manage Sheets dialog, a plugin manager, the scenarios
-   and simulation tools, Format → AutoFormat) from
+   frequency: a plugin manager, the scenarios and simulation tools,
+   Format → AutoFormat) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -1557,8 +1577,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-12: `main` at the function tooltips
-   commit (after consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-12: `main` at the Manage Sheets
+   commit (after function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

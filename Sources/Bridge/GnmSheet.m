@@ -860,6 +860,7 @@ gnm_cocoa_cairo_for_context (CGContextRef context, CGRect rect, cairo_surface_t 
 - (NSInteger)index { return _sheet->index_in_wb; }
 - (BOOL)isVisible { return sheet_is_visible (_sheet); }
 - (BOOL)isRightToLeft { return _sheet->text_is_rtl; }
+- (BOOL)isProtected { return _sheet->is_protected; }
 - (BOOL)hidesGridLines { return _sheet->hide_grid; }
 - (BOOL)hidesColumnHeader { return _sheet->hide_col_header; }
 - (BOOL)hidesRowHeader { return _sheet->hide_row_header; }

@@ -91,6 +91,12 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Workbook)
 /// Hide a sheet or show it again (the Manage Sheets dialog's visibility
 /// toggle, `cmd_reorganize_sheets`); at least one sheet stays visible.
 - (BOOL)setSheet:(GnmSheet *)sheet visible:(BOOL)visible error:(NSError **)error NS_SWIFT_NAME(setSheet(_:visible:));
+/// Lock a sheet or unlock it (the Manage Sheets dialog's padlock,
+/// `cmd_reorganize_sheets` over the `protected` property).
+- (BOOL)setSheet:(GnmSheet *)sheet protected:(BOOL)protected error:(NSError **)error NS_SWIFT_NAME(setSheet(_:protected:));
+/// Reorder the sheets by name (the dialog's sort buttons; the locale's
+/// collation), one undoable command.
+- (BOOL)sortSheetsAscending:(BOOL)ascending error:(NSError **)error NS_SWIFT_NAME(sortSheets(ascending:));
 /// Resize `sheets` to `columns` by `rows` (`cmd_resize_sheets`), one
 /// undoable command; the first sheet keeps the focus on undo.  Sizes
 /// must be powers of two within the limits below (the GTK dialog's

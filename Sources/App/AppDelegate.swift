@@ -1597,6 +1597,43 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_MANAGE"] != nil,
+               let controller = window.windowController as? WorkbookWindowController {
+                // Manage Sheets: a sheet appended and renamed through the
+                // table, the first locked and hidden, the list sorted, one
+                // step undone, the window captured to `-manage.png`.
+                let workbook = controller.workbook
+                let names = { workbook.sheets.map { "\($0.name)\($0.isProtected ? "🔒" : "")\($0.isVisible ? "" : "(hidden)")" }.joined(separator: ",") }
+                controller.manageSheets(nil)
+                if let dialog = controller.manageSheetsDialog {
+                    NSLog("manage: %ld rows, row %ld chosen", dialog.sheets.count, dialog.selectedRow)
+                    dialog.append(nil)
+                    dialog.setName("Zulu", forRow: dialog.selectedRow)
+                    dialog.toggleLock(row: 0)
+                    dialog.toggleVisible(row: 0)
+                    dialog.setTabColors(background: NSColor.systemTeal.cgColor, text: nil, of: dialog.sheets[0])
+                    NSLog("manage: after append, rename, lock, hide, color: %@ undo=%@", names(), workbook.undoLabel ?? "nil")
+                    dialog.sortDescending(nil)
+                    NSLog("manage: sorted descending: %@", names())
+                    dialog.undo(nil)
+                    NSLog("manage: undone: %@ undo=%@", names(), workbook.undoLabel ?? "nil")
+                    dialog.setName("", forRow: dialog.sheets.count - 1)
+                    NSLog("manage: empty name refused: %@", workbook.sheets.last?.name ?? "nil")
+                    if let content = dialog.window.contentView {
+                        content.layoutSubtreeIfNeeded()
+                        if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                            content.cacheDisplay(in: content.bounds, to: rep)
+                            let managePath = (path as NSString).deletingPathExtension + "-manage.png"
+                            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: managePath))
+                            NSLog("manage: captured %@ (%@)", managePath, NSStringFromRect(content.bounds))
+                        }
+                    }
+                    dialog.close(nil)
+                    NSLog("manage: closed, dialog=%@ tabs=%ld", controller.manageSheetsDialog == nil ? "nil" : "open", controller.tabCount)
+                }
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FREEZE"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

@@ -147,6 +147,9 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 @property (nonatomic, readonly) NSInteger index;
 @property (nonatomic, readonly, getter=isVisible) BOOL visible;
 @property (nonatomic, readonly, getter=isRightToLeft) BOOL rightToLeft;
+/// The Manage Sheets dialog's lock (`is_protected`); set through the
+/// workbook (`setSheet:protected:`), which makes the change undoable.
+@property (nonatomic, readonly, getter=isProtected) BOOL protected;
 @property (nonatomic, readonly) BOOL hidesGridLines;
 @property (nonatomic, readonly) BOOL hidesColumnHeader;
 @property (nonatomic, readonly) BOOL hidesRowHeader;

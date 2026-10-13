@@ -45,7 +45,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | EditNames | ported | Edit → Define Names… (2026-10-12): list, add or update, remove, workbook or sheet scope |
 | EditComment | ported | Insert → Comment… (Edit Comment… over one) and the cell's context menu (2026-10-12) |
 | InsertSheet, InsertSheetAtEnd, EditDuplicateSheet, SheetRemove, SheetChangeName | ported | Edit → Sheet and the tab context menu; rename through a prompt |
-| SheetReorder | partial | Move Left / Move Right, and Edit → Sheet → Hide / Unhide… (the Manage Sheets dialog's visibility toggle, 2026-10-12); no Manage Sheets dialog or drag |
+| SheetReorder | ported | Move Left / Move Right, Edit → Sheet → Hide / Unhide…, and Edit → Sheet → Manage Sheets… (2026-10-12: the GTK dialog's table of lock, visibility, name, and direction, tab colors, insert, append, duplicate, remove, up, down, sort by name, Undo; `ManageSheetsDialog.swift`); no tab drag |
 | SheetResize | ported | Edit → Sheet → Resize… (2026-10-12): powers of two, optionally every sheet |
 | EditSelectAll | ported | ⌘A and the header corner |
 | EditSelectColumn, EditSelectRow | ported | header clicks and Edit → Select |
