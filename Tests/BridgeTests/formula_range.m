@@ -110,6 +110,15 @@ int main (void)
         GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:5 row:1], @"hello");
         GNM_ASSERT ([s enterArrayFormula:@"-" error:&error], @"a lone minus: %@", error);
         GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:5 row:0], @"-");
+        /* the editor's style: a cell's whole format, and the font family
+         * the engine draws */
+        GnmCellFormat *f = [s formatOfCellAtColumn:0 row:0];
+        NSLog (@"format of A1: font '%@' %@ pt bold %@ align %@; Sans -> '%@', Monospace -> '%@'", f.fontName, f.fontSize, f.bold, f.horizontalAlignment,
+               [engine resolvedFontFamilyForName:@"Sans"], [engine resolvedFontFamilyForName:@"Monospace"]);
+        GNM_ASSERT (f.fontName.length > 0 && f.fontSize.doubleValue > 0 && f.bold != nil && f.horizontalAlignment != nil, @"a whole style");
+        GNM_ASSERT ([engine resolvedFontFamilyForName:@"Sans"].length > 0 && ![[engine resolvedFontFamilyForName:@"Sans"] isEqualToString:@"Sans"], @"Sans resolves to a real family");
+        GNM_ASSERT_EQ_STR ([engine resolvedFontFamilyForName:@"Georgia"], @"Georgia");
+
         GNM_ASSERT (stray.count == 0, @"stray messages: %@", stray);
         wb = nil;
       }

@@ -334,6 +334,9 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 /// The style shared by the selected cells; properties that differ across
 /// the selection are nil (`sheet_style_find_conflicts`).
 @property (nonatomic, readonly) GnmCellFormat *formatOfSelection;
+/// One cell's whole style (`sheet_style_get`), nothing nil: what the
+/// in-cell editor takes its font, colors, and alignment from.
+- (GnmCellFormat *)formatOfCellAtColumn:(NSInteger)column row:(NSInteger)row NS_SWIFT_NAME(formatOfCell(atColumn:row:));
 /// Apply the set properties of `format` to the selection as one undoable
 /// command (`cmd_selection_format`).
 - (BOOL)applyFormat:(GnmCellFormat *)format error:(NSError **)error NS_SWIFT_NAME(apply(_:));

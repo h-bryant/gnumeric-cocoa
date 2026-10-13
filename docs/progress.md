@@ -1345,6 +1345,20 @@
 - `solver.m` starts a run, stops it at once, and finishes it
   ("Cancelled" with the feasible start stored, as the GTK does).
 
+## 2026-10-12: The in-cell editor in the cell's own style
+
+- `GnmSheet.formatOfCellAtColumn:row:` (one cell's whole style) and
+  `GnmEngine.resolvedFontFamilyForName:` (the family pango's CoreText
+  font map picks for a name: Sans is Helvetica, Monospace is Menlo,
+  Serif is Times, an unknown name falls back to Helvetica).
+- `GridView.beginEditing` sets the editor's font from the cell (the
+  family resolved, the points at 96 dpi and the zoom, bold and italic
+  through `NSFontManager`), its text color, its fill when the cell has
+  one, and its alignment (General edits left-aligned, as item-edit.c
+  sets it; Right and Center as set).  `editorStyleForTesting` and the
+  `GNM_SNAPSHOT_FORMULA=1` hook (A6 in bold Georgia 14, right, red
+  before "=MAX(") cover it; `formula_range.m` checks the accessors.
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -1362,8 +1376,8 @@
    printing, formula range selection by mouse and keyboard, the font
    shortcuts, autocompletion, the function selector, and array formulas;
    and all 27 Statistics tools; next the rest of Phase 5 by usage
-   frequency: the editor in the cell's own font, a plugin manager, the
-   scenarios and simulation tools) from
+   frequency: a plugin manager, the scenarios and simulation tools,
+   Data → Fill → Merge and Tabulate) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -1387,7 +1401,7 @@
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
 3. The state at the end of 2026-10-12: `main` at the autocompletion and
-   solver-progress commit (after the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+   editor-style commit (after the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

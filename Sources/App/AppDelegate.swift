@@ -552,7 +552,18 @@ enum Snapshot {
                 }
                 let up = String(UnicodeScalar(NSUpArrowFunctionKey)!), right = String(UnicodeScalar(NSRightArrowFunctionKey)!)
                 sheet.selectCell(atColumn: 0, row: 5)
+                // A6 in bold Georgia 14, right-aligned, red: the editor takes
+                // the cell's style.
+                let style = CellFormat()
+                style.fontName = "Georgia"
+                style.fontSize = 14
+                style.bold = true
+                style.horizontalAlignment = 0x04
+                style.textColor = NSColor.systemRed.cgColor
+                do { try sheet.apply(style) } catch { NSLog("formula: style failed: %@", error.localizedDescription) }
                 controller.gridView.beginEditing(initialText: "=MAX(")
+                NSLog("formula: editor style %@ (Sans is %@)", controller.gridView.editorStyleForTesting,
+                      Engine.shared?.resolvedFontFamily(forName: "Sans") ?? "nil")
                 key(124, right, [])
                 NSLog("formula: Right -> '%@'", controller.gridView.editorTextForTesting)
                 key(126, up, [.command])

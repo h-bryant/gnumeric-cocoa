@@ -166,7 +166,7 @@ Status 2026-10-11: cell editor, formula bar editing, undo/redo on the engine's
 stack, Delete, the engine's clipboard (region copy/cut/paste with marching
 ants, text import from other applications), and saving `.gnumeric`,
 uncompressed `.xml`, and `.xlsx` through `NSDocument` exist
-(`docs/progress.md`). Not yet: the editor in the cell's own font.
+(`docs/progress.md`); the editor takes the cell's own font and alignment.
 
 ### Phase 2b — MVP completion
 
@@ -360,9 +360,10 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    (patch 0005 for the frequency and histogram tools' double free).
    The Solver then got the GTK dialog's run page: a progress sheet with
    the status, the objective so far, the elapsed time, and a Stop button
-   over `GnmSolverRun` (start, poll, stop, finish).  Next, by usage: the
-   editor in the cell's own font, a plugin manager, the scenarios and
-   simulation tools;
+   over `GnmSolverRun` (start, poll, stop, finish), and the in-cell editor
+   took the cell's font, colors, and alignment (`formatOfCellAtColumn:`,
+   `resolvedFontFamilyForName:`).  Next, by usage: a plugin manager, the
+   scenarios and simulation tools, Data → Fill → Merge and Tabulate;
    image and widget editors (`cmd_so_set_*`) later; the smaller Phase 3
    gaps (Insert/Delete Cells,
    Goto and the name box, the formula bar, autocomplete, drag and drop,

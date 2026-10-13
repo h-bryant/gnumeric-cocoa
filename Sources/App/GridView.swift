@@ -390,7 +390,18 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         let cell = sheet.editPosition
         let frame = sheet.frameOfCell(atColumn: cell.column, row: cell.row)
         let zoom = sheet.zoomFactor
-        editor.font = NSFont.systemFont(ofSize: max(8, 13.3 * zoom))   // the engine's 10 pt default at 96 dpi
+        // item-edit.c: the cell's own font at the zoom, its colors, and
+        // its alignment (General edits left-aligned).
+        let format = sheet.formatOfCell(atColumn: cell.column, row: cell.row)
+        editor.font = Self.editorFont(for: format, zoom: zoom)
+        editor.textColor = format.textColor.flatMap { NSColor(cgColor: $0) } ?? .black
+        editor.backgroundColor = (format.fillsBackground?.boolValue ?? false)
+            ? (format.backgroundColor.flatMap { NSColor(cgColor: $0) } ?? .white) : .white
+        switch format.horizontalAlignment?.intValue ?? 0x01 {
+        case 0x04: editor.alignment = .right
+        case 0x08: editor.alignment = .center
+        default: editor.alignment = .left
+        }
         editor.frame = NSRect(x: frame.minX, y: frame.minY,
                               width: max(frame.width, 80 * zoom), height: max(frame.height, 16 * zoom))
         editor.stringValue = initialText ?? (sheet.editingTextOfCell(atColumn: cell.column, row: cell.row) ?? "")
@@ -405,6 +416,25 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
             fieldEditor.selectedRange = NSRange(location: initialText == nil ? end : end, length: 0)
         }
         editingTextDidChange?(editor.stringValue)
+    }
+
+    /// The cell's font as the engine draws it: its family resolved the way
+    /// pango does, its points at 96 dpi and the zoom, bold and italic.
+    static func editorFont(for format: CellFormat, zoom: CGFloat) -> NSFont {
+        let points = CGFloat(format.fontSize?.doubleValue ?? 10)
+        let size = max(8, points * 96 / 72 * zoom)
+        let family = Engine.shared?.resolvedFontFamily(forName: format.fontName ?? "Sans") ?? "Helvetica"
+        let bold = format.bold?.boolValue ?? false
+        var traits: NSFontTraitMask = []
+        if bold { traits.insert(.boldFontMask) }
+        if format.italic?.boolValue ?? false { traits.insert(.italicFontMask) }
+        return NSFontManager.shared.font(withFamily: family, traits: traits, weight: bold ? 9 : 5, size: size)
+            ?? NSFont.systemFont(ofSize: size)
+    }
+
+    /// For the headless checks: the editor's font, size, and alignment.
+    var editorStyleForTesting: String {
+        "\(editor.font?.fontName ?? "nil") \(editor.font?.pointSize ?? 0) align=\(editor.alignment.rawValue)"
     }
 
     private func endEditingSession() {

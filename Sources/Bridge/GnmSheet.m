@@ -1539,6 +1539,12 @@ formatted_value_equal (GnmValue const *a, GnmValue const *b)
     return gnm_cocoa_format_from_selection (_sheet, r);
 }
 
+- (GnmCellFormat *)formatOfCellAtColumn:(NSInteger)column row:(NSInteger)row
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    return gnm_cocoa_format_from_style (sheet_style_get (_sheet, (int) column, (int) row));
+}
+
 - (BOOL)applyFormat:(GnmCellFormat *)format error:(NSError **)error
 {
     return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {

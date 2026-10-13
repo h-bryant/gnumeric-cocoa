@@ -68,6 +68,10 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Engine)
 @property (nonatomic, readonly, copy) NSString *version;
 @property (nonatomic, readonly) NSUInteger availablePluginCount;
 @property (nonatomic, readonly) NSUInteger activePluginCount;
+/// The family the engine's text rendering picks for a style's font name
+/// ("Sans" is Helvetica under the CoreText font map; an unknown name
+/// falls back the same way), so the in-cell editor can use the same.
+- (NSString *)resolvedFontFamilyForName:(NSString *)name NS_SWIFT_NAME(resolvedFontFamily(forName:));
 @property (nonatomic, readonly, copy) NSString *libraryDirectory;
 @property (nonatomic, readonly, copy) NSString *dataDirectory;
 @property (nonatomic, readonly, copy) NSString *localeDirectory;

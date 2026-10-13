@@ -2,6 +2,7 @@
 #import "GnmPrivate.h"
 #import <GnmCocoa/GnmRunLoopBridge.h>
 #include <stdlib.h>
+#include <pango/pangocairo.h>
 
 /* ------------------------------------------------------------------------
  * GOCmdContext implementation: a GObject whose interface methods forward to
@@ -252,6 +253,30 @@ static BOOL engineWasStarted;   /* gnm_init cannot be repeated in one process */
 - (NSUInteger)availablePluginCount
 {
     return g_slist_length (go_plugins_get_available_plugins ());
+}
+
+- (NSString *)resolvedFontFamilyForName:(NSString *)name
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    PangoFontMap *fm = pango_cairo_font_map_get_default ();
+    PangoContext *ctx = pango_font_map_create_context (fm);
+    PangoFontDescription *desc = pango_font_description_new ();
+    pango_font_description_set_family (desc, name.UTF8String);
+    pango_font_description_set_size (desc, 10 * PANGO_SCALE);
+    PangoFont *font = pango_font_map_load_font (fm, ctx, desc);
+    NSString *result = name;
+    if (font) {
+        PangoFontDescription *actual = pango_font_describe (font);
+        const char *family = actual ? pango_font_description_get_family (actual) : NULL;
+        if (family && *family)
+            result = GnmString (family);
+        if (actual)
+            pango_font_description_free (actual);
+        g_object_unref (font);
+    }
+    pango_font_description_free (desc);
+    g_object_unref (ctx);
+    return result;
 }
 
 - (NSUInteger)activePluginCount
