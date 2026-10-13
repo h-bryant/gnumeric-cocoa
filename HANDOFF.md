@@ -355,9 +355,11 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    keyboard range selection in the editor (arrows, Shift, ⌘ for the
    data's edge), array formulas (⇧⌘Return or ⌃⇧Return;
    `GnmSheet.enterArrayFormula`), and ⌘-arrow jumps on the grid
-   (`sheet_find_boundary_*`). Next, by usage: the remaining statistics
-   on the analysis pattern, a Stop button and progress for long solver
-   runs, the editor in the cell's own font;
+   (`sheet_find_boundary_*`), then the fifteen remaining statistics
+   tools on the analysis pattern with the GTK's Statistics menu groups
+   (patch 0005 for the frequency and histogram tools' double free).
+   Next, by usage: a Stop button and progress for long solver runs, the
+   editor in the cell's own font, a plugin manager;
    image and widget editors (`cmd_so_set_*`) later; the smaller Phase 3
    gaps (Insert/Delete Cells,
    Goto and the name box, the formula bar, autocomplete, drag and drop,

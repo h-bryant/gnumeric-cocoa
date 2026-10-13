@@ -200,17 +200,19 @@ GType gnm_cocoa_sheet_control_get_type (void);
 - (nullable GnmAnalysisTool *)_engineToolForSheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error;
 /// After a failed run, what the tool's error code means, or nil for none.
 - (nullable NSString *)_failureDescriptionForEngineTool:(GnmAnalysisTool *)tool;
+/// The function plugins the GTK dialog checks for (its `plugins[]`).
+- (NSArray<NSString *> *)_requiredPluginIdentifiers;
 @end
 
 @interface GnmGroupedAnalysis ()
 - (GnmAnalysisTool *)_newEngineTool;
-- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool engine:(GnmEngine *)engine error:(NSError **)error;
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool sheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error;
 @end
 
 @interface GnmTwoSampleAnalysis ()
 - (instancetype)initWithTitle:(NSString *)title;
 - (GnmAnalysisTool *)_newEngineTool;
-- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool engine:(GnmEngine *)engine error:(NSError **)error;
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool sheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error;
 @end
 
 @interface GnmSolverAlgorithm ()

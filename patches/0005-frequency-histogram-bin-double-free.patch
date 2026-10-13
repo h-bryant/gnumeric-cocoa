@@ -1,0 +1,35 @@
+Do not free the frequency and histogram tools' bin range twice.
+
+gnm_frequency_tool_perform_calc and gnm_histogram_tool_perform_calc wrap
+the dialog's bin range (tool->bin) in gnm_expr_new_constant, which takes
+the value over and frees it with the expression, and then
+gnm_frequency_tool_finalize and gnm_histogram_tool_finalize release
+tool->bin again when the command leaves the undo list: a double free
+(an invalid go_format_unref on macOS) for every Frequency Tables or
+Histogram run with predetermined categories or cutoffs, once the run is
+undone and another command pushes it off the redo list.  Found through
+the Cocoa front end on 2026-10-12; the GTK front end runs the same code.
+Hand the expression a copy.
+
+--- a/src/tools/analysis-frequency.c	2026-10-12 19:23:03
++++ b/src/tools/analysis-frequency.c	2026-10-12 19:23:03
+@@ -246,7 +246,7 @@
+ 		i_w_limit = range_width (&range);
+ 		i_limit = i_h_limit * i_w_limit;
+ 
+-		expr_bin = gnm_expr_new_constant (ftool->bin);
++		expr_bin = gnm_expr_new_constant (value_dup (ftool->bin));
+ 
+ 		for (i = 1; i <= i_h_limit; i++)
+ 			for (j = 1; j <= i_w_limit; j++) {
+--- a/src/tools/analysis-histogram.c	2026-10-12 19:23:03
++++ b/src/tools/analysis-histogram.c	2026-10-12 19:23:03
+@@ -388,7 +388,7 @@
+ 		i_start = 1;
+ 
+ 	if (htool->predetermined) {
+-		expr_bin = gnm_expr_new_constant (htool->bin);
++		expr_bin = gnm_expr_new_constant (value_dup (htool->bin));
+ 		for (i = 0; i < i_limit; i++)
+ 			dao_set_cell_expr (dao, to_col, i_start + i,
+ 					   gnm_expr_new_funcall2 (fd_small,

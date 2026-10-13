@@ -830,6 +830,52 @@ enum Snapshot {
                     tStat = sheet.displayTextOfCell(atColumn: 4, row: r) ?? "nil"
                 }
                 NSLog("stats: paired t-test into D6: t Stat=%@ undo=%@", tStat, sheet.workbook?.undoLabel ?? "nil")
+                // A histogram with three calculated cutoffs into D20 through
+                // its dialog (captured to `-hist.png`), then a test of
+                // independence on a 2×2 table into D30.
+                sheet.selectRange(CellRange(start: CellCoordinate(column: 0, row: 0), end: CellCoordinate(column: 1, row: 5)),
+                                  editPosition: CellCoordinate(column: 0, row: 0))
+                AnalysisDialog.headlessDriver = { dialog in
+                    dialog.labels.state = .on
+                    dialog.cutoffCountField.stringValue = "3"
+                    dialog.plusInfinity.state = .on
+                    dialog.destination.selectItem(at: 1)
+                    dialog.outputField.stringValue = "D20"
+                    if let content = dialog.alert.accessoryView {
+                        content.layoutSubtreeIfNeeded()
+                        if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                            content.cacheDisplay(in: content.bounds, to: rep)
+                            let histPath = (path as NSString).deletingPathExtension + "-hist.png"
+                            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: histPath))
+                            NSLog("stats: captured %@ (%@)", histPath, NSStringFromRect(content.bounds))
+                        }
+                    }
+                    return true
+                }
+                controller.histogram(nil)
+                NSLog("stats: histogram into D20: %@ | %@ / %@ | %@ / %@ | %@ undo=%@",
+                      sheet.displayTextOfCell(atColumn: 3, row: 21) ?? "nil", sheet.displayTextOfCell(atColumn: 4, row: 21) ?? "nil",
+                      sheet.displayTextOfCell(atColumn: 3, row: 22) ?? "nil", sheet.displayTextOfCell(atColumn: 4, row: 22) ?? "nil",
+                      sheet.displayTextOfCell(atColumn: 3, row: 24) ?? "nil", sheet.displayTextOfCell(atColumn: 4, row: 24) ?? "nil",
+                      sheet.workbook?.undoLabel ?? "nil")
+                do {
+                    for (i, text) in ["10", "20", "30", "40"].enumerated() { try sheet.setText(text, atColumn: 7 + i % 2, row: 30 + i / 2, autocorrect: false) }
+                } catch {
+                    NSLog("stats: table failed: %@", error.localizedDescription)
+                }
+                AnalysisDialog.headlessDriver = { dialog in
+                    dialog.inputField.stringValue = "H31:I32"
+                    dialog.destination.selectItem(at: 1)
+                    dialog.outputField.stringValue = "D30"
+                    return true
+                }
+                controller.independence(nil)
+                NSLog("stats: independence into D30: %@ %@ / %@ %@ undo=%@",
+                      sheet.displayTextOfCell(atColumn: 3, row: 30) ?? "nil", sheet.displayTextOfCell(atColumn: 4, row: 30) ?? "nil",
+                      sheet.displayTextOfCell(atColumn: 3, row: 32) ?? "nil", sheet.displayTextOfCell(atColumn: 4, row: 32) ?? "nil",
+                      sheet.workbook?.undoLabel ?? "nil")
+                sheet.selectRange(CellRange(start: CellCoordinate(column: 0, row: 0), end: CellCoordinate(column: 1, row: 5)),
+                                  editPosition: CellCoordinate(column: 0, row: 0))
                 AnalysisDialog.headlessDriver = { dialog in
                     dialog.labels.state = .on
                     dialog.confidenceInterval.state = .on

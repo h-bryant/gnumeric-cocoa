@@ -103,7 +103,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | ToolsAutoCorrect, ToolsAutoSave, ToolsSimulation, ToolsCompare, ToolsPlugins, ToolsScenarios, ToolsScenarioAdd | no | Phase 5 |
 | ToolsGoalSeek | ported | Tools → Goal Seek… (2026-10-12) |
 | Statistics: Descriptive Statistics, Correlation, Covariance, Rank and Percentile, Regression, Two Means (t and z), Two Variances (F), ANOVA single factor, Sampling, Moving Average, Exponential Smoothing | ported | Tools → Statistics (2026-10-12): the GTK dialogs' Input, tool, and Output pages as alert sheets over `cmd_analysis_tool` |
-| The other 16 Statistics items (frequencies, histograms, one-sample tests, the non-parametric tests, two-factor ANOVA, contingency, Fourier, Kaplan-Meier, principal components) | no | Phase 5; the pattern is set in `GnmAnalysis.m` (a tool object, an output description, one command) |
+| The other Statistics items: Frequency Tables, Histogram, Fourier, Principal Components, Kaplan-Meier, Normality Tests, Claims About a Mean, the one- and two-sample sign and Wilcoxon signed rank tests, Wilcoxon-Mann-Whitney, two-factor ANOVA, the contingency table tests | ported | 2026-10-12 on the same pattern; the Statistics menu now has the GTK's groups and submenus; a tool's required function plugins are activated on demand (Fourier's time series plugin is inactive by default); Kaplan-Meier groups are typed as "name from to; …" rather than a table; engine patch 0005 for the frequency and histogram tools' double free |
 
 ## Data
 

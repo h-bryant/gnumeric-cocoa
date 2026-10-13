@@ -1286,6 +1286,41 @@
   ⇧⌘Up → B1:B3, ")" ends the selection, Up commits; "=B1:B3*2" over
   A7:A9 by ⇧⌘Return).
 
+## 2026-10-12: The remaining statistics tools
+
+- Fifteen more tools on the `GnmAnalysis` pattern: `GnmFrequencyAnalysis`
+  and `GnmHistogramAnalysis` (categories or cutoffs from a range or
+  calculated; the histogram's bin types as three switches over the
+  engine's flags), `GnmNormalityAnalysis` (four tests), `GnmOneMeanTest`,
+  `GnmMedianTestAnalysis` (sign or Wilcoxon signed rank, one sample),
+  `GnmTwoMedianTestAnalysis` (paired; "the same shape" check),
+  `GnmMannWhitneyAnalysis`, `GnmPrincipalComponentsAnalysis`,
+  `GnmFourierAnalysis`, `GnmKaplanMeierAnalysis` (time, censorship, and
+  groups columns with the GTK's column checks; `GnmKaplanMeierGroup`
+  rows), `GnmContingencyTableAnalysis` (homogeneity or independence;
+  "too small" as the GTK counts it), `GnmAnovaTwoFactorAnalysis` (the
+  replication checks and the tool's error codes).  The private configure
+  hook now gets the sheet, for tools whose own page holds a range.
+- `runAnalysis:` activates a tool's required function plugins
+  (`_requiredPluginIdentifiers`, the GTK dialogs' `plugins[]`) rather
+  than refusing as `gnm_check_for_plugins_missing` does: the time series
+  plugin behind FOURIER is not in the engine's default active list, so
+  the Fourier tool wrote `#NAME?` until then.  Patch 0005: the frequency
+  and histogram tools handed their bin range to `gnm_expr_new_constant`
+  and released it again in `finalize`, a double free once an undone run
+  left the redo list (a crash in the test).
+- `AnalysisDialog` gained the tools' pages and `makeAnalysis` cases;
+  Kaplan-Meier groups are typed as "name from to; …".  Tools →
+  Statistics now mirrors the GTK's groups: Descriptive Statistics
+  (with Frequency Tables), Sampling, Dependent Observations (with
+  Forecast), One Sample Tests (with Claims About a Median), Two Sample
+  Tests (Claims About Two Means as four items preselecting the kind,
+  Claims About Two Medians, Two Variances), Multiple Sample Tests
+  (ANOVA, Contingency Table).
+- `analysis.m` runs every tool to a new sheet with its refusals;
+  `GNM_SNAPSHOT_STATS=1` adds a histogram into D20 through its dialog
+  (captured to `-hist.png`) and a test of independence into D30.
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -1302,10 +1337,9 @@
    twelve analysis tools, data validation, hyperlinks, the Solver,
    printing, formula range selection by mouse and keyboard, the font
    shortcuts, autocompletion, the function selector, and array formulas;
-   next the rest of Phase 5 by usage frequency: the remaining statistics
-   (frequencies, histograms, the non-parametric tests, two-factor
-   ANOVA, Fourier, Kaplan-Meier, principal components), a Stop button
-   for long solves, the editor in the cell's own font) from
+   and all 27 Statistics tools; next the rest of Phase 5 by usage
+   frequency: a Stop button for long solves, the editor in the cell's
+   own font, a plugin manager) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -1329,7 +1363,7 @@
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
 3. The state at the end of 2026-10-12: `main` at the autocompletion and
-   keyboard range selection commit (after the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+   remaining-statistics commit (after keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

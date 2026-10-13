@@ -249,6 +249,208 @@ NS_SWIFT_NAME(ExponentialSmoothingAnalysis)
 @property (nonatomic) BOOL includesChart;
 @end
 
+/// frequency.ui's chart choices.
+typedef NS_ENUM(NSInteger, GnmFrequencyChart) {
+    GnmFrequencyChartNone = 0,
+    GnmFrequencyChartBar,
+    GnmFrequencyChartColumn,
+} NS_SWIFT_NAME(FrequencyAnalysis.Chart);
+
+/// Frequency Tables: how often each category occurs in each variable.
+NS_SWIFT_NAME(FrequencyAnalysis)
+@interface GnmFrequencyAnalysis : GnmGroupedAnalysis
+- (instancetype)init;
+/// The categories as a range; nil (the default) takes `categoryCount`
+/// of them from the data.
+@property (nonatomic, copy, nullable) NSString *categoryRange;
+/// 10 at first.
+@property (nonatomic) NSInteger categoryCount;
+@property (nonatomic) BOOL asPercentages;
+/// "Use exact comparisons": a value counts only when it equals a
+/// category.
+@property (nonatomic) BOOL exactMatches;
+@property (nonatomic) GnmFrequencyChart chart;
+@end
+
+/// histogram.ui's chart choices.
+typedef NS_ENUM(NSInteger, GnmHistogramChart) {
+    GnmHistogramChartNone = 0,
+    GnmHistogramChartHistogram,
+    GnmHistogramChartBar,
+    GnmHistogramChartColumn,
+} NS_SWIFT_NAME(HistogramAnalysis.Chart);
+
+/// Histogram: counts of each variable's values between cutoffs.
+NS_SWIFT_NAME(HistogramAnalysis)
+@interface GnmHistogramAnalysis : GnmGroupedAnalysis
+- (instancetype)init;
+/// The cutoffs as a range; nil (the default) calculates `cutoffCount`
+/// of them between `minimum` and `maximum`, each the data's when nil.
+@property (nonatomic, copy, nullable) NSString *cutoffRange;
+/// 10 at first.
+@property (nonatomic) NSInteger cutoffCount;
+@property (nonatomic, copy, nullable) NSNumber *minimum;
+@property (nonatomic, copy, nullable) NSNumber *maximum;
+/// histogram.ui's bin types: each bin takes its upper cutoff, (∙,∙],
+/// rather than its lower, [∙,∙); the first bin reaches down to −∞; the
+/// last reaches up to +∞.  All off at first.
+@property (nonatomic) BOOL binsIncludeUpperCutoff;
+@property (nonatomic) BOOL firstBinFromMinusInfinity;
+@property (nonatomic) BOOL lastBinToPlusInfinity;
+@property (nonatomic) BOOL asPercentages;
+@property (nonatomic) BOOL cumulative;
+/// Count only numbers (not dates and so on).
+@property (nonatomic) BOOL onlyNumbers;
+@property (nonatomic) GnmHistogramChart chart;
+@end
+
+/// normality-tests.ui's tests.
+typedef NS_ENUM(NSInteger, GnmNormalityTestKind) {
+    GnmNormalityTestAndersonDarling = 0,
+    GnmNormalityTestCramerVonMises,
+    GnmNormalityTestLilliefors,
+    GnmNormalityTestShapiroFrancia,
+} NS_SWIFT_NAME(NormalityAnalysis.Kind);
+
+/// Normality Tests.
+NS_SWIFT_NAME(NormalityAnalysis)
+@interface GnmNormalityAnalysis : GnmGroupedAnalysis
+- (instancetype)init;
+/// Anderson-Darling at first.
+@property (nonatomic) GnmNormalityTestKind kind;
+/// 0.05 at first.
+@property (nonatomic) double alpha;
+/// "Create Normal Probability Plot".
+@property (nonatomic) BOOL includesProbabilityPlot;
+@end
+
+/// Claims About a Mean: the one-sample t-test of each variable.
+NS_SWIFT_NAME(OneMeanTestAnalysis)
+@interface GnmOneMeanTestAnalysis : GnmGroupedAnalysis
+- (instancetype)init;
+/// 0 at first.
+@property (nonatomic) double hypothesizedMean;
+/// 0.05 at first.
+@property (nonatomic) double alpha;
+@end
+
+/// sign-test.ui's tests.
+typedef NS_ENUM(NSInteger, GnmMedianTestKind) {
+    GnmMedianTestSign = 0,
+    GnmMedianTestWilcoxonSignedRank,
+} NS_SWIFT_NAME(MedianTestAnalysis.Kind);
+
+/// Claims About a Median: the sign test or the Wilcoxon signed rank test
+/// of each variable.
+NS_SWIFT_NAME(MedianTestAnalysis)
+@interface GnmMedianTestAnalysis : GnmGroupedAnalysis
+- (instancetype)init;
+/// The sign test at first.
+@property (nonatomic) GnmMedianTestKind kind;
+/// 0 at first.
+@property (nonatomic) double hypothesizedMedian;
+/// 0.05 at first.
+@property (nonatomic) double alpha;
+@end
+
+/// Claims About Two Medians, paired: the sign test or the Wilcoxon
+/// signed rank test of the differences between two variables of the
+/// same shape.
+NS_SWIFT_NAME(TwoMedianTestAnalysis)
+@interface GnmTwoMedianTestAnalysis : GnmTwoSampleAnalysis
+- (instancetype)init;
+/// The sign test at first.
+@property (nonatomic) GnmMedianTestKind kind;
+/// The hypothesized median of the differences; 0 at first.
+@property (nonatomic) double hypothesizedMedian;
+@end
+
+/// The Wilcoxon-Mann-Whitney test of two independent variables.
+NS_SWIFT_NAME(MannWhitneyAnalysis)
+@interface GnmMannWhitneyAnalysis : GnmTwoSampleAnalysis
+- (instancetype)init;
+@end
+
+/// Principal Components Analysis of the variables.
+NS_SWIFT_NAME(PrincipalComponentsAnalysis)
+@interface GnmPrincipalComponentsAnalysis : GnmGroupedAnalysis
+- (instancetype)init;
+@end
+
+/// Fourier Analysis of each variable.
+NS_SWIFT_NAME(FourierAnalysis)
+@interface GnmFourierAnalysis : GnmGroupedAnalysis
+- (instancetype)init;
+/// The inverse transform.
+@property (nonatomic) BOOL isInverse;
+@end
+
+/// One group of the Kaplan-Meier tool: the records whose group value
+/// lies between `from` and `to`.
+NS_SWIFT_NAME(KaplanMeierGroup)
+@interface GnmKaplanMeierGroup : NSObject
+- (instancetype)init NS_UNAVAILABLE;
+- (instancetype)initWithName:(NSString *)name from:(NSInteger)from to:(NSInteger)to NS_SWIFT_NAME(init(name:from:to:));
+@property (nonatomic, readonly, copy) NSString *name;
+@property (nonatomic, readonly) NSInteger from;
+@property (nonatomic, readonly) NSInteger to;
+@end
+
+/// Kaplan-Meier Estimates of a survival function.
+NS_SWIFT_NAME(KaplanMeierAnalysis)
+@interface GnmKaplanMeierAnalysis : GnmAnalysis
+- (instancetype)init;
+/// One column of times.
+@property (nonatomic, copy) NSString *timeRange;
+/// One column of the same height marking censored records with a value
+/// from `censorMark` to `censorMarkTo`; nil (the default) for no
+/// censoring.
+@property (nonatomic, copy, nullable) NSString *censorRange;
+@property (nonatomic) NSInteger censorMark;
+@property (nonatomic) NSInteger censorMarkTo;
+/// One column of the same height with each record's group, and the
+/// groups to estimate; nil and empty (the defaults) for one estimate.
+@property (nonatomic, copy, nullable) NSString *groupRange;
+@property (nonatomic, copy) NSArray<GnmKaplanMeierGroup *> *groups;
+/// With groups, the log-rank test between them.
+@property (nonatomic) BOOL logRankTest;
+@property (nonatomic) BOOL includesChart;
+/// Censorship ticks on the chart.
+@property (nonatomic) BOOL includesTicks;
+@property (nonatomic) BOOL includesStandardErrors;
+@property (nonatomic) BOOL includesMedian;
+@end
+
+/// Contingency Table: the chi-squared Test of Homogeneity or Test of
+/// Independence over a table of counts.
+NS_SWIFT_NAME(ContingencyTableAnalysis)
+@interface GnmContingencyTableAnalysis : GnmAnalysis
+- (instancetype)init;
+/// The table, at least two rows and two columns (plus the labels).
+@property (nonatomic, copy) NSString *inputRange;
+/// The first row and column are labels.
+@property (nonatomic) BOOL hasLabels;
+/// Independence rather than homogeneity; NO at first.
+@property (nonatomic) BOOL testsIndependence;
+/// 0.05 at first.
+@property (nonatomic) double alpha;
+@end
+
+/// ANOVA: Two Factor, with or without replication.
+NS_SWIFT_NAME(AnovaTwoFactorAnalysis)
+@interface GnmAnovaTwoFactorAnalysis : GnmAnalysis
+- (instancetype)init;
+/// The table: one factor's levels across the columns, the other's down
+/// the rows, `rowsPerSample` rows for each.
+@property (nonatomic, copy) NSString *inputRange;
+/// The first row and column are labels.
+@property (nonatomic) BOOL hasLabels;
+/// 0.05 at first.
+@property (nonatomic) double alpha;
+/// 1 at first (no replication).
+@property (nonatomic) NSInteger rowsPerSample;
+@end
+
 @interface GnmSheet (Analysis)
 /// Run a tool with its ranges read relative to this sheet, writing as the
 /// output says, as one undoable command named for the tool.  The sheet

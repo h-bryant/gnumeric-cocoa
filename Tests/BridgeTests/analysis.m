@@ -286,6 +286,187 @@ int main (void)
         GNM_ASSERT ([s runAnalysis:reg output:[GnmAnalysisOutput onNewSheet] error:&error] == nil
                     && [error.localizedDescription containsString:@"confidence level is invalid"], @"confidence: %@", error);
 
+        /* the remaining tools: categories in M1:M3, a 2x2 table in M5:N6 */
+        NSArray *cats = @[@"1", @"3", @"5"];
+        for (int r = 0; r < 3; r++)
+            GNM_ASSERT ([s setText:cats[r] atColumn:12 row:r autocorrect:NO error:&error], @"categories: %@", error);
+        NSArray *table = @[@"10", @"20", @"30", @"40"];
+        for (int i = 0; i < 4; i++)
+            GNM_ASSERT ([s setText:table[i] atColumn:12 + i % 2 row:4 + i / 2 autocorrect:NO error:&error], @"table: %@", error);
+        void (^dump) (GnmSheet *, NSString *, int, int) = ^(GnmSheet *o, NSString *what, int cols, int rows) {
+            NSMutableString *text = [NSMutableString string];
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < cols; c++)
+                    [text appendFormat:@"%@%@", c ? @" | " : @"", cell (o, c, r)];
+                [text appendString:@" / "];
+            }
+            NSLog (@"%@ '%@': %@", what, o.name, text);
+        };
+
+        GnmFrequencyAnalysis *freq = [[GnmFrequencyAnalysis alloc] init];
+        freq.inputRanges = @"A1:A6";
+        freq.hasLabels = YES;
+        freq.categoryRange = @"M1:M3";
+        freq.exactMatches = YES;
+        out = [s runAnalysis:freq output:[GnmAnalysisOutput onNewSheet] error:&error];
+        GNM_ASSERT (out != nil, @"frequency: %@", error);
+        dump (out, @"frequency", 3, 6);
+        [wb undo];
+
+        GnmHistogramAnalysis *hist = [[GnmHistogramAnalysis alloc] init];
+        hist.inputRanges = @"A1:A6";
+        hist.hasLabels = YES;
+        hist.cutoffCount = 2;
+        out = [s runAnalysis:hist output:[GnmAnalysisOutput onNewSheet] error:&error];
+        GNM_ASSERT (out != nil, @"histogram: %@", error);
+        dump (out, @"histogram", 3, 6);
+        [wb undo];
+        hist.cutoffRange = @"M1:M3";
+        hist.lastBinToPlusInfinity = YES;
+        hist.cumulative = YES;
+        out = [s runAnalysis:hist output:[GnmAnalysisOutput onNewSheet] error:&error];
+        GNM_ASSERT (out != nil, @"histogram cutoffs: %@", error);
+        dump (out, @"histogram cutoffs", 3, 6);
+        [wb undo];
+
+        GnmNormalityAnalysis *norm = [[GnmNormalityAnalysis alloc] init];
+        norm.inputRanges = @"A1:A6";
+        norm.hasLabels = YES;
+        norm.kind = GnmNormalityTestLilliefors;
+        out = [s runAnalysis:norm output:[GnmAnalysisOutput onNewSheet] error:&error];
+        GNM_ASSERT (out != nil, @"normality: %@", error);
+        dump (out, @"normality", 2, 7);
+        NSLog (@"normality statistic cell: entered '%@'", [out enteredTextOfCellAtColumn:1 row:3]);
+        [wb undo];
+
+        GnmOneMeanTestAnalysis *one = [[GnmOneMeanTestAnalysis alloc] init];
+        one.inputRanges = @"A1:A6";
+        one.hasLabels = YES;
+        one.hypothesizedMean = 3;
+        out = [s runAnalysis:one output:[GnmAnalysisOutput onNewSheet] error:&error];
+        GNM_ASSERT (out != nil, @"one mean: %@", error);
+        dump (out, @"one mean", 2, 12);
+        [wb undo];
+
+        GnmMedianTestAnalysis *med = [[GnmMedianTestAnalysis alloc] init];
+        med.inputRanges = @"A1:A6";
+        med.hasLabels = YES;
+        med.hypothesizedMedian = 2;
+        out = [s runAnalysis:med output:[GnmAnalysisOutput onNewSheet] error:&error];
+        GNM_ASSERT (out != nil, @"sign test: %@", error);
+        dump (out, @"sign test", 2, 10);
+        [wb undo];
+        med.kind = GnmMedianTestWilcoxonSignedRank;
+        out = [s runAnalysis:med output:[GnmAnalysisOutput onNewSheet] error:&error];
+        GNM_ASSERT (out != nil, @"signed rank: %@", error);
+        dump (out, @"signed rank", 2, 10);
+        [wb undo];
+
+        GnmTwoMedianTestAnalysis *two = [[GnmTwoMedianTestAnalysis alloc] init];
+        two.firstRange = @"A1:A6";
+        two.secondRange = @"B1:B6";
+        two.hasLabels = YES;
+        out = [s runAnalysis:two output:[GnmAnalysisOutput onNewSheet] error:&error];
+        GNM_ASSERT (out != nil, @"two medians: %@", error);
+        dump (out, @"two medians", 2, 10);
+        [wb undo];
+        two.kind = GnmMedianTestWilcoxonSignedRank;
+        out = [s runAnalysis:two output:[GnmAnalysisOutput onNewSheet] error:&error];
+        GNM_ASSERT (out != nil, @"two signed rank: %@", error);
+        dump (out, @"two signed rank", 2, 10);
+        [wb undo];
+
+        GnmMannWhitneyAnalysis *mw = [[GnmMannWhitneyAnalysis alloc] init];
+        mw.firstRange = @"A1:A6";
+        mw.secondRange = @"B1:B6";
+        mw.hasLabels = YES;
+        out = [s runAnalysis:mw output:[GnmAnalysisOutput onNewSheet] error:&error];
+        GNM_ASSERT (out != nil, @"mann whitney: %@", error);
+        dump (out, @"mann whitney", 2, 10);
+        [wb undo];
+
+        GnmPrincipalComponentsAnalysis *pca = [[GnmPrincipalComponentsAnalysis alloc] init];
+        pca.inputRanges = @"A1:B6";
+        pca.hasLabels = YES;
+        out = [s runAnalysis:pca output:[GnmAnalysisOutput onNewSheet] error:&error];
+        GNM_ASSERT (out != nil, @"pca: %@", error);
+        dump (out, @"pca", 3, 14);
+        [wb undo];
+
+        GnmFourierAnalysis *four = [[GnmFourierAnalysis alloc] init];
+        four.inputRanges = @"A1:A6";
+        four.hasLabels = YES;
+        out = [s runAnalysis:four output:[GnmAnalysisOutput onNewSheet] error:&error];
+        GNM_ASSERT (out != nil, @"fourier: %@", error);
+        dump (out, @"fourier", 3, 7);
+        GNM_ASSERT (![cell (out, 0, 3) isEqualToString:@"#NAME?"], @"the time series plugin was activated: %@", cell (out, 0, 3));
+        [wb undo];
+
+        GnmKaplanMeierAnalysis *km = [[GnmKaplanMeierAnalysis alloc] init];
+        km.timeRange = @"A2:A6";
+        km.includesMedian = YES;
+        out = [s runAnalysis:km output:[GnmAnalysisOutput onNewSheet] error:&error];
+        GNM_ASSERT (out != nil, @"kaplan meier: %@", error);
+        dump (out, @"kaplan meier", 4, 10);
+        [wb undo];
+        km.censorRange = @"B2:B6";
+        km.censorMark = 12;
+        km.censorMarkTo = 12;
+        km.groupRange = @"B2:B6";
+        km.groups = @[[[GnmKaplanMeierGroup alloc] initWithName:@"low" from:0 to:7], [[GnmKaplanMeierGroup alloc] initWithName:@"high" from:8 to:20]];
+        km.logRankTest = YES;
+        out = [s runAnalysis:km output:[GnmAnalysisOutput onNewSheet] error:&error];
+        GNM_ASSERT (out != nil, @"kaplan meier groups: %@", error);
+        dump (out, @"kaplan meier groups", 8, 12);
+        [wb undo];
+
+        GnmContingencyTableAnalysis *chi = [[GnmContingencyTableAnalysis alloc] init];
+        chi.inputRange = @"M5:N6";
+        chi.testsIndependence = YES;
+        out = [s runAnalysis:chi output:[GnmAnalysisOutput onNewSheet] error:&error];
+        GNM_ASSERT (out != nil, @"independence: %@", error);
+        dump (out, @"independence", 2, 8);
+        [wb undo];
+        chi.testsIndependence = NO;
+        out = [s runAnalysis:chi output:[GnmAnalysisOutput onNewSheet] error:&error];
+        GNM_ASSERT (out != nil, @"homogeneity: %@", error);
+        dump (out, @"homogeneity", 2, 8);
+        [wb undo];
+
+        GnmAnovaTwoFactorAnalysis *anova2 = [[GnmAnovaTwoFactorAnalysis alloc] init];
+        anova2.inputRange = @"A2:B6";
+        out = [s runAnalysis:anova2 output:[GnmAnalysisOutput onNewSheet] error:&error];
+        GNM_ASSERT (out != nil, @"anova two: %@", error);
+        dump (out, @"anova two", 7, 16);
+        [wb undo];
+
+        /* their refusals */
+        error = nil;
+        freq.categoryRange = @"nowhere";
+        GNM_ASSERT ([s runAnalysis:freq output:[GnmAnalysisOutput onNewSheet] error:&error] == nil
+                    && [error.localizedDescription containsString:@"categories range"], @"categories: %@", error);
+        error = nil;
+        chi.inputRange = @"M5:M6";
+        GNM_ASSERT ([s runAnalysis:chi output:[GnmAnalysisOutput onNewSheet] error:&error] == nil
+                    && [error.localizedDescription containsString:@"too small"], @"small table: %@", error);
+        error = nil;
+        anova2.rowsPerSample = 0;
+        GNM_ASSERT ([s runAnalysis:anova2 output:[GnmAnalysisOutput onNewSheet] error:&error] == nil
+                    && [error.localizedDescription containsString:@"positive integer"], @"rows per sample: %@", error);
+        error = nil;
+        anova2.rowsPerSample = 2;
+        GNM_ASSERT ([s runAnalysis:anova2 output:[GnmAnalysisOutput onNewSheet] error:&error] == nil
+                    && [error.localizedDescription containsString:@"multiple of the replication"], @"replication: %@", error);
+        error = nil;
+        km.timeRange = @"A1:B6";
+        GNM_ASSERT ([s runAnalysis:km output:[GnmAnalysisOutput onNewSheet] error:&error] == nil
+                    && [error.localizedDescription containsString:@"single column"], @"time columns: %@", error);
+        error = nil;
+        two.secondRange = @"B1:B4";
+        GNM_ASSERT ([s runAnalysis:two output:[GnmAnalysisOutput onNewSheet] error:&error] == nil
+                    && [error.localizedDescription containsString:@"same shape"], @"shape: %@", error);
+        error = nil;
+
         GNM_ASSERT (stray.count == 0, @"stray messages: %@", stray);
         wb = nil;
       }

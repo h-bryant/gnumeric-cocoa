@@ -6,6 +6,17 @@
 #include <tools/analysis-ztest.h>
 #include <tools/analysis-ftest.h>
 #include <tools/analysis-exp-smoothing.h>
+#include <tools/analysis-frequency.h>
+#include <tools/analysis-histogram.h>
+#include <tools/analysis-normality.h>
+#include <tools/analysis-one-mean-test.h>
+#include <tools/analysis-sign-test.h>
+#include <tools/analysis-signed-rank-test.h>
+#include <tools/analysis-wilcoxon-mann-whitney.h>
+#include <tools/analysis-principal-components.h>
+#include <tools/analysis-kaplan-meier.h>
+#include <tools/analysis-chi-squared.h>
+#include <tools/analysis-anova.h>
 
 static NSError *
 analysis_error (GnmEngine *engine, NSString *message)
@@ -111,6 +122,11 @@ single_range (Sheet *sheet, NSString *text)
     return nil;
 }
 
+- (NSArray<NSString *> *)_requiredPluginIdentifiers
+{
+    return @[];
+}
+
 @end
 
 @implementation GnmGroupedAnalysis
@@ -129,7 +145,7 @@ single_range (Sheet *sheet, NSString *text)
     return NULL;
 }
 
-- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool engine:(GnmEngine *)engine error:(NSError **)error
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool sheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error
 {
     return YES;
 }
@@ -147,7 +163,7 @@ single_range (Sheet *sheet, NSString *text)
     }
     gtool->base.group_by = (gnm_tool_group_by_t) _grouping;
     gtool->base.labels = _hasLabels;
-    if (![self _configureEngineTool:tool engine:engine error:error]) {
+    if (![self _configureEngineTool:tool sheet:sheet engine:engine error:error]) {
         g_object_unref (tool);
         return NULL;
     }
@@ -182,7 +198,7 @@ single_range (Sheet *sheet, NSString *text)
 
 - (GnmAnalysisTool *)_newEngineTool { return gnm_descriptive_tool_new (); }
 
-- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool engine:(GnmEngine *)engine error:(NSError **)error
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool sheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error
 {
     /* desc_stat_tool_update_sensitivity_cb's checks */
     if (!_summaryStatistics && !_confidenceLevel && !_kthLargest && !_kthSmallest) {
@@ -326,7 +342,7 @@ single_range (Sheet *sheet, NSString *text)
 
 - (GnmAnalysisTool *)_newEngineTool { return NULL; }
 
-- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool engine:(GnmEngine *)engine error:(NSError **)error { return YES; }
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool sheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error { return YES; }
 
 - (GnmAnalysisTool *)_engineToolForSheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error
 {
@@ -357,7 +373,7 @@ single_range (Sheet *sheet, NSString *text)
     btool->base.range_2 = second;
     btool->base.labels = _hasLabels;
     btool->base.alpha = _alpha;
-    if (![self _configureEngineTool:tool engine:engine error:error]) {
+    if (![self _configureEngineTool:tool sheet:sheet engine:engine error:error]) {
         g_object_unref (tool);
         return NULL;
     }
@@ -393,7 +409,7 @@ single_range (Sheet *sheet, NSString *text)
     return gnm_ttest_neqvar_tool_new ();
 }
 
-- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool engine:(GnmEngine *)engine error:(NSError **)error
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool sheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error
 {
     switch (_kind) {
     case GnmMeanTestPaired: GNM_TTEST_PAIRED_TOOL (tool)->mean_diff = _hypothesizedMeanDifference; break;
@@ -441,7 +457,7 @@ single_range (Sheet *sheet, NSString *text)
 
 - (GnmAnalysisTool *)_newEngineTool { return gnm_anova_single_tool_new (); }
 
-- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool engine:(GnmEngine *)engine error:(NSError **)error
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool sheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error
 {
     if (!(_alpha > 0 && _alpha < 1)) {
         if (error)
@@ -457,7 +473,7 @@ single_range (Sheet *sheet, NSString *text)
 @implementation GnmRankingAnalysis
 - (instancetype)init { return [super initWithTitle:@"Rank and Percentile"]; }
 - (GnmAnalysisTool *)_newEngineTool { return gnm_ranking_tool_new (); }
-- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool engine:(GnmEngine *)engine error:(NSError **)error
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool sheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error
 {
     GNM_RANKING_TOOL (tool)->av_ties = _averagesTies;
     return YES;
@@ -478,7 +494,7 @@ single_range (Sheet *sheet, NSString *text)
 
 - (GnmAnalysisTool *)_newEngineTool { return gnm_sampling_tool_new (); }
 
-- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool engine:(GnmEngine *)engine error:(NSError **)error
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool sheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error
 {
     /* sampling_tool_update_sensitivity_cb */
     NSString *why = nil;
@@ -521,7 +537,7 @@ single_range (Sheet *sheet, NSString *text)
 
 - (GnmAnalysisTool *)_newEngineTool { return gnm_moving_average_tool_new (); }
 
-- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool engine:(GnmEngine *)engine error:(NSError **)error
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool sheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error
 {
     /* average_tool_update_sensitivity_cb, then average_tool_ok_clicked_cb */
     GnmMovingAverageTool *mtool = GNM_MOVING_AVERAGE_TOOL (tool);
@@ -583,7 +599,7 @@ single_range (Sheet *sheet, NSString *text)
 
 - (GnmAnalysisTool *)_newEngineTool { return gnm_exp_smoothing_tool_new (); }
 
-- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool engine:(GnmEngine *)engine error:(NSError **)error
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool sheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error
 {
     /* exp_smoothing_tool_update_sensitivity_cb */
     NSString *why = nil;
@@ -616,6 +632,473 @@ single_range (Sheet *sheet, NSString *text)
 
 @end
 
+#pragma mark - Frequency tables and histograms
+
+@implementation GnmFrequencyAnalysis
+
+- (instancetype)init
+{
+    if (!(self = [super initWithTitle:@"Frequency Tables"]))
+        return nil;
+    _categoryCount = 10;
+    return self;
+}
+
+- (GnmAnalysisTool *)_newEngineTool { return gnm_frequency_tool_new (); }
+
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool sheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error
+{
+    /* frequency_tool_update_sensitivity_cb and frequency_tool_ok_clicked_cb */
+    GnmFrequencyTool *ftool = GNM_FREQUENCY_TOOL (tool);
+    if (_categoryRange.length) {
+        ftool->bin = single_range (sheet, _categoryRange);
+        if (!ftool->bin) {
+            if (error)
+                *error = analysis_error (engine, @"The categories range is not valid.");
+            return NO;
+        }
+        ftool->predetermined = TRUE;
+    } else {
+        if (_categoryCount < 1) {
+            if (error)
+                *error = analysis_error (engine, @"The number of categories is invalid.");
+            return NO;
+        }
+        ftool->predetermined = FALSE;
+        ftool->bin = NULL;
+        ftool->n = (gint) _categoryCount;
+    }
+    ftool->percentage = _asPercentages;
+    ftool->exact = _exactMatches;
+    ftool->chart = (gnm_freq_tool_chart_t) _chart;
+    return YES;
+}
+
+@end
+
+@implementation GnmHistogramAnalysis
+
+- (instancetype)init
+{
+    if (!(self = [super initWithTitle:@"Histogram"]))
+        return nil;
+    _cutoffCount = 10;
+    return self;
+}
+
+- (GnmAnalysisTool *)_newEngineTool { return gnm_histogram_tool_new (); }
+
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool sheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error
+{
+    /* histogram_tool_update_sensitivity_cb and histogram_tool_ok_clicked_cb */
+    GnmHistogramTool *htool = GNM_HISTOGRAM_TOOL (tool);
+    if (_cutoffRange.length) {
+        htool->bin = single_range (sheet, _cutoffRange);
+        if (!htool->bin) {
+            if (error)
+                *error = analysis_error (engine, @"The cutoff range is not valid.");
+            return NO;
+        }
+        htool->predetermined = TRUE;
+    } else {
+        if (_cutoffCount < 1) {
+            if (error)
+                *error = analysis_error (engine, @"The number of to be calculated cutoffs is invalid.");
+            return NO;
+        }
+        htool->predetermined = FALSE;
+        htool->bin = NULL;
+        htool->n = (gint) _cutoffCount;
+        htool->max_given = _maximum != nil;
+        htool->min_given = _minimum != nil;
+        htool->max = _maximum.doubleValue;
+        htool->min = _minimum.doubleValue;
+    }
+    htool->bin_type = (analysis_histogram_bin_type_t) ((_binsIncludeUpperCutoff ? bintype_no_inf_upper : 0)
+                                                        | (_lastBinToPlusInfinity ? bintype_p_inf_lower : 0)
+                                                        | (_firstBinFromMinusInfinity ? bintype_m_inf_lower : 0));
+    htool->percentage = _asPercentages;
+    htool->cumulative = _cumulative;
+    htool->only_numbers = _onlyNumbers;
+    htool->chart = (gnm_hist_tool_chart_t) _chart;
+    return YES;
+}
+
+@end
+
+#pragma mark - One-sample tests
+
+static BOOL
+check_alpha (double alpha, GnmEngine *engine, NSError **error)
+{
+    if (alpha > 0 && alpha < 1)
+        return YES;
+    if (error)
+        *error = analysis_error (engine, @"The alpha value should be between 0 and 1.");
+    return NO;
+}
+
+@implementation GnmNormalityAnalysis
+
+- (instancetype)init
+{
+    if (!(self = [super initWithTitle:@"Normality Tests"]))
+        return nil;
+    _alpha = 0.05;
+    return self;
+}
+
+- (GnmAnalysisTool *)_newEngineTool { return gnm_normality_tool_new (); }
+
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool sheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error
+{
+    if (!check_alpha (_alpha, engine, error))
+        return NO;
+    GnmNormalityTool *ntool = GNM_NORMALITY_TOOL (tool);
+    ntool->alpha = _alpha;
+    ntool->type = (gnm_normality_test_type_t) _kind;
+    ntool->graph = _includesProbabilityPlot;
+    return YES;
+}
+
+@end
+
+@implementation GnmOneMeanTestAnalysis
+
+- (instancetype)init
+{
+    if (!(self = [super initWithTitle:@"Claims About a Mean"]))
+        return nil;
+    _alpha = 0.05;
+    return self;
+}
+
+- (GnmAnalysisTool *)_newEngineTool { return gnm_one_mean_test_tool_new (); }
+
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool sheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error
+{
+    if (!check_alpha (_alpha, engine, error))
+        return NO;
+    GnmOneMeanTestTool *otool = GNM_ONE_MEAN_TEST_TOOL (tool);
+    otool->mean = _hypothesizedMean;
+    otool->alpha = _alpha;
+    return YES;
+}
+
+@end
+
+@implementation GnmMedianTestAnalysis
+
+- (instancetype)init
+{
+    if (!(self = [super initWithTitle:@"Claims About a Median"]))
+        return nil;
+    _alpha = 0.05;
+    return self;
+}
+
+- (GnmAnalysisTool *)_newEngineTool
+{
+    return _kind == GnmMedianTestSign ? gnm_sign_test_tool_new () : gnm_signed_rank_test_tool_new ();
+}
+
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool sheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error
+{
+    if (!check_alpha (_alpha, engine, error))
+        return NO;
+    if (GNM_IS_SIGN_TEST_TOOL (tool)) {
+        GNM_SIGN_TEST_TOOL (tool)->median = _hypothesizedMedian;
+        GNM_SIGN_TEST_TOOL (tool)->alpha = _alpha;
+    } else {
+        GNM_SIGNED_RANK_TEST_TOOL (tool)->median = _hypothesizedMedian;
+        GNM_SIGNED_RANK_TEST_TOOL (tool)->alpha = _alpha;
+    }
+    return YES;
+}
+
+@end
+
+#pragma mark - Two-sample tests
+
+@implementation GnmTwoMedianTestAnalysis
+
+- (instancetype)init
+{
+    return [super initWithTitle:@"Claims About Two Medians"];
+}
+
+- (GnmAnalysisTool *)_newEngineTool
+{
+    return _kind == GnmMedianTestSign ? gnm_sign_test_two_tool_new () : gnm_signed_rank_test_two_tool_new ();
+}
+
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool sheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error
+{
+    /* sign_test_two_tool_update_sensitivity_cb: the same shape */
+    GnmGenericBAnalysisTool *btool = GNM_GENERIC_B_ANALYSIS_TOOL (tool);
+    GnmRangeRef const *a = &btool->base.range_1->v_range.cell, *b = &btool->base.range_2->v_range.cell;
+    if (a->b.col - a->a.col != b->b.col - b->a.col || a->b.row - a->a.row != b->b.row - b->a.row) {
+        if (error)
+            *error = analysis_error (engine, @"The input ranges do not have the same shape.");
+        return NO;
+    }
+    if (GNM_IS_SIGN_TEST_TWO_TOOL (tool))
+        GNM_SIGN_TEST_TWO_TOOL (tool)->median = _hypothesizedMedian;
+    else
+        GNM_SIGNED_RANK_TEST_TWO_TOOL (tool)->median = _hypothesizedMedian;
+    return YES;
+}
+
+@end
+
+@implementation GnmMannWhitneyAnalysis
+
+- (instancetype)init
+{
+    return [super initWithTitle:@"Wilcoxon-Mann-Whitney Test"];
+}
+
+- (GnmAnalysisTool *)_newEngineTool { return gnm_wilcoxon_mann_whitney_tool_new (); }
+
+@end
+
+#pragma mark - Dependent observations
+
+@implementation GnmPrincipalComponentsAnalysis
+
+- (instancetype)init
+{
+    return [super initWithTitle:@"Principal Components Analysis"];
+}
+
+- (GnmAnalysisTool *)_newEngineTool { return gnm_principal_components_tool_new (); }
+
+@end
+
+@implementation GnmFourierAnalysis
+
+- (instancetype)init
+{
+    return [super initWithTitle:@"Fourier Analysis"];
+}
+
+- (GnmAnalysisTool *)_newEngineTool { return gnm_fourier_tool_new (); }
+
+/* dialog_fourier_tool's plugins: the time series analysis one is not in
+ * the default active list */
+- (NSArray<NSString *> *)_requiredPluginIdentifiers
+{
+    return @[@"Gnumeric_fnTimeSeriesAnalysis", @"Gnumeric_fncomplex"];
+}
+
+- (BOOL)_configureEngineTool:(GnmAnalysisTool *)tool sheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error
+{
+    GNM_FOURIER_TOOL (tool)->inverse = _isInverse;
+    return YES;
+}
+
+@end
+
+@implementation GnmKaplanMeierGroup
+
+- (instancetype)initWithName:(NSString *)name from:(NSInteger)from to:(NSInteger)to
+{
+    if (!(self = [super init]))
+        return nil;
+    _name = [name copy];
+    _from = from;
+    _to = to;
+    return self;
+}
+
+@end
+
+@implementation GnmKaplanMeierAnalysis
+
+- (instancetype)init
+{
+    if (!(self = [super initWithTitle:@"Kaplan-Meier Estimates"]))
+        return nil;
+    _timeRange = @"";
+    _groups = @[];
+    return self;
+}
+
+/* kaplan_meier_tool_update_sensitivity_cb's reading of a column entry */
+static GnmValue *
+kaplan_meier_column (Sheet *sheet, NSString *text, GnmValue const *time, NSString *what, GnmEngine *engine, NSError **error)
+{
+    GnmValue *v = single_range (sheet, text);
+    NSString *message = nil;
+    if (!v)
+        message = [NSString stringWithFormat:@"The %@ column is not valid.", what];
+    else if (v->v_range.cell.a.col != v->v_range.cell.b.col)
+        message = [NSString stringWithFormat:@"The %@ column should be part of a single column.", what];
+    else if (time && v->v_range.cell.b.row - v->v_range.cell.a.row != time->v_range.cell.b.row - time->v_range.cell.a.row)
+        message = [NSString stringWithFormat:@"The %@ and time columns should have the same height.", what];
+    if (!message)
+        return v;
+    if (v)
+        value_release (v);
+    if (error)
+        *error = analysis_error (engine, message);
+    return NULL;
+}
+
+- (GnmAnalysisTool *)_engineToolForSheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error
+{
+    GnmValue *time = kaplan_meier_column (sheet, _timeRange, NULL, @"time", engine, error);
+    if (!time)
+        return NULL;
+    GnmValue *censor = NULL, *group = NULL;
+    if (_censorRange.length && !(censor = kaplan_meier_column (sheet, _censorRange, time, @"censorship", engine, error))) {
+        value_release (time);
+        return NULL;
+    }
+    if (_groups.count && !(group = kaplan_meier_column (sheet, _groupRange ?: @"", time, @"groups", engine, error))) {
+        value_release (time);
+        if (censor)
+            value_release (censor);
+        return NULL;
+    }
+    GnmAnalysisTool *tool = gnm_kaplan_meier_tool_new ();
+    GnmKaplanMeierTool *ktool = GNM_KAPLAN_MEIER_TOOL (tool);
+    ktool->parent.base.range_1 = time;
+    ktool->parent.base.range_2 = censor;
+    ktool->censored = censor != NULL;
+    ktool->censor_mark = (int) _censorMark;
+    ktool->censor_mark_to = (int) _censorMarkTo;
+    ktool->range_3 = group;
+    GSList *list = NULL;
+    for (GnmKaplanMeierGroup *g in _groups) {
+        analysis_tools_kaplan_meier_group_t *entry = g_new0 (analysis_tools_kaplan_meier_group_t, 1);
+        entry->name = g_strdup (g.name.UTF8String);
+        entry->group_from = (guint) MAX (g.from, 0);
+        entry->group_to = (guint) MAX (g.to, 0);
+        list = g_slist_append (list, entry);
+    }
+    ktool->group_list = list;
+    ktool->logrank_test = list != NULL && _logRankTest;
+    ktool->median = _includesMedian;
+    ktool->chart = _includesChart;
+    ktool->ticks = _includesTicks;
+    ktool->std_err = _includesStandardErrors;
+    return tool;
+}
+
+@end
+
+#pragma mark - Tables
+
+@implementation GnmContingencyTableAnalysis
+
+- (instancetype)init
+{
+    if (!(self = [super initWithTitle:@"Contingency Table"]))
+        return nil;
+    _inputRange = @"";
+    _alpha = 0.05;
+    return self;
+}
+
+- (GnmAnalysisTool *)_engineToolForSheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error
+{
+    /* chi_squared_tool_update_sensitivity_cb and chi_squared_tool_ok_clicked_cb */
+    GnmValue *input = single_range (sheet, _inputRange);
+    if (!input) {
+        if (error)
+            *error = analysis_error (engine, @"The input range is invalid.");
+        return NULL;
+    }
+    int rows = input->v_range.cell.b.row - input->v_range.cell.a.row + 1;
+    int cols = input->v_range.cell.b.col - input->v_range.cell.a.col + 1;
+    if (MIN (rows, cols) < (_hasLabels ? 3 : 2)) {
+        if (error)
+            *error = analysis_error (engine, @"The input range is too small.");
+        value_release (input);
+        return NULL;
+    }
+    if (!check_alpha (_alpha, engine, error)) {
+        value_release (input);
+        return NULL;
+    }
+    GnmAnalysisTool *tool = gnm_chi_squared_tool_new ();
+    GnmChiSquaredTool *ctool = GNM_CHI_SQUARED_TOOL (tool);
+    ctool->input = input;
+    ctool->labels = _hasLabels;
+    ctool->alpha = _alpha;
+    ctool->independence = _testsIndependence;
+    return tool;
+}
+
+@end
+
+@implementation GnmAnovaTwoFactorAnalysis
+
+- (instancetype)init
+{
+    if (!(self = [super initWithTitle:@"ANOVA: Two Factor"]))
+        return nil;
+    _inputRange = @"";
+    _alpha = 0.05;
+    _rowsPerSample = 1;
+    return self;
+}
+
+- (GnmAnalysisTool *)_engineToolForSheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error
+{
+    /* anova_two_factor_tool_update_sensitivity_cb and anova_two_factor_tool_ok_clicked_cb */
+    GnmValue *input = single_range (sheet, _inputRange);
+    if (!input) {
+        if (error)
+            *error = analysis_error (engine, @"The input range is invalid.");
+        return NULL;
+    }
+    if (!check_alpha (_alpha, engine, error)) {
+        value_release (input);
+        return NULL;
+    }
+    if (_rowsPerSample < 1) {
+        if (error)
+            *error = analysis_error (engine, @"The number of rows per sample should be a positive integer.");
+        value_release (input);
+        return NULL;
+    }
+    GnmAnalysisTool *tool = gnm_anova_two_factor_tool_new ();
+    GnmAnovaTwoFactorTool *atool = GNM_ANOVA_TWO_FACTOR_TOOL (tool);
+    atool->input = input;
+    atool->err = analysis_tools_noerr;
+    atool->labels = _hasLabels;
+    atool->alpha = _alpha;
+    atool->replication = (gint) _rowsPerSample;
+    return tool;
+}
+
+- (NSString *)_failureDescriptionForEngineTool:(GnmAnalysisTool *)tool
+{
+    GnmAnovaTwoFactorTool *atool = GNM_ANOVA_TWO_FACTOR_TOOL (tool);
+    switch (atool->err) {
+    case analysis_tools_noerr:
+        return nil;
+    case analysis_tools_missing_data:
+        return _hasLabels ? @"The given input range should contain at least two columns and two rows of data and the labels."
+                          : @"The given input range should contain at least two columns and two rows of data.";
+    case analysis_tools_too_few_cols:
+        return _hasLabels ? @"The given input range should contain at least two columns of data and the labels."
+                          : @"The given input range should contain at least two columns of data.";
+    case analysis_tools_too_few_rows:
+        return _hasLabels ? @"The given input range should contain at least two rows of data and the labels."
+                          : @"The given input range should contain at least two rows of data.";
+    case analysis_tools_replication_invalid:
+        return @"The number of data rows must be a multiple of the replication number.";
+    default:
+        return [NSString stringWithFormat:@"An unexpected error has occurred: %d.", atool->err];
+    }
+}
+
+@end
+
+
 #pragma mark - Running
 
 @implementation GnmSheet (Analysis)
@@ -628,6 +1111,28 @@ single_range (Sheet *sheet, NSString *text)
     if (!sheet || !workbook)
         return nil;
     GnmEngine *engine = workbook.engine;
+    /* gnm_check_for_plugins_missing, except that a plugin that is merely
+     * inactive is activated here (the GTK sends the user to its plugin
+     * manager) */
+    for (NSString *identifier in [analysis _requiredPluginIdentifiers]) {
+        GOPlugin *plugin = go_plugins_get_plugin_by_id (identifier.UTF8String);
+        if (!plugin) {
+            if (error)
+                *error = analysis_error (engine, [NSString stringWithFormat:@"The plugin with id %@ is required but cannot be found.", identifier]);
+            return nil;
+        }
+        if (!go_plugin_is_active (plugin)) {
+            GOErrorInfo *info = NULL;
+            go_plugin_activate (plugin, &info);
+            if (info) {
+                if (error)
+                    *error = analysis_error (engine, [NSString stringWithFormat:@"The %s plugin is required but could not be loaded: %s",
+                                                      go_plugin_get_name (plugin), go_error_info_peek_message (info) ?: ""]);
+                go_error_info_free (info);
+                return nil;
+            }
+        }
+    }
     GnmAnalysisTool *tool = [analysis _engineToolForSheet:sheet engine:engine error:error];
     if (!tool)
         return nil;

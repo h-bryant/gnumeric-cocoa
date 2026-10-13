@@ -1211,15 +1211,36 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     @objc func sampling(_ sender: Any?) { runAnalysisDialog(.sampling) }
     @objc func movingAverage(_ sender: Any?) { runAnalysisDialog(.movingAverage) }
     @objc func exponentialSmoothing(_ sender: Any?) { runAnalysisDialog(.exponentialSmoothing) }
+    @objc func frequency(_ sender: Any?) { runAnalysisDialog(.frequency) }
+    @objc func histogram(_ sender: Any?) { runAnalysisDialog(.histogram) }
+    @objc func fourier(_ sender: Any?) { runAnalysisDialog(.fourier) }
+    @objc func principalComponents(_ sender: Any?) { runAnalysisDialog(.principalComponents) }
+    @objc func kaplanMeier(_ sender: Any?) { runAnalysisDialog(.kaplanMeier) }
+    @objc func normality(_ sender: Any?) { runAnalysisDialog(.normality) }
+    @objc func oneMeanTest(_ sender: Any?) { runAnalysisDialog(.oneMeanTest) }
+    @objc func oneMedianSignTest(_ sender: Any?) { runAnalysisDialog(.oneMedianSignTest) }
+    @objc func oneMedianSignedRank(_ sender: Any?) { runAnalysisDialog(.oneMedianSignedRank) }
+    @objc func twoMedianSignTest(_ sender: Any?) { runAnalysisDialog(.twoMedianSignTest) }
+    @objc func twoMedianSignedRank(_ sender: Any?) { runAnalysisDialog(.twoMedianSignedRank) }
+    @objc func mannWhitney(_ sender: Any?) { runAnalysisDialog(.mannWhitney) }
+    @objc func anovaTwoFactor(_ sender: Any?) { runAnalysisDialog(.anovaTwoFactor) }
+    @objc func homogeneity(_ sender: Any?) { runAnalysisDialog(.homogeneity) }
+    @objc func independence(_ sender: Any?) { runAnalysisDialog(.independence) }
+    // The GTK's four Claims About Two Means items preselect the kind.
+    @objc func meanTestPaired(_ sender: Any?) { runAnalysisDialog(.meanTest) { $0.meanTestKind.selectItem(at: 0) } }
+    @objc func meanTestKnownVariances(_ sender: Any?) { runAnalysisDialog(.meanTest) { $0.meanTestKind.selectItem(at: 1) } }
+    @objc func meanTestEqualVariances(_ sender: Any?) { runAnalysisDialog(.meanTest) { $0.meanTestKind.selectItem(at: 2) } }
+    @objc func meanTestUnequalVariances(_ sender: Any?) { runAnalysisDialog(.meanTest) { $0.meanTestKind.selectItem(at: 3) } }
 
     /// One of the GTK analysis tool dialogs as an alert sheet; the tool
     /// runs as one undoable command and the sheet written to is shown.  A
     /// refusal (the dialogs' message) re-presents the sheet with its
     /// values kept.
-    private func runAnalysisDialog(_ tool: AnalysisDialog.Tool) {
+    private func runAnalysisDialog(_ tool: AnalysisDialog.Tool, configure: ((AnalysisDialog) -> Void)? = nil) {
         guard let window, let sheet = gridView.sheet, window.attachedSheet == nil else { return }
         if gridView.isEditing { gridView.cancelEditing() }
         let dialog = AnalysisDialog(tool: tool, sheet: sheet)
+        configure?(dialog)
         dialog.present(in: window) { [weak self] analysis, output in
             guard let self else { return true }
             do {

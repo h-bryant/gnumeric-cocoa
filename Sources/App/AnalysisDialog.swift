@@ -11,6 +11,10 @@ final class AnalysisDialog {
     enum Tool {
         case descriptiveStatistics, correlation, covariance, regression
         case meanTest, varianceTest, anovaSingleFactor, ranking, sampling, movingAverage, exponentialSmoothing
+        case frequency, histogram, fourier, principalComponents, kaplanMeier
+        case normality, oneMeanTest, oneMedianSignTest, oneMedianSignedRank
+        case twoMedianSignTest, twoMedianSignedRank, mannWhitney
+        case anovaTwoFactor, homogeneity, independence
 
         var title: String {
             switch self {
@@ -25,16 +29,38 @@ final class AnalysisDialog {
             case .sampling: return "Sampling"
             case .movingAverage: return "Moving Average"
             case .exponentialSmoothing: return "Exponential Smoothing"
+            case .frequency: return "Frequency Tables"
+            case .histogram: return "Histogram"
+            case .fourier: return "Fourier Analysis"
+            case .principalComponents: return "Principal Components Analysis"
+            case .kaplanMeier: return "Kaplan-Meier Estimates"
+            case .normality: return "Normality Tests"
+            case .oneMeanTest: return "Claims About a Mean"
+            case .oneMedianSignTest, .oneMedianSignedRank: return "Claims About a Median"
+            case .twoMedianSignTest, .twoMedianSignedRank: return "Claims About Two Medians"
+            case .mannWhitney: return "Wilcoxon-Mann-Whitney Test"
+            case .anovaTwoFactor: return "ANOVA: Two Factor"
+            case .homogeneity: return "Test of Homogeneity"
+            case .independence: return "Test of Independence"
             }
         }
 
         /// Tools over a list of ranges split into variables.
         var isGrouped: Bool {
             switch self {
-            case .descriptiveStatistics, .correlation, .covariance, .anovaSingleFactor, .ranking, .sampling, .movingAverage, .exponentialSmoothing:
+            case .descriptiveStatistics, .correlation, .covariance, .anovaSingleFactor, .ranking, .sampling, .movingAverage, .exponentialSmoothing,
+                 .frequency, .histogram, .fourier, .principalComponents, .normality, .oneMeanTest, .oneMedianSignTest, .oneMedianSignedRank:
                 return true
             default:
                 return false
+            }
+        }
+
+        /// Tools over two variables (the ttest.ui layout).
+        var isTwoSample: Bool {
+            switch self {
+            case .meanTest, .varianceTest, .twoMedianSignTest, .twoMedianSignedRank, .mannWhitney: return true
+            default: return false
             }
         }
     }
@@ -85,6 +111,42 @@ final class AnalysisDialog {
     let standardErrors = NSButton(checkboxWithTitle: "Standard errors", target: nil, action: nil)
     let denominator = NSPopUpButton(frame: .zero, pullsDown: false)
     let chart = NSButton(checkboxWithTitle: "Include chart", target: nil, action: nil)
+    // Frequency tables and histograms
+    let cutoffSource = NSPopUpButton(frame: .zero, pullsDown: false)
+    let cutoffRangeField = NSTextField(string: "")
+    let cutoffCountField = NSTextField(string: "10")
+    let minField = NSTextField(string: "")
+    let maxField = NSTextField(string: "")
+    let upperCutoff = NSButton(checkboxWithTitle: "Bins take their upper cutoff: (∙,∙] rather than [∙,∙)", target: nil, action: nil)
+    let minusInfinity = NSButton(checkboxWithTitle: "First bin reaches down to −∞", target: nil, action: nil)
+    let plusInfinity = NSButton(checkboxWithTitle: "Last bin reaches up to +∞", target: nil, action: nil)
+    let percentage = NSButton(checkboxWithTitle: "Percentages", target: nil, action: nil)
+    let cumulative = NSButton(checkboxWithTitle: "Cumulative answers", target: nil, action: nil)
+    let onlyNumbers = NSButton(checkboxWithTitle: "Count numbers only", target: nil, action: nil)
+    let exact = NSButton(checkboxWithTitle: "Use exact comparisons", target: nil, action: nil)
+    let chartKind = NSPopUpButton(frame: .zero, pullsDown: false)
+    // One-sample and two-sample tests
+    let normalityKind = NSPopUpButton(frame: .zero, pullsDown: false)
+    let probabilityPlot = NSButton(checkboxWithTitle: "Create normal probability plot", target: nil, action: nil)
+    let meanField = NSTextField(string: "0")
+    let medianField = NSTextField(string: "0")
+    let medianKind = NSPopUpButton(frame: .zero, pullsDown: false)
+    // Fourier, Kaplan-Meier
+    let inverse = NSButton(checkboxWithTitle: "Inverse transform", target: nil, action: nil)
+    let timeField = NSTextField(string: "")
+    let censorField = NSTextField(string: "")
+    let censorFromField = NSTextField(string: "0")
+    let censorToField = NSTextField(string: "0")
+    let groupsRangeField = NSTextField(string: "")
+    let groupsField = NSTextField(string: "")
+    let kmChart = NSButton(checkboxWithTitle: "Chart", target: nil, action: nil)
+    let kmTicks = NSButton(checkboxWithTitle: "Censorship ticks on the chart", target: nil, action: nil)
+    let kmStandardErrors = NSButton(checkboxWithTitle: "Standard errors", target: nil, action: nil)
+    let kmMedian = NSButton(checkboxWithTitle: "Median", target: nil, action: nil)
+    let logRank = NSButton(checkboxWithTitle: "Log-rank test between the groups", target: nil, action: nil)
+    // Tables
+    let chiKind = NSPopUpButton(frame: .zero, pullsDown: false)
+    let replicationField = NSTextField(string: "1")
     // Descriptive statistics
     let summary = NSButton(checkboxWithTitle: "Summary statistics", target: nil, action: nil)
     let ssmedian = NSButton(checkboxWithTitle: "Use SSMEDIAN for the median", target: nil, action: nil)
@@ -128,16 +190,26 @@ final class AnalysisDialog {
                                             "Holt's trend corrected exponential smoothing", "Additive Holt-Winters exponential smoothing",
                                             "Multiplicative Holt-Winters exponential smoothing"])
         denominator.addItems(withTitles: ["n", "n − 1", "n − 2", "n − 3"])
-        for field in [inputField, xField, yField, outputField] {
+        cutoffSource.addItems(withTitles: tool == .frequency ? ["Counted from the data", "From a range:"] : ["Calculated", "From a range:"])
+        chartKind.addItems(withTitles: tool == .frequency ? ["No chart", "Bar chart", "Column chart"]
+                                                          : ["No chart", "Histogram chart", "Bar chart", "Column chart"])
+        normalityKind.addItems(withTitles: ["Anderson-Darling test", "Cramér-von Mises test", "Lilliefors (Kolmogorov-Smirnov) test", "Shapiro-Francia test"])
+        medianKind.addItems(withTitles: ["Sign test", "Wilcoxon signed rank test"])
+        medianKind.selectItem(at: tool == .oneMedianSignedRank || tool == .twoMedianSignedRank ? 1 : 0)
+        chiKind.addItems(withTitles: ["Test of homogeneity", "Test of independence"])
+        chiKind.selectItem(at: tool == .independence ? 1 : 0)
+        timeField.stringValue = selection
+        for field in [inputField, xField, yField, outputField, cutoffRangeField, timeField, censorField, groupsRangeField, groupsField] {
             field.widthAnchor.constraint(greaterThanOrEqualToConstant: 220).isActive = true
         }
         for field in [confidenceField, intervalField, largestField, smallestField, alphaField, meanDifferenceField, firstVarianceField,
                       secondVarianceField, sampleSizeField, sampleCountField, periodField, offsetField, maIntervalField, averageOffsetField,
-                      dampingField, growthField, seasonalField, seasonalPeriodField] {
+                      dampingField, growthField, seasonalField, seasonalPeriodField, cutoffCountField, minField, maxField, meanField,
+                      medianField, censorFromField, censorToField, replicationField] {
             field.widthAnchor.constraint(equalToConstant: 70).isActive = true
         }
         alert.accessoryView = makeGrid()
-        alert.window.initialFirstResponder = tool.isGrouped ? inputField : xField
+        alert.window.initialFirstResponder = tool.isGrouped ? inputField : (tool == .kaplanMeier ? timeField : xField)
     }
 
     private func makeGrid() -> NSGridView {
@@ -174,6 +246,27 @@ final class AnalysisDialog {
         case .varianceTest:
             rows += [[label("Variable 1 range:"), xField], [label("Variable 2 range:"), yField], [NSGridCell.emptyContentView, labels],
                      [heading("Test"), NSGridCell.emptyContentView], [label("Alpha:"), alphaField]]
+        case .twoMedianSignTest, .twoMedianSignedRank:
+            rows += [[label("Variable 1 range:"), xField], [label("Variable 2 range:"), yField], [NSGridCell.emptyContentView, labels],
+                     [heading("Test"), NSGridCell.emptyContentView], [label("Test:"), medianKind],
+                     [label("Predicted difference:"), medianField], [label("Alpha:"), alphaField]]
+        case .mannWhitney:
+            rows += [[label("Variable 1 range:"), xField], [label("Variable 2 range:"), yField], [NSGridCell.emptyContentView, labels]]
+        case .kaplanMeier:
+            rows += [[label("Time column:"), timeField], [label("Censorship column:"), censorField],
+                     [label("Censor marks from:"), censorFromField], [label("to:"), censorToField],
+                     [label("Groups column:"), groupsRangeField], [label("Groups (name from to; …):"), groupsField],
+                     [heading("Options"), NSGridCell.emptyContentView],
+                     [NSGridCell.emptyContentView, kmChart], [NSGridCell.emptyContentView, kmTicks],
+                     [NSGridCell.emptyContentView, kmStandardErrors], [NSGridCell.emptyContentView, kmMedian],
+                     [NSGridCell.emptyContentView, logRank]]
+        case .anovaTwoFactor:
+            rows += [[label("Input range:"), inputField], [NSGridCell.emptyContentView, labels],
+                     [heading("Options"), NSGridCell.emptyContentView],
+                     [label("Rows per sample:"), replicationField], [label("Alpha:"), alphaField]]
+        case .homogeneity, .independence:
+            rows += [[label("Input range:"), inputField], [NSGridCell.emptyContentView, labels],
+                     [heading("Test"), NSGridCell.emptyContentView], [label("Test:"), chiKind], [label("Alpha:"), alphaField]]
         default:
             rows += [[label("Input range:"), inputField], [label("Grouped by:"), grouping], [NSGridCell.emptyContentView, labels]]
             switch tool {
@@ -205,6 +298,34 @@ final class AnalysisDialog {
                          [label("Seasonal period:"), seasonalPeriodField],
                          [NSGridCell.emptyContentView, standardErrors], [label("Denominator:"), denominator],
                          [NSGridCell.emptyContentView, chart]]
+            case .frequency:
+                rows += [[heading("Categories"), NSGridCell.emptyContentView],
+                         [label("Categories:"), cutoffSource], [NSGridCell.emptyContentView, cutoffRangeField],
+                         [label("Number of categories:"), cutoffCountField],
+                         [heading("Options"), NSGridCell.emptyContentView],
+                         [NSGridCell.emptyContentView, exact], [NSGridCell.emptyContentView, percentage],
+                         [label("Chart:"), chartKind]]
+            case .histogram:
+                rows += [[heading("Cutoffs"), NSGridCell.emptyContentView],
+                         [label("Cutoffs:"), cutoffSource], [NSGridCell.emptyContentView, cutoffRangeField],
+                         [label("Number of cutoffs:"), cutoffCountField], [label("Minimum:"), minField], [label("Maximum:"), maxField],
+                         [heading("Bins"), NSGridCell.emptyContentView],
+                         [NSGridCell.emptyContentView, upperCutoff], [NSGridCell.emptyContentView, minusInfinity],
+                         [NSGridCell.emptyContentView, plusInfinity],
+                         [heading("Options"), NSGridCell.emptyContentView],
+                         [NSGridCell.emptyContentView, percentage], [NSGridCell.emptyContentView, cumulative],
+                         [NSGridCell.emptyContentView, onlyNumbers], [label("Chart:"), chartKind]]
+            case .fourier:
+                rows += [[heading("Options"), NSGridCell.emptyContentView], [NSGridCell.emptyContentView, inverse]]
+            case .normality:
+                rows += [[heading("Test"), NSGridCell.emptyContentView],
+                         [label("Test:"), normalityKind], [label("Alpha:"), alphaField], [NSGridCell.emptyContentView, probabilityPlot]]
+            case .oneMeanTest:
+                rows += [[heading("Test"), NSGridCell.emptyContentView],
+                         [label("Predicted mean:"), meanField], [label("Alpha:"), alphaField]]
+            case .oneMedianSignTest, .oneMedianSignedRank:
+                rows += [[heading("Test"), NSGridCell.emptyContentView],
+                         [label("Test:"), medianKind], [label("Predicted median:"), medianField], [label("Alpha:"), alphaField]]
             default:
                 break
             }
@@ -314,6 +435,108 @@ final class AnalysisDialog {
             smoothing.denominatorOffset = denominator.indexOfSelectedItem
             smoothing.includesChart = chart.state == .on
             return smoothing
+        case .frequency:
+            let frequency = FrequencyAnalysis()
+            fill(frequency)
+            frequency.categoryRange = cutoffSource.indexOfSelectedItem == 1 ? cutoffRangeField.stringValue : nil
+            frequency.categoryCount = Int(cutoffCountField.stringValue) ?? 0
+            frequency.exactMatches = exact.state == .on
+            frequency.asPercentages = percentage.state == .on
+            frequency.chart = FrequencyAnalysis.Chart(rawValue: chartKind.indexOfSelectedItem) ?? .none
+            return frequency
+        case .histogram:
+            let histogram = HistogramAnalysis()
+            fill(histogram)
+            histogram.cutoffRange = cutoffSource.indexOfSelectedItem == 1 ? cutoffRangeField.stringValue : nil
+            histogram.cutoffCount = Int(cutoffCountField.stringValue) ?? 0
+            histogram.minimum = Double(minField.stringValue).map { NSNumber(value: $0) }
+            histogram.maximum = Double(maxField.stringValue).map { NSNumber(value: $0) }
+            histogram.binsIncludeUpperCutoff = upperCutoff.state == .on
+            histogram.firstBinFromMinusInfinity = minusInfinity.state == .on
+            histogram.lastBinToPlusInfinity = plusInfinity.state == .on
+            histogram.asPercentages = percentage.state == .on
+            histogram.cumulative = cumulative.state == .on
+            histogram.onlyNumbers = onlyNumbers.state == .on
+            histogram.chart = HistogramAnalysis.Chart(rawValue: chartKind.indexOfSelectedItem) ?? .none
+            return histogram
+        case .fourier:
+            let fourier = FourierAnalysis()
+            fill(fourier)
+            fourier.isInverse = inverse.state == .on
+            return fourier
+        case .principalComponents:
+            let components = PrincipalComponentsAnalysis()
+            fill(components)
+            return components
+        case .kaplanMeier:
+            let estimates = KaplanMeierAnalysis()
+            estimates.timeRange = timeField.stringValue
+            estimates.censorRange = censorField.stringValue.isEmpty ? nil : censorField.stringValue
+            estimates.censorMark = Int(censorFromField.stringValue) ?? 0
+            estimates.censorMarkTo = Int(censorToField.stringValue) ?? 0
+            estimates.groupRange = groupsRangeField.stringValue.isEmpty ? nil : groupsRangeField.stringValue
+            estimates.groups = Self.parseGroups(groupsField.stringValue)
+            estimates.includesChart = kmChart.state == .on
+            estimates.includesTicks = kmTicks.state == .on
+            estimates.includesStandardErrors = kmStandardErrors.state == .on
+            estimates.includesMedian = kmMedian.state == .on
+            estimates.logRankTest = logRank.state == .on
+            return estimates
+        case .normality:
+            let test = NormalityAnalysis()
+            fill(test)
+            test.kind = NormalityAnalysis.Kind(rawValue: normalityKind.indexOfSelectedItem) ?? .andersonDarling
+            test.alpha = Double(alphaField.stringValue) ?? -1
+            test.includesProbabilityPlot = probabilityPlot.state == .on
+            return test
+        case .oneMeanTest:
+            let test = OneMeanTestAnalysis()
+            fill(test)
+            test.hypothesizedMean = Double(meanField.stringValue) ?? 0
+            test.alpha = Double(alphaField.stringValue) ?? -1
+            return test
+        case .oneMedianSignTest, .oneMedianSignedRank:
+            let test = MedianTestAnalysis()
+            fill(test)
+            test.kind = medianKind.indexOfSelectedItem == 1 ? .wilcoxonSignedRank : .sign
+            test.hypothesizedMedian = Double(medianField.stringValue) ?? 0
+            test.alpha = Double(alphaField.stringValue) ?? -1
+            return test
+        case .twoMedianSignTest, .twoMedianSignedRank:
+            let test = TwoMedianTestAnalysis()
+            fillTwoSample(test)
+            test.kind = medianKind.indexOfSelectedItem == 1 ? .wilcoxonSignedRank : .sign
+            test.hypothesizedMedian = Double(medianField.stringValue) ?? 0
+            return test
+        case .mannWhitney:
+            let test = MannWhitneyAnalysis()
+            fillTwoSample(test)
+            test.alpha = 0.05   // the dialog has no alpha
+            return test
+        case .anovaTwoFactor:
+            let anova = AnovaTwoFactorAnalysis()
+            anova.inputRange = inputField.stringValue
+            anova.hasLabels = labels.state == .on
+            anova.alpha = Double(alphaField.stringValue) ?? -1
+            anova.rowsPerSample = Int(replicationField.stringValue) ?? 0
+            return anova
+        case .homogeneity, .independence:
+            let test = ContingencyTableAnalysis()
+            test.inputRange = inputField.stringValue
+            test.hasLabels = labels.state == .on
+            test.testsIndependence = chiKind.indexOfSelectedItem == 1
+            test.alpha = Double(alphaField.stringValue) ?? -1
+            return test
+        }
+    }
+
+    /// "low 0 7; high 8 20": the Kaplan-Meier groups, each a name and its
+    /// first and last group values.
+    static func parseGroups(_ text: String) -> [KaplanMeierGroup] {
+        text.split(separator: ";").compactMap { part -> KaplanMeierGroup? in
+            let words = part.split(whereSeparator: { $0 == " " || $0 == "\t" }).map(String.init)
+            guard words.count >= 3, let from = Int(words[words.count - 2]), let to = Int(words[words.count - 1]) else { return nil }
+            return KaplanMeierGroup(name: words.dropLast(2).joined(separator: " "), from: from, to: to)
         }
     }
 
