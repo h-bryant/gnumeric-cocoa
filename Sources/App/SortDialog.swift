@@ -33,7 +33,7 @@ final class SortDialog: NSObject {
     private let orderPopUps = (0..<SortDialog.keyRows).map { _ in NSPopUpButton(frame: .zero, pullsDown: false) }
     private let caseChecks = (0..<SortDialog.keyRows).map { _ in NSButton(checkboxWithTitle: "Case sensitive", target: nil, action: nil) }
     let locale = NSComboBox(frame: .zero)
-    private let alert = NSAlert()
+    let alert = NSAlert()
     /// The most entries a key pop-up lists (a whole-sheet selection would
     /// otherwise list every column).
     private static let maximumKeys = 1024
@@ -59,6 +59,11 @@ final class SortDialog: NSObject {
             caseChecks[i].state = Sheet.sortDefaultsToCaseSensitive ? .on : .off
         }
         rebuildKeys()
+        // The setup the dialog last used on this very range comes back
+        // (dialog_cell_sort_load_sort_setup), the heading detected afresh.
+        if let setup = sheet.sortSetup(for: range) {
+            load(setup)
+        }
         alert.messageText = "Sort"
         alert.informativeText = "Sort \(rangeDescription) by the keys, in order."
         locale.addItems(withObjectValues: Self.locales.map { $0.isEmpty ? "(current)" : $0 })
@@ -85,6 +90,37 @@ final class SortDialog: NSObject {
         }
         grid.frame = NSRect(x: 0, y: 0, width: 440, height: grid.fittingSize.height)
         alert.accessoryView = grid
+    }
+
+    /// Whether a remembered setup filled the dialog (the headless checks).
+    private(set) var loadedSetup = false
+
+    private func load(_ setup: SortSetup) {
+        direction.selectItem(at: setup.byRows ? 0 : 1)
+        rebuildKeys()
+        for (i, popUp) in keyPopUps.enumerated() {
+            if i < setup.keys.count, popUp.menu?.item(withTag: setup.keys[i].index) != nil {
+                let key = setup.keys[i]
+                _ = popUp.selectItem(withTag: key.index)
+                orderPopUps[i].selectItem(at: key.isDescending ? 1 : 0)
+                caseChecks[i].state = key.isCaseSensitive ? .on : .off
+            } else if i > 0 {
+                _ = popUp.selectItem(withTag: -1)
+            }
+        }
+        retainFormats.state = setup.retainsFormats ? .on : .off
+        locale.stringValue = setup.locale ?? "(current)"
+        loadedSetup = true
+    }
+
+    /// The keys as chosen: (index, descending, case-sensitive) per row
+    /// that names one (the headless checks).
+    var chosenKeysForTesting: [(Int, Bool, Bool)] {
+        (0..<Self.keyRows).compactMap { i in
+            let index = keyPopUps[i].selectedTag()
+            guard index >= 0 else { return nil }
+            return (index, orderPopUps[i].indexOfSelectedItem == 1, caseChecks[i].state == .on)
+        }
     }
 
     private var rangeDescription: String {

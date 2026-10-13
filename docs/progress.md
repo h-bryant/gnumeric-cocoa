@@ -1945,6 +1945,19 @@
   hands the sheet to GTK's own preview (cb_file_print_preview).
   `GNM_SNAPSHOT_PREVIEW=1`; the toolbar gained a Print Preview item.
 
+### 2026-10-13 (later): the Sort dialog's remembered setups
+
+- `sortRange:…locale:` now stores a copy of its `GnmSortData` on the
+  sheet under the range's name before sorting (cb_dialog_ok_clicked's
+  `gnm_sheet_add_sort_setup`), and `sortSetupForRange:` reads it back
+  as a `GnmSortSetup` (direction, keys with absolute indexes from the
+  clauses' offsets, keep formats, locale), as
+  dialog_cell_sort_load_sort_setup does.  `editing.m` checks the
+  remembered four-key sort and an unsorted range.
+- `SortDialog` loads the setup for its range after detecting the
+  heading afresh (`loadedSetup`, `chosenKeysForTesting`).
+  `GNM_SNAPSHOT_SORTSETUP=1`.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and

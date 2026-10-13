@@ -114,7 +114,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 
 | Action | Status | Notes / Phase |
 |---|---|---|
-| DataSort | partial | Data → Sort… (2026-10-12): rows or columns, header, six key rows with order and case, the collation's locale (a pop-up of common ones or typed), keep formats; no saved setups, the GTK's open-ended key list is six rows |
+| DataSort | partial | Data → Sort… (2026-10-12): rows or columns, header, six key rows with order and case, the collation's locale (a pop-up of common ones or typed), keep formats; 2026-10-13: the setup of the last dialog sort of a range is remembered on the sheet (`gnm_sheet_add_sort_setup`, `sortSetup(for:)`) and fills the dialog when it opens on that range again; the GTK's open-ended key list is six rows |
 | DataValidate | ported | Data → Validation… (2026-10-12): the criteria, the action's alerts on entry, the in-cell list, the input message |
 | DataTable | ported | Data → Table… (2026-10-12): the GTK dialog's row and column input cells over the selection, `cmd_create_data_table` |
 | DataShuffle, DataConsolidate | ported | Data → Shuffle… (columns, rows, or area in place, `cmd_data_shuffle`) and Data → Consolidate… (the ten functions, four source areas, top-row and left-column labels, copy labels, the Output page's values or formulas; `gnm_consolidate_tool_new`) (2026-10-12) |

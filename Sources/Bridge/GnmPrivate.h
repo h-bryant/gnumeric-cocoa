@@ -143,6 +143,11 @@ GType gnm_cocoa_sheet_control_get_type (void);
         description:(NSString *)description reported:(nullable BOOL *)reported error:(NSError **)error;
 @end
 
+@interface GnmSortSetup ()
+- (instancetype)initPrivateWithByRows:(BOOL)byRows keys:(NSArray<GnmSortKey *> *)keys retainsFormats:(BOOL)retainsFormats
+                               locale:(nullable NSString *)locale;
+@end
+
 @interface GnmSheet ()
 - (instancetype)initWithSheetView:(SheetView *)sheetView workbook:(GnmWorkbook *)workbook NS_DESIGNATED_INITIALIZER;
 /// The wrapper of an engine object, created on first sight and kept.

@@ -47,6 +47,21 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(SortKey)
 @property (nonatomic, readonly) BOOL byValue;
 @end
 
+/// A sort setup the sheet remembers for a range (`gnm_sheet_add_sort_setup`,
+/// what the GTK Sort dialog stores on OK and reloads when it opens on
+/// the same range): the direction, the keys with absolute indexes, keep
+/// formats, and the locale.
+NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(SortSetup)
+@interface GnmSortSetup : NSObject
+- (instancetype)init NS_UNAVAILABLE;
++ (instancetype)new NS_UNAVAILABLE;
+@property (nonatomic, readonly) BOOL byRows;
+@property (nonatomic, readonly, copy) NSArray<GnmSortKey *> *keys;
+@property (nonatomic, readonly) BOOL retainsFormats;
+/// nil for the current locale.
+@property (nonatomic, readonly, copy, nullable) NSString *locale;
+@end
+
 /// What and how `pasteWithOptions:` pastes; mirrors the engine's PASTE_*
 /// flags.  `GnmPasteDefault` is the plain paste (everything, with column
 /// widths and row heights adjusted).
@@ -339,6 +354,10 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 - (BOOL)sortRange:(GnmCellRange)range byRows:(BOOL)byRows hasHeader:(BOOL)hasHeader keys:(NSArray<GnmSortKey *> *)keys
     retainFormats:(BOOL)retainFormats locale:(nullable NSString *)locale error:(NSError **)error
     NS_SWIFT_NAME(sort(_:byRows:hasHeader:keys:retainFormats:locale:));
+/// The setup the last dialog sort of exactly `range` used (the sorts
+/// above remember theirs under the range's name, as cb_dialog_ok_clicked
+/// does, whether or not the command went through); nil when none.
+- (nullable GnmSortSetup *)sortSetupForRange:(GnmCellRange)range NS_SWIFT_NAME(sortSetup(for:));
 /// The engine's sort preferences (`core/sort/default/*`).
 @property (class, nonatomic, readonly) BOOL sortDefaultsToCaseSensitive;
 @property (class, nonatomic, readonly) BOOL sortDefaultsToRetainingFormats;

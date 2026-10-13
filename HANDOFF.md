@@ -397,10 +397,11 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    `SheetCompareDialog.swift`), the Format Cells Protection page, the
    shapes with the object toolbar's pull-down, Go to Top/Bottom/First/
    Last, the marching ants' animation, and File → Print Preview
-   (`PrintPreviewWindow.swift`).  Next, by usage: the "partial" rows
-   of `docs/mvp-known-gaps.md` (status bar fields, the tab text color,
-   saved sort setups) and the "no" rows (ViewNew, data slicers, goffice
-   components).
+   (`PrintPreviewWindow.swift`), and the Sort dialog's remembered
+   setups.  Next, by usage: the "partial" rows of
+   `docs/mvp-known-gaps.md` (status bar fields, the tab text color, the
+   remaining Settings pages) and the "no" rows (ViewNew, data slicers,
+   goffice components).
 6. Headless checks for all of it: `GNM_SNAPSHOT=out.png scripts/run-app.sh
    file` plus `GNM_SNAPSHOT_TYPE`, `_FORMAT`, `_PHASE3`, `_FREEZE`,
    `_SHEETS`, `_FILTER`, `_OBJECTS`, `_CHART`, `_EDITOR`, `_EVERYDAY`, `_FIND`, `_PREFS`, `_TEXT`, `_IMPORT`, `_COMMENT`, `_NAMES`, `_FILL`, `_GOAL`, `_COND`, `_STATS`, `_VALID`, `_LINK`, `_SOLVE`, `_PRINT`, `_FORMULA`, `_FUNC`, `_ZOOM` (`docs/build.md`); compare `out.png` with

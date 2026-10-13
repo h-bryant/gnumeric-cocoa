@@ -2404,6 +2404,42 @@ enum Snapshot {
                     preview.window.orderOut(nil)
                 }
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_SORTSETUP"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // Remembered sort setups: a table sorted once by its second
+                // column descending with the C locale through the dialog's
+                // command, then the dialog built again on the range comes
+                // back filled; captured to -sortsetup.png.
+                let rows: [(String, String)] = [("Name", "Score"), ("Ann", "7"), ("Bob", "9"), ("Cy", "3"), ("Dee", "5")]
+                for (row, pair) in rows.enumerated() {
+                    try? sheet.setText(pair.0, atColumn: 0, row: row, autocorrect: false)
+                    try? sheet.setText(pair.1, atColumn: 1, row: row, autocorrect: false)
+                }
+                let range = CellRange(start: CellCoordinate(column: 0, row: 0), end: CellCoordinate(column: 1, row: 4))
+                let key = SortKey(index: 1, descending: true, caseSensitive: true, byValue: true)
+                do {
+                    try sheet.sort(range, byRows: true, hasHeader: true, keys: [key], retainFormats: false, locale: "C")
+                } catch {
+                    NSLog("sortsetup: sort failed %@", error.localizedDescription)
+                }
+                let dialog = SortDialog(sheet: sheet, range: range)
+                let keys: String = dialog.chosenKeysForTesting.map { "\($0.0)/\($0.1 ? "desc" : "asc")/\($0.2 ? "cs" : "ci")" }.joined(separator: " ")
+                let a2: String = sheet.displayTextOfCell(atColumn: 0, row: 1) ?? "nil"
+                NSLog("sortsetup: loaded=%d keys=%@ A2='%@' setup=%@", dialog.loadedSetup ? 1 : 0, keys, a2,
+                      sheet.sortSetup(for: range).map { "\($0)" } ?? "nil")
+                if let content = dialog.alert.accessoryView {
+                    content.layoutSubtreeIfNeeded()
+                    if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                        content.cacheDisplay(in: content.bounds, to: rep)
+                        let sortPath = (path as NSString).deletingPathExtension + "-sortsetup.png"
+                        try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: sortPath))
+                        NSLog("sortsetup: captured %@ (%@)", sortPath, NSStringFromRect(content.bounds))
+                    }
+                }
+                let other = SortDialog(sheet: sheet, range: CellRange(start: CellCoordinate(column: 4, row: 0), end: CellCoordinate(column: 5, row: 3)))
+                NSLog("sortsetup: another range loaded=%d", other.loadedSetup ? 1 : 0)
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FREEZE"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

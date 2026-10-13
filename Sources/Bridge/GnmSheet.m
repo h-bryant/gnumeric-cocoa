@@ -1377,9 +1377,37 @@ range_from (GnmCellRange r)
     data->top = byRows;
     data->retain_formats = retainFormats;
     data->locale = locale.length ? g_strdup (locale.UTF8String) : NULL;
+    /* the dialog remembers the setup under the range's name before it
+     * sorts (cb_dialog_ok_clicked); the sheet owns key and copy */
+    GnmRange full;
+    range_init (&full, (int) range.start.column, (int) range.start.row, (int) range.end.column, (int) range.end.row);
+    gnm_sheet_add_sort_setup (_sheet, g_strdup (range_as_string (&full)), gnm_sort_data_copy (data));
     return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
         return cmd_sort (wbc, data);   /* takes ownership of data */
     } description:@"Could not sort." error:error];
+}
+
+- (GnmSortSetup *)sortSetupForRange:(GnmCellRange)range
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    if (!_sheet)
+        return nil;
+    GnmRange full;
+    range_init (&full, (int) range.start.column, (int) range.start.row, (int) range.end.column, (int) range.end.row);
+    GnmSortData const *data = gnm_sheet_find_sort_setup (_sheet, range_as_string (&full));
+    if (!data)
+        return nil;
+    /* dialog_cell_sort_load_sort_setup: the clauses' offsets are from
+     * the sorted range's first column (row) */
+    NSMutableArray<GnmSortKey *> *keys = [NSMutableArray array];
+    int base = data->top ? data->range.start.col : data->range.start.row;
+    for (int i = 0; i < data->num_clause; i++) {
+        GnmSortClause const *clause = &data->clauses[i];
+        [keys addObject:[[GnmSortKey alloc] initWithIndex:base + clause->offset descending:clause->asc
+                                            caseSensitive:clause->cs byValue:clause->val]];
+    }
+    return [[GnmSortSetup alloc] initPrivateWithByRows:data->top keys:keys retainsFormats:data->retain_formats
+                                                locale:data->locale ? [NSString stringWithUTF8String:data->locale] : nil];
 }
 
 + (BOOL)sortDefaultsToCaseSensitive { return gnm_conf_get_core_sort_default_by_case (); }
@@ -2548,6 +2576,28 @@ image_type_for_data (NSData *data)
 {
     if ([self.delegate respondsToSelector:@selector(sheetFrozenPanesDidChange:)])
         [self.delegate sheetFrozenPanesDidChange:self];
+}
+
+@end
+
+@implementation GnmSortSetup
+
+- (instancetype)initPrivateWithByRows:(BOOL)byRows keys:(NSArray<GnmSortKey *> *)keys retainsFormats:(BOOL)retainsFormats
+                               locale:(NSString *)locale
+{
+    if (!(self = [super init]))
+        return nil;
+    _byRows = byRows;
+    _keys = [keys copy];
+    _retainsFormats = retainsFormats;
+    _locale = [locale copy];
+    return self;
+}
+
+- (NSString *)description
+{
+    return [NSString stringWithFormat:@"<%@ %@ %lu keys formats=%d locale=%@>", self.class, _byRows ? @"rows" : @"columns",
+            (unsigned long) _keys.count, _retainsFormats, _locale ?: @"(current)"];
 }
 
 @end

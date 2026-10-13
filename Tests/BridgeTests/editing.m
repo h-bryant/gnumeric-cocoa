@@ -688,6 +688,13 @@ int main (void)
         NSArray *four = @[byN, byV, byN, byV];
         GNM_ASSERT ([s sortRange:region byRows:YES hasHeader:YES keys:four retainFormats:YES locale:@"en_US.UTF-8" error:&error], @"four keys: %@", error);
         NSLog (@"sort with a locale and four keys: undo '%@'", wb.undoLabel);
+        /* the setup the dialog would reload for the range */
+        GnmSortSetup *setup = [s sortSetupForRange:region];
+        GNM_ASSERT (setup && setup.byRows && setup.keys.count == 4 && setup.retainsFormats, @"setup remembered: %@", setup);
+        GNM_ASSERT_EQ_STR (setup.locale ?: @"", @"en_US.UTF-8");
+        GNM_ASSERT (setup.keys[0].index == 90 && setup.keys[0].isDescending && setup.keys[0].isCaseSensitive, @"first key N desc: %@", setup);
+        GNM_ASSERT (setup.keys[1].index == 91 && !setup.keys[1].isDescending, @"second key V asc");
+        GNM_ASSERT ([s sortSetupForRange:GnmCellRangeMake (0, 0, 1, 1)] == nil, @"no setup for an unsorted range");
         /* by columns: a row of keys */
         [s setText:@"x" atColumn:95 row:120 autocorrect:NO error:NULL];
         [s setText:@"z" atColumn:96 row:120 autocorrect:NO error:NULL];
