@@ -2035,6 +2035,17 @@
   the reasoning; the decision can be revisited if side-by-side sheets
   of one file are wanted.
 
+### 2026-10-13 (later): data slicers left out
+
+- Henry chose to leave Data → Data Slicer (Create, Refresh, Edit) out.
+  In 1.12.62 the feature is unfinished: the Create dialog's source
+  handler ends in `#warning "FIXME: Now what?"`,
+  `gnm_sheet_slicer_regenerate` is compiled out with `#if 0`, and the
+  Refresh command clears the slicer's range around that empty call.  A
+  port would be a stub and working pivot tables a project of their own.
+  The Excel reader loads pivot definitions into slicer objects; whether
+  the writer puts them back is unverified.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
