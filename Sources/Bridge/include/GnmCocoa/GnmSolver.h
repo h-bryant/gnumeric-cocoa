@@ -117,6 +117,31 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(SolverOutcome)
 @property (nonatomic, readonly) double elapsedSeconds;
 @end
 
+/// A run in progress (the dialog's run page: cb_notify_status,
+/// cb_timer_tick, the Stop button): the engine's solver works through
+/// the GLib main context, which the app's run loop pumps.  Read its
+/// state, stop it, and once it finished, `finish` to store the solution.
+NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(SolverRun)
+@interface GnmSolverRun : NSObject
+- (instancetype)init NS_UNAVAILABLE;
++ (instancetype)new NS_UNAVAILABLE;
+/// The dialog's Solver Status so far ("Running", "Done (Timeout)").
+@property (nonatomic, readonly, copy) NSString *status;
+@property (nonatomic, readonly) BOOL isFinished;
+/// The objective value the solver reported so far, or nil.
+@property (nonatomic, readonly, copy, nullable) NSNumber *objectiveValue;
+@property (nonatomic, readonly) double elapsedSeconds;
+/// The dialog's timer tick: stop the solver past its time limit; YES
+/// when that just happened.
+- (BOOL)checkTimeout;
+/// The dialog's Stop button; NO when the solver would not stop.
+- (BOOL)stop;
+/// Once finished: store a solution in the cells, with the reports, as
+/// one undoable command ("Running solver"), and say what the run came
+/// to.  Nil before the run finished, and on a second call.
+- (nullable GnmSolverOutcome *)finish;
+@end
+
 @interface GnmEngine (Solver)
 /// The algorithms the plugins registered, by name.
 @property (nonatomic, readonly) NSArray<GnmSolverAlgorithm *> *solverAlgorithms;
@@ -130,6 +155,11 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(SolverOutcome)
 /// as "Changing solver parameters" when they differ; NO with the
 /// engine's message otherwise, the sheet's settings unchanged.
 - (BOOL)setSolverSettings:(GnmSolverSettings *)settings error:(NSError **)error NS_SWIFT_NAME(setSolverSettings(_:));
+/// Start a run with the sheet's parameters (run_solver): the parameters
+/// checked, the chosen algorithm's solver created and started.  Nil with
+/// the dialog's message when it cannot start; a run that failed at once
+/// comes back finished with its reason.
+- (nullable GnmSolverRun *)startSolverWithError:(NSError **)error NS_SWIFT_NAME(startSolver());
 /// Run the sheet's settings to the end (the dialog's Solve, waiting as
 /// its nested main loop does; the time limit holds), store a solution
 /// in the cells with the reports asked for as one command ("Running
@@ -137,6 +167,9 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(SolverOutcome)
 /// with the message when the settings are invalid, the algorithm
 /// cannot run, or the solver failed to start.
 - (nullable GnmSolverOutcome *)runSolverWithError:(NSError **)error NS_SWIFT_NAME(runSolver());
+@end
+
+@interface GnmSheet (SolverRules)
 /// A rule as the dialog lists it ("A1:A3 ≤ 10"), or nil when its sides
 /// do not parse (`gnm_solver_constraint_as_str`).
 - (nullable NSString *)descriptionOfSolverRule:(GnmSolverRule *)rule NS_SWIFT_NAME(description(of:));

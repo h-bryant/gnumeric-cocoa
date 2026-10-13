@@ -99,7 +99,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 
 | Action | Status | Notes / Phase |
 |---|---|---|
-| ToolsSolver | ported | Tools → Solver… (2026-10-12): parameters, model and algorithm, constraints, options, reports; Gnumeric's own solver, GLPK and lp_solve when installed; no Stop button, no scenarios |
+| ToolsSolver | ported | Tools → Solver… (2026-10-12): parameters, model and algorithm, constraints, options, reports; Gnumeric's own solver, GLPK and lp_solve when installed; the run page as a progress sheet with the status, objective, elapsed time, and a Stop button (`GnmSolverRun`); no scenarios |
 | ToolsAutoCorrect, ToolsAutoSave, ToolsSimulation, ToolsCompare, ToolsPlugins, ToolsScenarios, ToolsScenarioAdd | no | Phase 5 |
 | ToolsGoalSeek | ported | Tools → Goal Seek… (2026-10-12) |
 | Statistics: Descriptive Statistics, Correlation, Covariance, Rank and Percentile, Regression, Two Means (t and z), Two Variances (F), ANOVA single factor, Sampling, Moving Average, Exponential Smoothing | ported | Tools → Statistics (2026-10-12): the GTK dialogs' Input, tool, and Output pages as alert sheets over `cmd_analysis_tool` |

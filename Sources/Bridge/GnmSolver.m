@@ -239,21 +239,29 @@ factory_with_id (NSString *identifier)
 
 @end
 
+/* cb_notify_status's words */
+static NSString *
+status_text (GnmSolver *sol)
+{
+    switch (sol->status) {
+    case GNM_SOLVER_STATUS_READY: return @"Ready";
+    case GNM_SOLVER_STATUS_PREPARING: return @"Preparing";
+    case GNM_SOLVER_STATUS_PREPARED: return @"Prepared";
+    case GNM_SOLVER_STATUS_RUNNING: return @"Running";
+    case GNM_SOLVER_STATUS_DONE: return @"Done";
+    case GNM_SOLVER_STATUS_CANCELLED: return @"Cancelled";
+    case GNM_SOLVER_STATUS_ERROR:
+    default: return @"Error";
+    }
+}
+
 @implementation GnmSolverOutcome
 
 - (instancetype)initWithSolver:(GnmSolver *)sol
 {
     if (!(self = [super init]))
         return nil;
-    switch (sol->status) {
-    case GNM_SOLVER_STATUS_READY: _status = @"Ready"; break;
-    case GNM_SOLVER_STATUS_PREPARING: _status = @"Preparing"; break;
-    case GNM_SOLVER_STATUS_PREPARED: _status = @"Prepared"; break;
-    case GNM_SOLVER_STATUS_RUNNING: _status = @"Running"; break;
-    case GNM_SOLVER_STATUS_DONE: _status = @"Done"; break;
-    case GNM_SOLVER_STATUS_ERROR: _status = @"Error"; break;
-    case GNM_SOLVER_STATUS_CANCELLED: _status = @"Cancelled"; break;
-    }
+    _status = status_text (sol);
     _reason = sol->reason ? GnmString (sol->reason) : nil;
     _quality = sol->result ? (GnmSolverQuality) sol->result->quality : GnmSolverQualityNone;
     _hasSolution = gnm_solver_has_solution (sol);
@@ -333,7 +341,7 @@ cb_keep_waiting (gpointer data)
     return ok;
 }
 
-- (GnmSolverOutcome *)runSolverWithError:(NSError **)error
+- (GnmSolverRun *)startSolverWithError:(NSError **)error
 {
     NSAssert (NSThread.isMainThread, @"engine access off the main thread");
     Sheet *sheet = self.engineSheet;
@@ -362,31 +370,119 @@ cb_keep_waiting (gpointer data)
     if (!sr.sheet)
         sr.sheet = param->sheet;
     GOUndo *undo = clipboard_copy_range_undo (sr.sheet, &sr.range);
-    WorkbookControl *wbc = workbook.control;
-    gboolean ok = gnm_solver_start (sol, wbc, &err);
-    if (ok) {
-        /* the dialog's nested main loop: the solver's sources run until
-         * it is done, with the time limit checked as its timer does */
-        guint ticker = g_timeout_add (100, cb_keep_waiting, NULL);
-        while (!gnm_solver_finished (sol)) {
-            g_main_context_iteration (NULL, TRUE);
-            gnm_solver_check_timeout (sol);
-        }
-        g_source_remove (ticker);
-        ok = gnm_solver_has_solution (sol);
-    } else if (err)
-        gnm_solver_set_reason (sol, err->message);
+    if (!gnm_solver_start (sol, workbook.control, &err)) {
+        /* finished at once, with the words of the failure */
+        if (err)
+            gnm_solver_set_reason (sol, err->message);
+        if (!gnm_solver_finished (sol))
+            gnm_solver_set_status (sol, GNM_SOLVER_STATUS_ERROR);
+    }
     g_clear_error (&err);
-    if (ok) {
-        gnm_solver_store_result (sol);
-        GOUndo *redo = clipboard_copy_range_undo (sr.sheet, &sr.range);
+    GnmSolverRun *run = [[GnmSolverRun alloc] initWithSolver:sol sheet:self range:sr undo:undo];
+    g_object_unref (sol);
+    return run;
+}
+
+- (GnmSolverOutcome *)runSolverWithError:(NSError **)error
+{
+    GnmSolverRun *run = [self startSolverWithError:error];
+    if (!run)
+        return nil;
+    /* the dialog's nested main loop: the solver's sources run until it
+     * is done, with the time limit checked as its timer does */
+    guint ticker = g_timeout_add (100, cb_keep_waiting, NULL);
+    while (!run.isFinished) {
+        g_main_context_iteration (NULL, TRUE);
+        [run checkTimeout];
+    }
+    g_source_remove (ticker);
+    return [run finish];
+}
+
+@end
+
+@implementation GnmSolverRun {
+    GnmSolver *_sol;
+    GnmSheet *_sheet;
+    /* kept alive past the solver: its parameters are the sheet's, and
+     * their dependents unlink from the sheet when the solver goes */
+    GnmWorkbook *_workbook;
+    GnmSheetRange _range;
+    GOUndo *_undo;
+    BOOL _finished;
+}
+
+- (instancetype)initWithSolver:(GnmSolver *)solver sheet:(GnmSheet *)sheet range:(GnmSheetRange)range undo:(GOUndo *)undo
+{
+    if (!(self = [super init]))
+        return nil;
+    _sol = g_object_ref (solver);
+    _sheet = sheet;
+    _workbook = sheet.workbook;
+    _range = range;
+    _undo = undo;
+    return self;
+}
+
+- (void)dealloc
+{
+    /* before ARC lets the workbook go */
+    if (_undo)
+        g_object_unref (_undo);
+    g_object_unref (_sol);
+}
+
+- (NSString *)status
+{
+    NSString *text = status_text (_sol);
+    return _sol->reason ? [NSString stringWithFormat:@"%@ (%s)", text, _sol->reason] : text;
+}
+
+- (BOOL)isFinished { return gnm_solver_finished (_sol); }
+
+- (NSNumber *)objectiveValue
+{
+    /* update_obj_value: the result's value, once there is one */
+    return _sol->result ? @(_sol->result->value) : nil;
+}
+
+- (double)elapsedSeconds { return gnm_solver_elapsed (_sol); }
+
+- (BOOL)checkTimeout
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    return gnm_solver_check_timeout (_sol);
+}
+
+- (BOOL)stop
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    if (gnm_solver_finished (_sol))
+        return YES;
+    return gnm_solver_stop (_sol, NULL);
+}
+
+- (GnmSolverOutcome *)finish
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    if (_finished || !gnm_solver_finished (_sol))
+        return nil;
+    _finished = YES;
+    Sheet *sheet = _sheet.engineSheet;
+    GnmWorkbook *workbook = _sheet.workbook;
+    GnmSolverParameters *param = _sol->params;
+    if (sheet && workbook && gnm_solver_has_solution (_sol)) {
+        gnm_solver_store_result (_sol);
+        GOUndo *undo = _undo;
+        _undo = NULL;
+        GOUndo *redo = clipboard_copy_range_undo (_range.sheet, &_range.range);
         if (param->options.program_report || param->options.sensitivity_report) {
             Workbook *wb = param->sheet->workbook;
             GOUndo *undo_report = go_undo_binary_new (wb, workbook_sheet_state_new (wb), (GOUndoBinaryFunc) workbook_sheet_state_restore,
                                                       NULL, (GFreeFunc) workbook_sheet_state_unref);
             undo = go_undo_combine (undo, undo_report);
             char *base = g_strdup_printf ("%s %%s Report", sheet->name_unquoted);
-            gnm_solver_create_report (sol, wbc, base);
+            gnm_solver_create_report (_sol, workbook.control, base);
             g_free (base);
             GOUndo *redo_report = go_undo_binary_new (wb, workbook_sheet_state_new (wb), (GOUndoBinaryFunc) workbook_sheet_state_restore,
                                                       NULL, (GFreeFunc) workbook_sheet_state_unref);
@@ -395,15 +491,14 @@ cb_keep_waiting (gpointer data)
         [workbook _runCommand:^gboolean (WorkbookControl *control) {
             return cmd_generic (control, "Running solver", undo, redo);
         } description:@"Could not record the solver's result." error:NULL];
-        undo = NULL;
     }
-    if (undo)
-        g_object_unref (undo);
     gnm_app_recalc ();
-    GnmSolverOutcome *outcome = [[GnmSolverOutcome alloc] initWithSolver:sol];
-    g_object_unref (sol);
-    return outcome;
+    return [[GnmSolverOutcome alloc] initWithSolver:_sol];
 }
+
+@end
+
+@implementation GnmSheet (SolverRules)
 
 - (NSString *)descriptionOfSolverRule:(GnmSolverRule *)rule
 {

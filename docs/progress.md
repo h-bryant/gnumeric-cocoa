@@ -1321,6 +1321,30 @@
   `GNM_SNAPSHOT_STATS=1` adds a histogram into D20 through its dialog
   (captured to `-hist.png`) and a test of independence into D30.
 
+## 2026-10-12: The Solver's progress sheet and Stop button
+
+- `GnmSolverRun` splits `runSolverWithError:` into the GTK dialog's run
+  page: `startSolver` checks the parameters, creates and starts the
+  algorithm's solver, and copies the input cells for undo; the run
+  reports `status` ("Running", "Done (Timeout)"), `objectiveValue`,
+  `elapsedSeconds`, `checkTimeout` (the dialog's timer tick), `stop`
+  (`gnm_solver_stop`), and `finish` (store the result, the reports, the
+  "Running solver" command; the outcome).  `runSolverWithError:` is now
+  start, a GLib loop, finish.  The run keeps the workbook wrapper alive:
+  the solver's parameters are the sheet's, and their dependents unlink
+  from the sheet when the solver goes (a crash in the test otherwise).
+- `SolverProgress.swift`: an alert sheet with the status, objective, and
+  elapsed labels and a Stop button, polled by a 100 ms timer while the
+  engine's solver works through the run loop; it closes itself when the
+  run ends and the outcome alert follows.  The window controller starts
+  the run after the Solver dialog's sheet closes.  Headlessly the sheet
+  is not shown but the timer path is: `GNM_SNAPSHOT_SOLVE=1` pumps the
+  run loop until the outcome arrives.  Main-queue blocks did not run
+  inside that nested loop, so the headless path starts the progress
+  without the one-turn delay.
+- `solver.m` starts a run, stops it at once, and finishes it
+  ("Cancelled" with the feasible start stored, as the GTK does).
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -1338,8 +1362,8 @@
    printing, formula range selection by mouse and keyboard, the font
    shortcuts, autocompletion, the function selector, and array formulas;
    and all 27 Statistics tools; next the rest of Phase 5 by usage
-   frequency: a Stop button for long solves, the editor in the cell's
-   own font, a plugin manager) from
+   frequency: the editor in the cell's own font, a plugin manager, the
+   scenarios and simulation tools) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -1363,7 +1387,7 @@
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
 3. The state at the end of 2026-10-12: `main` at the autocompletion and
-   remaining-statistics commit (after keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+   solver-progress commit (after the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

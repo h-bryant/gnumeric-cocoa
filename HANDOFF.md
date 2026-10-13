@@ -358,8 +358,11 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    (`sheet_find_boundary_*`), then the fifteen remaining statistics
    tools on the analysis pattern with the GTK's Statistics menu groups
    (patch 0005 for the frequency and histogram tools' double free).
-   Next, by usage: a Stop button and progress for long solver runs, the
-   editor in the cell's own font, a plugin manager;
+   The Solver then got the GTK dialog's run page: a progress sheet with
+   the status, the objective so far, the elapsed time, and a Stop button
+   over `GnmSolverRun` (start, poll, stop, finish).  Next, by usage: the
+   editor in the cell's own font, a plugin manager, the scenarios and
+   simulation tools;
    image and widget editors (`cmd_so_set_*`) later; the smaller Phase 3
    gaps (Insert/Delete Cells,
    Goto and the name box, the formula bar, autocomplete, drag and drop,

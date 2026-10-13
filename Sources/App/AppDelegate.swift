@@ -671,6 +671,12 @@ enum Snapshot {
                 }
                 controller.solver(nil)
                 SolverDialog.headlessDriver = nil
+                // The run goes through the progress sheet's timer: pump the
+                // run loop until the outcome arrives.
+                let deadline = Date(timeIntervalSinceNow: 15)
+                while WorkbookWindowController.lastSolverOutcome == nil && Date() < deadline {
+                    RunLoop.main.run(mode: .default, before: Date(timeIntervalSinceNow: 0.05))
+                }
                 let outcome = WorkbookWindowController.lastSolverOutcome
                 NSLog("solve: status=%@ quality=%ld objective=%g A1=%@ A2=%@ B1=%@ undo=%@", outcome?.status ?? "nil", outcome?.quality.rawValue ?? -1,
                       outcome?.objectiveValue ?? .nan, sheet.displayTextOfCell(atColumn: 0, row: 0) ?? "nil",

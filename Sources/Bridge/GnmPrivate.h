@@ -229,6 +229,12 @@ GType gnm_cocoa_sheet_control_get_type (void);
 - (instancetype)initWithSolver:(GnmSolver *)solver NS_DESIGNATED_INITIALIZER;
 @end
 
+@interface GnmSolverRun ()
+/// Over a started solver (referenced), the input cells' range, and the
+/// undo copied before the start (taken over).
+- (instancetype)initWithSolver:(GnmSolver *)solver sheet:(GnmSheet *)sheet range:(GnmSheetRange)range undo:(GOUndo *)undo NS_DESIGNATED_INITIALIZER;
+@end
+
 @interface GnmPrintSettings ()
 - (instancetype)initWithPrintInformation:(GnmPrintInformation *)pi NS_DESIGNATED_INITIALIZER;
 - (void)_applyToPrintInformation:(GnmPrintInformation *)pi;

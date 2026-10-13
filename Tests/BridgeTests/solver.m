@@ -3,6 +3,7 @@
 // engine's refusals), a small linear program solved by Gnumeric's own
 // solver with its program report, undo and redo, and an infeasible one.
 #import "GnmTest.h"
+#include <glib.h>
 
 static NSString *
 cell (GnmSheet *s, int col, int row)
@@ -135,6 +136,30 @@ int main (void)
         NSLog (@"solver: infeasible run: %@ status %@ quality %ld solution %d reason %@", error, outcome.status, (long) outcome.quality, outcome.hasSolution, outcome.reason);
         GNM_ASSERT (outcome == nil || !outcome.hasSolution, @"no solution stored");
         GNM_ASSERT (number (s, 0, 0) == 1, @"x untouched: %@", cell (s, 0, 0));
+
+        /* a run started, stopped at once, and finished (the dialog's Stop) */
+        [wb undo];
+        GNM_ASSERT ([s setText:@"1" atColumn:0 row:0 autocorrect:NO error:&error] && [s setText:@"1" atColumn:0 row:1 autocorrect:NO error:&error], @"reset: %@", error);
+        settings = [s solverSettings];
+        settings.rules = @[[[GnmSolverRule alloc] initWithKind:GnmSolverRuleLessOrEqual leftSide:@"A1" rightSide:@"3"],
+                           [[GnmSolverRule alloc] initWithKind:GnmSolverRuleLessOrEqual leftSide:@"A1:A2" rightSide:@"4"]];
+        GNM_ASSERT ([s setSolverSettings:settings error:&error], @"stop settings: %@", error);
+        error = nil;
+        GnmSolverRun *run = [s startSolverWithError:&error];
+        GNM_ASSERT (run != nil, @"start: %@", error);
+        NSLog (@"solver: started: status '%@' finished %d objective %@", run.status, run.isFinished, run.objectiveValue);
+        GNM_ASSERT ([run finish] == nil, @"nothing to finish before the end");
+        GNM_ASSERT ([run stop], @"stop");
+        for (int i = 0; i < 200 && !run.isFinished; i++) {
+            g_main_context_iteration (NULL, FALSE);
+            [run checkTimeout];
+        }
+        NSLog (@"solver: stopped: status '%@' finished %d elapsed %.3f", run.status, run.isFinished, run.elapsedSeconds);
+        GNM_ASSERT (run.isFinished, @"the solver stopped");
+        outcome = [run finish];
+        GNM_ASSERT (outcome != nil && [run finish] == nil, @"finished once: %@", outcome);
+        NSLog (@"solver: stopped outcome: status %@ quality %ld solution %d; A1=%@", outcome.status, (long) outcome.quality, outcome.hasSolution, cell (s, 0, 0));
+        GNM_ASSERT ([outcome.status hasPrefix:@"Cancelled"] || !outcome.hasSolution || number (s, 0, 0) >= 1, @"a stop keeps the cells or stores a solution");
 
         /* no algorithm */
         settings.algorithmIdentifier = nil;

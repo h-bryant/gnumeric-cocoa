@@ -140,8 +140,9 @@ validation (C1 takes a value from B1:B5 through the dialog, captured to
 `-valid.png`; an entry outside the list refused, one from it taken), and
 hyperlinks (a web link on A1 through the dialog, captured to
 `-link.png`, an internal link on A3 followed to C5), and the Solver (a
-small linear program through the dialog, captured to `-solve.png`, the
-solution in the cells), and printing (landscape with grid lines and a
+small linear program through the dialog, captured to `-solve.png`, run
+through the progress sheet's timer with the run loop pumped until the
+outcome, the solution in the cells), and printing (landscape with grid lines and a
 header through the Page Setup dialog, captured to `-print.png`, the
 first page drawn to `-page1.png`), formula range selection ("=SUM(" in
 A5 takes B1:B3 from the grid, then Bold; "=MAX(" in A6 takes B1:B3 by

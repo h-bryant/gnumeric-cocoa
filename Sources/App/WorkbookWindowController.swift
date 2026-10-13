@@ -1102,7 +1102,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     nonisolated(unsafe) static var lastSolverOutcome: SolverOutcome?
 
     /// Tools → Solver…: the GTK dialog as an alert sheet; Solve records
-    /// the settings and runs to the end, then shows the outcome.
+    /// the settings and starts the run, which the progress sheet follows
+    /// (with its Stop button) until the outcome is shown.
     @objc func solver(_ sender: Any?) {
         guard let window, let sheet = gridView.sheet, window.attachedSheet == nil else { return }
         if gridView.isEditing { gridView.cancelEditing() }
@@ -1117,15 +1118,29 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             }
             guard solve else { return true }
             do {
-                let outcome = try sheet.runSolver()
-                Self.lastSolverOutcome = outcome
-                presentSolverOutcome(outcome)
+                let run = try sheet.startSolver()
+                let follow = { [weak self] in
+                    guard let self, let window = self.window else { return }
+                    solverProgress = SolverProgress(run: run, in: window) { [weak self] outcome in
+                        guard let self else { return }
+                        solverProgress = nil
+                        Self.lastSolverOutcome = outcome
+                        presentSolverOutcome(outcome)
+                    }
+                    solverProgress?.begin()
+                }
+                // The dialog's sheet is still closing; the progress sheet
+                // waits a turn of the run loop (not headlessly).
+                if SolverDialog.headlessDriver != nil { follow() } else { DispatchQueue.main.async(execute: follow) }
             } catch {
                 presentMessage(error.localizedDescription)
             }
             return true
         }
     }
+
+    /// The run in progress, while there is one.
+    private var solverProgress: SolverProgress?
 
     /// The dialog's Results page: the solver and problem status, the
     /// objective value, the elapsed time.
