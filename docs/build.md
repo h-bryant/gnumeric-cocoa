@@ -65,6 +65,7 @@ not a Homebrew formula; `dylibbundler` 1.0.5 is (Phase 6).
 | `scripts/build-app.sh` | swiftc build of `Sources/App` plus the bridge into `build/app/GnumericCocoa.app` (ad-hoc signed) |
 | `scripts/test-xcode.sh` | build the Xcode test bundle and run it with `xcrun xctest`; `--xcodebuild` uses `xcodebuild test` (needs developer mode) |
 | `scripts/bundle.sh` | make `build/dist/GnumericCocoa.app`, a relocatable bundle: the dylib closure in `Contents/Frameworks` rewritten to `@rpath`, the Gnumeric and goffice plugins, the templates, the GSettings schemas, the gdk-pixbuf loaders, and every bundled library's license texts with an index under `Contents/Resources`, everything ad-hoc signed (see "Bundling") |
+| `scripts/gen-gtk-labels.py` | regenerate `Sources/App/GTKLabels.swift`, the GTK's action labels by plain title, from `upstream/gnumeric/src/wbc-gtk-actions.c` (run after an upstream update) |
 | `scripts/verify-bundle.sh` | make the bundle and run it headlessly with `build/prefix` renamed away, logging what the engine found and whether the licenses are inside (`GNM_SNAPSHOT_BUNDLE=1`) |
 | `scripts/run-app.sh [file ...]` | launch that app directly; `GNM_SNAPSHOT=out.png` writes the grid (`out.png`), the whole window through `cacheDisplay` (`out-window.png`) and through `CALayer.render` (`out-layers.png`), then quits; `GNM_DEBUG_LAYOUT=1` logs view frames, layer state, and every grid and header draw with its transform |
 
@@ -121,7 +122,7 @@ GNM_SNAPSHOT=/tmp/grid.png scripts/run-app.sh upstream/gnumeric/samples/format-t
 `GNM_SNAPSHOT_MERGE=1`, `GNM_SNAPSHOT_COMPARE=1`, `GNM_SNAPSHOT_PROTECT=1`,
 `GNM_SNAPSHOT_SHAPES=1`, `GNM_SNAPSHOT_PREVIEW=1`, `GNM_SNAPSHOT_SORTSETUP=1`,
 `GNM_SNAPSHOT_REPEAT=1`, `GNM_SNAPSHOT_XMLOPEN=1`, `GNM_SNAPSHOT_BUNDLE=1`, and
-`GNM_SNAPSHOT_RTL=1` (a right-to-left sheet: column A at the right, the row header on the right, Left moving to B, and back), and `GNM_SNAPSHOT_LOCALE=1` (run under `LANG=de_DE.UTF-8 LANGUAGE=de`: the engine's messages in German, "1,5" a number)
+`GNM_SNAPSHOT_RTL=1` (a right-to-left sheet: column A at the right, the row header on the right, Left moving to B, and back), `GNM_SNAPSHOT_LOCALE=1` (run under `LANG=de_DE.UTF-8 LANGUAGE=de`: the engine's messages in German, "1,5" a number), and `GNM_SNAPSHOT_MENUS=1` (under the same: the menu bar, Format → Sheet, the sheet tab menu, and a dynamic title in German, with the count of titles that changed; under English, none)
 exercise zoom, editing and saving, the Format Cells model, the Phase 3
 commands, frozen panes, sheet management, the autofilter with the Sort
 command, a sheet resize, and a tab color, the sheet objects (select, move,
@@ -344,6 +345,21 @@ Third-Party Licenses would open.
 Not yet done: running on a machine without Homebrew (fontconfig,
 GIO modules, and goffice's own compiled-in plugin directory are untested
 without it) and a real signature (HANDOFF.md Phase 6).
+
+## Localization (2026-10-13)
+
+The engine's messages follow the process locale (above, "Bundling", the
+catalogs).  The app's menu titles follow it too: `Localization.title`
+takes a title as written in `MainMenu.swift`, finds the GTK's message id
+for it (`GTKLabels.messages`, generated from the action labels in
+`wbc-gtk-actions.c` by `scripts/gen-gtk-labels.py`; `Localization.aliases`
+for titles worded differently here; else the title itself, for the
+command names the engine translates), asks `Engine.localizedString` for
+its translation in the gnumeric catalog, and strips the mnemonic.  A
+title without a translation stays as written, so an English run is
+unchanged.  The menu is built after the engine starts.  Still English:
+the dialogs, the toolbar labels, the cell context menu, and the titles
+with no GTK counterpart.
 
 ## Xcode build
 

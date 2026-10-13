@@ -120,9 +120,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 
     func applicationWillFinishLaunching(_ notification: Notification) {
-        NSApp.mainMenu = MainMenu.build()
         do {
             let engine = try Engine.start(configuration: EngineLocator.configuration())
+            // The menu after the engine: its titles come through the
+            // engine's catalogs (Localization).
+            self.engine = engine
+            NSApp.mainMenu = MainMenu.build()
             engine.messageHandler = { (error: any Error) in
                 let nsError = error as NSError
                 NSLog("Gnumeric: %@ %@", nsError.localizedDescription, nsError.localizedRecoverySuggestion ?? "")
@@ -2705,6 +2708,28 @@ enum Snapshot {
                 let b1: String = sheet.displayTextOfCell(atColumn: 1, row: 0) ?? "nil"
                 let state: String = "messages=\(engine.messagesLocale) dir=\(engine.localeDirectory) sheet=\(sheet.name) translated=\(engine.localizedString("Sheet%d")) undo=\(undo) b1=\(b1)"
                 NSLog("locale: %@", state)
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_MENUS"] != nil,
+               let controller = window.windowController as? WorkbookWindowController {
+                // The menu titles in the engine's language (run under
+                // LANG=de_DE.UTF-8 LANGUAGE=de): the menu bar, the sheet
+                // tab menu, a dynamic title, and how many titles changed.
+                let top: [String] = NSApp.mainMenu?.items.map { $0.title } ?? []
+                NSLog("menus: top=%@", top.joined(separator: " | "))
+                let pairs = Localization.titlesForTesting
+                let changed = pairs.filter { $0.english != $0.shown }
+                let sample: String = changed.prefix(8).map { "\($0.english)→\($0.shown)" }.joined(separator: ", ")
+                NSLog("menus: localized=%ld of %ld: %@", changed.count, pairs.count, sample)
+                let formatMenu = NSApp.mainMenu?.items.first { $0.title == Localization.title("Format") }?.submenu
+                let sheetMenuTitles: [String] = formatMenu?.items.first { $0.submenu != nil && $0.title == Localization.title("Sheet") }?.submenu?.items.map { $0.title } ?? []
+                NSLog("menus: format→sheet=%@", sheetMenuTitles.joined(separator: " | "))
+                let tabMenu: [String] = MainMenu.sheetMenu().items.map { $0.title }
+                NSLog("menus: tab=%@", tabMenu.joined(separator: " | "))
+                let breakItem = NSMenuItem(title: "", action: #selector(WorkbookWindowController.toggleColumnPageBreak(_:)), keyEquivalent: "")
+                _ = controller.validateUserInterfaceItem(breakItem)
+                NSLog("menus: pagebreak='%@'", breakItem.title)
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }

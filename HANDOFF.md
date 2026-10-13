@@ -409,9 +409,11 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    has the reasoning for all three.  Custom document properties came
    last (the Properties dialog's fourth tab).  Right-to-left sheets (Phase 7) came
    the same day, and the engine's messages now follow the macOS language
-   (the catalogs are built and bundled; `Engine.localizedString`).  Next:
-   the app's own titles through the GTK catalog (the rest of the
-   localization row of `docs/mvp-known-gaps.md`), Phase 6's remaining
+   (the catalogs are built and bundled; `Engine.localizedString`), and
+   the menu bar's titles follow it through the GTK's own labels
+   (`Localization`, `scripts/gen-gtk-labels.py`).  Next: the dialogs,
+   the toolbar, and the context menus through the same catalog (the rest
+   of the localization row of `docs/mvp-known-gaps.md`), Phase 6's remaining
    items (a run on a Mac without Homebrew, a real signature; the
    relocatable bundle, the licenses, and the locale data are done since
    2026-10-13), and Henry's

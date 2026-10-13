@@ -867,7 +867,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             let has = columns ? sheet.columnPageBreaks.contains(NSNumber(value: edit.column))
                               : sheet.rowPageBreaks.contains(NSNumber(value: edit.row))
             if let menuItem = item as? NSMenuItem {
-                menuItem.title = (has ? "Remove " : "Add ") + (columns ? "Column" : "Row") + " Page Break"
+                menuItem.title = Localization.title((has ? "Remove " : "Add ") + (columns ? "Column" : "Row") + " Page Break")
             }
             return columns ? edit.column != 0 : edit.row != 0
         case #selector(clearPageBreaks(_:)):

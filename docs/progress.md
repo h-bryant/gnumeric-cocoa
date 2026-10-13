@@ -2222,6 +2222,32 @@
   (`undo=Ausdruck wird in B1 eingefügt`); `scripts/verify-bundle.sh` runs
   the bundle under German and logs `catalogs=62 sheet=Blatt1`.
 
+### 2026-10-13 (later): the menu titles follow the engine's language
+
+- `Localization.title` (Sources/App/Localization.swift): a menu title
+  as written in English → the GTK's message id (`GTKLabels.messages`,
+  262 action labels keyed by plain title, generated from
+  `wbc-gtk-actions.c` by `scripts/gen-gtk-labels.py`, which decodes the
+  C octal escapes of "Display _Formulæ"; `aliases` for the 33 titles
+  worded differently here, "Find…" being the GTK's "S_earch..."; else
+  the title itself, which translates the command names such as "Add
+  Column Page Break") → `Engine.localizedString` → the mnemonic
+  stripped, "..." an ellipsis, the app's ellipsis kept.  A title with no
+  translation stays as written.  `MainMenu` passes every literal title
+  through it (the `items` and `submenu` helpers too), and the menu is
+  built after the engine starts.  The page-break titles the window
+  controller sets go through it as well.
+- `GNM_SNAPSHOT_MENUS=1` under German: the menu bar reads Datei |
+  Bearbeiten | Ansicht | Einfügen | Format | Daten | Werkzeuge | Window |
+  Hilfe, Format → Sheet is German through "Richtung", the tab menu is
+  German except Tab Color and Move Left/Right (no GTK message), the
+  page-break item is "Spaltenbezogener Seitenumbruch hinzufügen", and 256
+  of 289 titles changed; under English, 0 of 289.  The German catalog
+  writes " …" with a space before its ellipses; the titles show it as
+  the translators wrote it.
+- Still English: the dialogs, the toolbar labels, the cell context
+  menu, and the standard macOS items.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -2262,8 +2288,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-13: `main` at the engine-messages-
-   follow-the-language commit (after right-to-left sheets, the bundled
+3. The state at the end of 2026-10-13: `main` at the menu-titles-follow-
+   the-language commit (after the engine's messages, right-to-left sheets, the bundled
    licenses, the relocatable bundle, the workbook properties, multi-line editing, drag and drop, the toolbar, the widget editors, AutoFormat, scenarios and simulation, the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
