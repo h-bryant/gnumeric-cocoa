@@ -1730,6 +1730,24 @@
   `properties.m` is a new test program; the `GNM_SNAPSHOT_PROPS` hook
   drives all three.
 
+## 2026-10-13: The toolbar's format extras
+
+- `GnmSheet (ToolbarFormats)` gained `increaseIndentOfSelection` /
+  `decrease…` (`workbook_cmd_inc_indent` / `_dec_indent`),
+  `toggleFontScriptOfSelection:` (`toggle_font_attr` over
+  `cmd_selection_format_toggle_font_style` with `MSTYLE_FONT_SCRIPT`),
+  `setBordersOfSelection:` (the twelve presets of `cb_border_activated`,
+  "Set Borders"), and `indentOfSelection` / `fontScriptOfSelection`
+  from the view's current style.  `gnm_style_border_fetch` takes over
+  one reference to the color it is given, so the automatic pattern
+  color is fetched once per border as the GTK does (sharing one
+  reference crashed in the next command).  A cell's borders come with
+  `formatOfSelection`, not `formatOfCellAtColumn:row:`.
+- The toolbar gained Less Indent, More Indent, Superscript, Subscript
+  (toggles following the cursor cell), a Borders pull-down with the
+  presets, text and fill color wells (following the cell's colors),
+  and No Fill; the `GNM_SNAPSHOT_TOOLBAR` hook presses them.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -1747,8 +1765,7 @@
    printing, formula range selection by mouse and keyboard, the font
    shortcuts, autocompletion, the function selector, and array formulas;
    and all 27 Statistics tools; next the rest of Phase 5 by usage
-   frequency: the toolbar's missing items, widgets that act, the
-   remaining "no" rows) from
+   frequency: widgets that act, the remaining "no" rows) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -1771,8 +1788,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-13: `main` at the workbook properties
-   commit (after multi-line editing, drag and drop, the toolbar, the widget editors, AutoFormat, scenarios and simulation, the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-13: `main` at the toolbar extras
+   commit (after the workbook properties, multi-line editing, drag and drop, the toolbar, the widget editors, AutoFormat, scenarios and simulation, the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

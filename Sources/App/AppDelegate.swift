@@ -1858,6 +1858,24 @@ enum Snapshot {
                     controller.fontSizeChosen(combo)
                     NSLog("toolbar: font size %@", sheet.formatOfCell(atColumn: 2, row: 2).fontSize ?? -1)
                 }
+                // the format extras: indent, superscript, an outside border, red text, a yellow fill
+                sheet.selectCell(atColumn: 2, row: 2)
+                for identifier in ["indentMore", "superscript"] { controller.performToolbarItemForTesting(identifier) }
+                if let popUp = window.toolbar?.items.first(where: { $0.itemIdentifier.rawValue == "borders" })?.view as? NSPopUpButton,
+                   let outside = popUp.menu?.items.first(where: { $0.title == "Outside" }) {
+                    controller.borderPresetChosen(outside)
+                }
+                if let well = window.toolbar?.items.first(where: { $0.itemIdentifier.rawValue == "textColor" })?.view as? NSColorWell {
+                    well.color = .systemRed
+                    controller.textColorChosen(well)
+                }
+                if let well = window.toolbar?.items.first(where: { $0.itemIdentifier.rawValue == "fillColor" })?.view as? NSColorWell {
+                    well.color = .systemYellow
+                    controller.fillColorChosen(well)
+                }
+                let extras = sheet.formatOfSelection
+                NSLog("toolbar: C3 indent=%ld script=%ld top border=%@ text color=%@ fill=%@ state %@", sheet.indentOfSelection, sheet.fontScriptOfSelection.rawValue,
+                      extras.borderStyle(edge: .top) ?? -1, extras.textColor == nil ? "nil" : "set", extras.fillsBackground ?? -1, controller.toolbarStateForTesting)
                 sheet.selectCell(atColumn: 2, row: 4)
                 controller.performToolbarItemForTesting("autosum")
                 NSLog("toolbar: autosum editing=%d text='%@'", controller.gridView.isEditing ? 1 : 0, controller.gridView.editorTextForTesting)

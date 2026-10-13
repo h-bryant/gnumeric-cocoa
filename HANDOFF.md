@@ -387,9 +387,10 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    of cells, files, and sheet tabs (`GnmDragging.h`), and multi-line
    editing (Option+Return; the editor and the formula bar grow), and
    Edit → Select → Array/Depends/Inputs, Format → Workbook…, File →
-   Properties… (`GnmWorkbookProperties.h`, `properties.m`).  Next, by
-   usage: the toolbar's borders, colors, and indent, widgets that act,
-   and what `docs/mvp-known-gaps.md` still lists as "no".
+   Properties… (`GnmWorkbookProperties.h`, `properties.m`), and the
+   toolbar's indent, script, border, and color items.  Next, by usage:
+   widgets that act, and what `docs/mvp-known-gaps.md` still lists as
+   "no".
 6. Headless checks for all of it: `GNM_SNAPSHOT=out.png scripts/run-app.sh
    file` plus `GNM_SNAPSHOT_TYPE`, `_FORMAT`, `_PHASE3`, `_FREEZE`,
    `_SHEETS`, `_FILTER`, `_OBJECTS`, `_CHART`, `_EDITOR`, `_EVERYDAY`, `_FIND`, `_PREFS`, `_TEXT`, `_IMPORT`, `_COMMENT`, `_NAMES`, `_FILL`, `_GOAL`, `_COND`, `_STATS`, `_VALID`, `_LINK`, `_SOLVE`, `_PRINT`, `_FORMULA`, `_FUNC`, `_ZOOM` (`docs/build.md`); compare `out.png` with

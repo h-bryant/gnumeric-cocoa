@@ -49,13 +49,19 @@ extension WorkbookWindowController: NSToolbarDelegate {
         ToolbarSpec(identifier: "thousands", label: "Thousands", symbol: "textformat.123", action: Selector(("formatWithThousands:")), toggles: false),
         ToolbarSpec(identifier: "morePrecision", label: "More Decimals", symbol: "plus.circle", action: Selector(("increasePrecision:")), toggles: false),
         ToolbarSpec(identifier: "lessPrecision", label: "Fewer Decimals", symbol: "minus.circle", action: Selector(("decreasePrecision:")), toggles: false),
+        ToolbarSpec(identifier: "indentLess", label: "Less Indent", symbol: "decrease.indent", action: Selector(("decreaseIndent:")), toggles: false),
+        ToolbarSpec(identifier: "indentMore", label: "More Indent", symbol: "increase.indent", action: Selector(("increaseIndent:")), toggles: false),
+        ToolbarSpec(identifier: "superscript", label: "Superscript", symbol: "textformat.superscript", action: Selector(("toggleSuperscript:")), toggles: true),
+        ToolbarSpec(identifier: "subscript", label: "Subscript", symbol: "textformat.subscript", action: Selector(("toggleSubscript:")), toggles: true),
+        ToolbarSpec(identifier: "clearFill", label: "No Fill", symbol: "paintbrush", action: Selector(("clearFill:")), toggles: false),
     ]
 
     static let defaultToolbarItems: [NSToolbarItem.Identifier] = {
         let names = ["new", "open", "save", "print", "|", "cut", "copy", "paste", "|", "undo", "redo", "|",
                      "autosum", "function", "sortAscending", "sortDescending", "chart", "zoom", "~",
                      "fontFamily", "fontSize", "bold", "italic", "underline", "|", "alignLeft", "alignCenter", "alignRight", "merge", "|",
-                     "accounting", "percent", "thousands", "morePrecision", "lessPrecision"]
+                     "accounting", "percent", "thousands", "morePrecision", "lessPrecision", "|",
+                     "indentLess", "indentMore", "superscript", "subscript", "borders", "textColor", "fillColor"]
         return names.map { $0 == "|" ? .space : $0 == "~" ? .flexibleSpace : NSToolbarItem.Identifier($0) }
     }()
 
@@ -73,7 +79,7 @@ extension WorkbookWindowController: NSToolbarDelegate {
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
         Self.toolbarSpecs.map { NSToolbarItem.Identifier($0.identifier) }
-            + ["zoom", "fontFamily", "fontSize", "centerAcross", "unmerge", "hyperlink"].map { NSToolbarItem.Identifier($0) }
+            + ["zoom", "fontFamily", "fontSize", "borders", "textColor", "fillColor"].map { NSToolbarItem.Identifier($0) }
             + [.space, .flexibleSpace]
     }
 
@@ -97,6 +103,27 @@ extension WorkbookWindowController: NSToolbarDelegate {
             item.view = popUp
             item.label = "Font"
             item.toolTip = "Font"
+        case "borders":
+            let popUp = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 150, height: 24), pullsDown: true)
+            popUp.addItem(withTitle: "Borders")
+            for preset in Sheet.allBorderPresets {
+                let menuItem = NSMenuItem(title: Sheet.nameOfBorderPreset(Sheet.BorderPreset(rawValue: preset.intValue) ?? .none), action: #selector(borderPresetChosen(_:)), keyEquivalent: "")
+                menuItem.target = self
+                menuItem.tag = preset.intValue
+                popUp.menu?.addItem(menuItem)
+            }
+            item.view = popUp
+            item.label = "Borders"
+            item.toolTip = "Borders"
+        case "textColor", "fillColor":
+            let well = NSColorWell(frame: NSRect(x: 0, y: 0, width: 40, height: 24))
+            well.isContinuous = false
+            well.color = itemIdentifier.rawValue == "textColor" ? .black : .white
+            well.target = self
+            well.action = itemIdentifier.rawValue == "textColor" ? #selector(textColorChosen(_:)) : #selector(fillColorChosen(_:))
+            item.view = well
+            item.label = itemIdentifier.rawValue == "textColor" ? "Text Color" : "Fill Color"
+            item.toolTip = item.label
         case "fontSize":
             let combo = NSComboBox(frame: NSRect(x: 0, y: 0, width: 60, height: 24))
             combo.addItems(withObjectValues: Self.fontSizes)
@@ -148,6 +175,14 @@ extension WorkbookWindowController: NSToolbarDelegate {
             case "alignCenter": (item.view as? NSButton)?.state = alignment == 0x08 ? .on : .off
             case "alignRight": (item.view as? NSButton)?.state = alignment == 0x04 ? .on : .off
             case "centerAcross": (item.view as? NSButton)?.state = alignment == 0x40 ? .on : .off
+            case "superscript": (item.view as? NSButton)?.state = sheet.fontScriptOfSelection == .superscript ? .on : .off
+            case "subscript": (item.view as? NSButton)?.state = sheet.fontScriptOfSelection == .subscript ? .on : .off
+            case "textColor":
+                if let well = item.view as? NSColorWell, let color = format.textColor, let ns = NSColor(cgColor: color) { well.color = ns }
+            case "fillColor":
+                if let well = item.view as? NSColorWell {
+                    well.color = format.fillsBackground?.boolValue == true ? (format.backgroundColor.flatMap(NSColor.init(cgColor:)) ?? .white) : .white
+                }
             case "fontFamily":
                 if let popUp = item.view as? NSPopUpButton, let name = format.fontName, popUp.titleOfSelectedItem != name {
                     popUp.selectItem(withTitle: name)
@@ -226,6 +261,42 @@ extension WorkbookWindowController: NSToolbarDelegate {
     @objc func formatWithThousands(_ sender: Any?) { runSizeCommand { try $0.changeNumberFormatOfSelection(.toggleThousands) } }
     @objc func increasePrecision(_ sender: Any?) { runSizeCommand { try $0.changeNumberFormatOfSelection(.increasePrecision) } }
     @objc func decreasePrecision(_ sender: Any?) { runSizeCommand { try $0.changeNumberFormatOfSelection(.decreasePrecision) } }
+
+    @objc func increaseIndent(_ sender: Any?) { runSizeCommand { try $0.increaseIndentOfSelection() } }
+    @objc func decreaseIndent(_ sender: Any?) { runSizeCommand { try $0.decreaseIndentOfSelection() } }
+    @objc func toggleSuperscript(_ sender: Any?) { runSizeCommand { try $0.toggleFontScriptOfSelection(.superscript) } }
+    @objc func toggleSubscript(_ sender: Any?) { runSizeCommand { try $0.toggleFontScriptOfSelection(.subscript) } }
+
+    @objc func borderPresetChosen(_ sender: NSMenuItem) {
+        guard let preset = Sheet.BorderPreset(rawValue: sender.tag) else { return }
+        runSizeCommand { try $0.setBordersOfSelection(preset) }
+    }
+
+    @objc func textColorChosen(_ sender: NSColorWell) {
+        runSizeCommand { sheet in
+            let format = CellFormat()
+            format.textColor = sender.color.cgColor
+            try sheet.apply(format)
+        }
+    }
+
+    @objc func fillColorChosen(_ sender: NSColorWell) {
+        runSizeCommand { sheet in
+            let format = CellFormat()
+            format.fillsBackground = true
+            format.backgroundColor = sender.color.cgColor
+            try sheet.apply(format)
+        }
+    }
+
+    /// The color combo's "Automatic": no fill.
+    @objc func clearFill(_ sender: Any?) {
+        runSizeCommand { sheet in
+            let format = CellFormat()
+            format.fillsBackground = false
+            try sheet.apply(format)
+        }
+    }
 
     /// cb_autosum: start "=SUM()" with the cursor inside, or put the
     /// cursor before the closing parenthesis of a sum being typed.

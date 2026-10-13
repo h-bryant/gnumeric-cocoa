@@ -440,6 +440,39 @@ int main (void)
         GNM_ASSERT ([s toggleHorizontalAlignmentOfSelection:4 error:&error] && [s formatOfCellAtColumn:7 row:7].horizontalAlignment.intValue == 4, @"right: %@", error);
         [wb undo];
         GNM_ASSERT ([s formatOfCellAtColumn:7 row:7].horizontalAlignment.intValue == 1, @"alignment undone");
+        /* the toolbar's indent, script, and border presets */
+        [s selectCellAtColumn:7 row:7];
+        GNM_ASSERT (s.indentOfSelection == 0 && s.fontScriptOfSelection == GnmFontScriptStandard, @"plain to start");
+        GNM_ASSERT ([s increaseIndentOfSelectionWithError:&error] && s.indentOfSelection == 1, @"indent: %@ -> %ld", error, (long) s.indentOfSelection);
+        GNM_ASSERT_EQ_STR (wb.undoLabel ?: @"", @"Increase Indent");
+        GNM_ASSERT ([s formatOfCellAtColumn:7 row:7].horizontalAlignment.intValue == 2, @"indenting aligns left");
+        GNM_ASSERT ([s decreaseIndentOfSelectionWithError:&error] && s.indentOfSelection == 0, @"dedent: %@", error);
+        GNM_ASSERT ([s decreaseIndentOfSelectionWithError:&error] && s.indentOfSelection == 0, @"not below zero");
+        GNM_ASSERT ([s toggleFontScriptOfSelection:GnmFontScriptSuperscript error:&error] && s.fontScriptOfSelection == GnmFontScriptSuperscript, @"superscript: %@", error);
+        GNM_ASSERT ([s toggleFontScriptOfSelection:GnmFontScriptSubscript error:&error] && s.fontScriptOfSelection == GnmFontScriptSubscript, @"subscript: %@", error);
+        GNM_ASSERT ([s toggleFontScriptOfSelection:GnmFontScriptSubscript error:&error] && s.fontScriptOfSelection == GnmFontScriptStandard, @"toggled off: %@", error);
+        GNM_ASSERT (GnmSheet.allBorderPresets.count == 12 && [[GnmSheet nameOfBorderPreset:GnmBorderPresetTopAndDoubleBottom] isEqualToString:@"Top and Double Bottom"], @"the presets");
+        [s selectRange:GnmCellRangeMake (7, 7, 8, 8) editPosition:GnmCellCoordinateMake (7, 7)];
+        GNM_ASSERT ([s setBordersOfSelection:GnmBorderPresetAll error:&error], @"all borders: %@", error);
+        GNM_ASSERT_EQ_STR (wb.undoLabel ?: @"", @"Set Borders");
+        /* borders come with the selection's format, not a cell's */
+        GnmCellFormat *(^formatAt)(int, int) = ^(int col, int row) {
+            [s selectCellAtColumn:col row:row];
+            return s.formatOfSelection;
+        };
+        GnmCellFormat *bordered = formatAt (7, 7);
+        NSLog (@"editing: H8 borders top %@ bottom %@ left %@ right %@", [bordered borderStyleForEdge:GnmBorderEdgeTop], [bordered borderStyleForEdge:GnmBorderEdgeBottom],
+               [bordered borderStyleForEdge:GnmBorderEdgeLeft], [bordered borderStyleForEdge:GnmBorderEdgeRight]);
+        GNM_ASSERT ([bordered borderStyleForEdge:GnmBorderEdgeTop].intValue == 1 && [bordered borderStyleForEdge:GnmBorderEdgeRight].intValue == 1, @"H8 top and inner right thin");
+        [s selectRange:GnmCellRangeMake (7, 7, 8, 8) editPosition:GnmCellCoordinateMake (7, 7)];
+        GNM_ASSERT ([s setBordersOfSelection:GnmBorderPresetThickBottom error:&error], @"thick bottom: %@", error);
+        GNM_ASSERT ([formatAt (7, 8) borderStyleForEdge:GnmBorderEdgeBottom].intValue == 5, @"H9 bottom thick: %@", [formatAt (7, 8) borderStyleForEdge:GnmBorderEdgeBottom]);
+        [s selectRange:GnmCellRangeMake (7, 7, 8, 8) editPosition:GnmCellCoordinateMake (7, 7)];
+        GNM_ASSERT ([s setBordersOfSelection:GnmBorderPresetNone error:&error], @"none: %@", error);
+        GNM_ASSERT ([formatAt (7, 7) borderStyleForEdge:GnmBorderEdgeTop].intValue == 0, @"cleared: %@", [formatAt (7, 7) borderStyleForEdge:GnmBorderEdgeTop]);
+        [wb undo];
+        GNM_ASSERT ([formatAt (7, 8) borderStyleForEdge:GnmBorderEdgeBottom].intValue == 5, @"clearing undone");
+
         /* dragging the selection by its border: a move adjusts references,
          * a copy leaves the source */
         GNM_ASSERT ([s setText:@"7" atColumn:9 row:9 autocorrect:NO error:&error] && [s setText:@"=J10*2" atColumn:10 row:9 autocorrect:NO error:&error], @"J10 K10: %@", error);

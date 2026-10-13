@@ -652,7 +652,9 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
              #selector(insertScrollbar(_:)), #selector(insertSpinButton(_:)), #selector(insertSlider(_:)), #selector(insertList(_:)),
              #selector(insertCombo(_:)), #selector(alignLeft(_:)), #selector(alignCenter(_:)), #selector(alignRight(_:)),
              #selector(centerAcrossSelection(_:)), #selector(formatAsAccounting(_:)), #selector(formatAsPercentage(_:)),
-             #selector(formatWithThousands(_:)), #selector(increasePrecision(_:)), #selector(decreasePrecision(_:)), #selector(autoSum(_:)):
+             #selector(formatWithThousands(_:)), #selector(increasePrecision(_:)), #selector(decreasePrecision(_:)), #selector(autoSum(_:)),
+             #selector(increaseIndent(_:)), #selector(decreaseIndent(_:)), #selector(toggleSuperscript(_:)), #selector(toggleSubscript(_:)),
+             #selector(clearFill(_:)):
             return gridView.sheet != nil
         case #selector(advancedFilter(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil

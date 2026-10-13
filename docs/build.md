@@ -184,7 +184,9 @@ inserted at B2 and configured through its dialog, a scrollbar at D2 made
 horizontal over 0…50, both in the window capture), and the toolbar
 (1234.5678 in C3 made bold, centered, a percentage with one more decimal
 through the toolbar's items, the font size 14 through its combo, AutoSum
-in C5, zoom 150% through its pop-up; the toggles' state logged), and drag
+in C5, zoom 150% through its pop-up, then C3 indented, superscripted,
+given an outside border, red text, and a yellow fill through the format
+extras; the toggles' state logged), and drag
 and drop (A1:B1 dropped at A4 as a move and at A7 as a copy, a PNG
 written beside the capture and dropped at D2, the second tab dragged
 before the first), and multi-line editing ("first", Option+Return, and

@@ -23,7 +23,48 @@ typedef NS_ENUM(NSInteger, GnmNumberFormatChange) {
     GnmNumberFormatDecreasePrecision,
 } NS_SWIFT_NAME(Sheet.NumberFormatChange);
 
+/// The format toolbar's border presets (`cb_border_activated`'s
+/// indexes).
+typedef NS_ENUM(NSInteger, GnmBorderPreset) {
+    GnmBorderPresetLeft = 11,
+    GnmBorderPresetNone = 12,
+    GnmBorderPresetRight = 13,
+    GnmBorderPresetAll = 21,
+    GnmBorderPresetOutside = 22,
+    GnmBorderPresetThickOutside = 23,
+    GnmBorderPresetBottom = 31,
+    GnmBorderPresetDoubleBottom = 32,
+    GnmBorderPresetThickBottom = 33,
+    GnmBorderPresetTopAndBottom = 41,
+    GnmBorderPresetTopAndDoubleBottom = 42,
+    GnmBorderPresetTopAndThickBottom = 43,
+} NS_SWIFT_NAME(Sheet.BorderPreset);
+
+/// `GOFontScript`.
+typedef NS_ENUM(NSInteger, GnmFontScript) {
+    GnmFontScriptSubscript = -1,
+    GnmFontScriptStandard = 0,
+    GnmFontScriptSuperscript = 1,
+} NS_SWIFT_NAME(Sheet.FontScript);
+
 @interface GnmSheet (ToolbarFormats)
+/// The cursor cell's indent and script, for the toolbar's state.
+@property (nonatomic, readonly) NSInteger indentOfSelection;
+@property (nonatomic, readonly) GnmFontScript fontScriptOfSelection;
+/// `workbook_cmd_inc_indent` / `_dec_indent`: one step, up to 20, left
+/// alignment set on the way up ("Increase Indent", undoable).
+- (BOOL)increaseIndentOfSelectionWithError:(NSError **)error NS_SWIFT_NAME(increaseIndentOfSelection());
+- (BOOL)decreaseIndentOfSelectionWithError:(NSError **)error NS_SWIFT_NAME(decreaseIndentOfSelection());
+/// The toolbar's superscript and subscript toggles (`toggle_font_attr`
+/// over `cmd_selection_format_toggle_font_style`): `script` when the
+/// cursor cell does not have it, standard when it does.
+- (BOOL)toggleFontScriptOfSelection:(GnmFontScript)script error:(NSError **)error NS_SWIFT_NAME(toggleFontScriptOfSelection(_:));
+/// The border selector's presets ("Set Borders", undoable), in the
+/// sheet's automatic pattern color.
+- (BOOL)setBordersOfSelection:(GnmBorderPreset)preset error:(NSError **)error NS_SWIFT_NAME(setBordersOfSelection(_:));
+/// The presets in the GTK selector's order, with their names.
+@property (class, nonatomic, readonly) NSArray<NSNumber *> *allBorderPresets;
++ (NSString *)nameOfBorderPreset:(GnmBorderPreset)preset NS_SWIFT_NAME(nameOfBorderPreset(_:));
 /// Apply one of the toolbar's number format changes to the selection,
 /// from the cursor cell's format (`wb_view->current_style`).
 - (BOOL)changeNumberFormatOfSelection:(GnmNumberFormatChange)change error:(NSError **)error NS_SWIFT_NAME(changeNumberFormatOfSelection(_:));
