@@ -147,6 +147,9 @@ GType gnm_cocoa_sheet_control_get_type (void);
 - (instancetype)initWithSheetView:(SheetView *)sheetView workbook:(GnmWorkbook *)workbook NS_DESIGNATED_INITIALIZER;
 /// The wrapper of an engine object, created on first sight and kept.
 - (GnmSheetObject *)_wrapperForObject:(SheetObject *)object;
+/// Attach a new object at `frame` and commit it as "Insert 1 Object".
+- (nullable GnmSheetObject *)_insertCreatedObject:(SheetObject *)so frame:(CGRect)frame anchorMode:(GnmSOAnchorMode)mode
+                                       description:(NSString *)description error:(NSError **)error;
 /// An object's bounds changed, or it left or joined the sheet.
 - (void)_objectsDidChange;
 @property (nonatomic, readonly) Sheet *engineSheet;

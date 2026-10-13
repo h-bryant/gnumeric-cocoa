@@ -5,6 +5,8 @@
 #import <Foundation/Foundation.h>
 #import <CoreGraphics/CoreGraphics.h>
 
+@class GnmSheet;
+
 NS_ASSUME_NONNULL_BEGIN
 
 NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(SheetObject)
@@ -15,6 +17,8 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(SheetObject)
 /// The engine's type name: "SheetObjectGraph", "SheetObjectImage",
 /// "GnmSOLine", "GnmSOFilled", "GnmSOPath", the "GnmSOW..." widgets.
 @property (nonatomic, readonly, copy) NSString *typeName;
+/// The sheet the object belongs to.
+@property (nonatomic, readonly, weak, nullable) GnmSheet *sheet;
 /// The object's own name, often empty.
 @property (nonatomic, readonly, copy) NSString *name;
 /// Where it is drawn, in sheet pixels at the current zoom; empty while

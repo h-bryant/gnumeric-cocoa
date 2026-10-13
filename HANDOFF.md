@@ -381,11 +381,10 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    Scenarios and Simulation… (`GnmScenarios.h`, `ScenariosDialog.swift`,
    `SimulationDialog.swift`, `scenarios.m`), and Format → AutoFormat…
    (`GnmAutoFormat.h`, `AutoFormatDialog.swift`, `autoformat.m`; engine
-   patch 0008).  Next, by usage:
-   image and widget editors (`cmd_so_set_*`) later; the smaller Phase 3
-   gaps (Insert/Delete Cells,
-   Goto and the name box, the formula bar, autocomplete, drag and drop,
-   outlines) as filler.
+   patch 0008), and the widget editors with Insert → Object
+   (`GnmWidgets.h`, `WidgetDialog.swift`, `widgets.m`).  Next, by usage:
+   the smaller Phase 3 gaps (drag and drop, toolbars, the formula bar's
+   multi-line editing) and widgets that act.
 6. Headless checks for all of it: `GNM_SNAPSHOT=out.png scripts/run-app.sh
    file` plus `GNM_SNAPSHOT_TYPE`, `_FORMAT`, `_PHASE3`, `_FREEZE`,
    `_SHEETS`, `_FILTER`, `_OBJECTS`, `_CHART`, `_EDITOR`, `_EVERYDAY`, `_FIND`, `_PREFS`, `_TEXT`, `_IMPORT`, `_COMMENT`, `_NAMES`, `_FILL`, `_GOAL`, `_COND`, `_STATS`, `_VALID`, `_LINK`, `_SOLVE`, `_PRINT`, `_FORMULA`, `_FUNC`, `_ZOOM` (`docs/build.md`); compare `out.png` with

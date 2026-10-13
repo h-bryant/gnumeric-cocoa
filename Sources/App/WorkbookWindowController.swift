@@ -554,6 +554,10 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             return window?.attachedSheet == nil
         case #selector(scenarioAdd(_:)), #selector(scenarioView(_:)), #selector(simulation(_:)), #selector(autoFormat(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
+        case #selector(insertFrame(_:)), #selector(insertButton(_:)), #selector(insertCheckbox(_:)), #selector(insertRadioButton(_:)),
+             #selector(insertScrollbar(_:)), #selector(insertSpinButton(_:)), #selector(insertSlider(_:)), #selector(insertList(_:)),
+             #selector(insertCombo(_:)):
+            return gridView.sheet != nil
         case #selector(advancedFilter(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(pasteSpecial(_:)):
@@ -1828,7 +1832,11 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     /// guru's later pages on a working copy.
     func editObject(_ object: SheetObject) {
         guard let window, chartEditor == nil, window.attachedSheet == nil else { return }
-        guard let editor = ChartEditor(editing: object) else { return }   // images have no editor yet
+        if object.widgetKind != .none {
+            editWidget(object)
+            return
+        }
+        guard let editor = ChartEditor(editing: object) else { return }   // images have no editor (nor in the GTK)
         if gridView.isEditing { gridView.cancelEditing() }
         let sheet = ChartEditorWindow(editor: editor)
         chartEditor = sheet
@@ -1840,6 +1848,59 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             }
         }
     }
+
+    /// A widget's Properties…: its configuration dialog, the engine's
+    /// command on OK.
+    func editWidget(_ object: SheetObject) {
+        guard let window, let sheet = object.sheet, let settings = sheet.widgetSettings(of: object) else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let dialog = WidgetDialog(settings: settings)
+        dialog.present(in: window) { [weak self] edited in
+            guard let self else { return true }
+            do {
+                try sheet.applyWidgetSettings(edited, to: object)
+                gridView.needsDisplay = true
+                return true
+            } catch {
+                present(error)
+                return false
+            }
+        }
+    }
+
+    /// Insert → Object: a widget placed at the edit position, sized as the
+    /// GTK's default creation drag would leave it.
+    func insertWidget(ofKind kind: WidgetSettings.Kind) {
+        guard let sheet = gridView.sheet else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let edit = sheet.editPosition
+        let cell = sheet.frameOfCell(atColumn: edit.column, row: edit.row)
+        let size: CGSize
+        switch kind {
+        case .frame: size = CGSize(width: 160, height: 100)
+        case .scrollbar, .slider: size = CGSize(width: 20, height: 120)
+        case .spinButton: size = CGSize(width: 80, height: 24)
+        case .list: size = CGSize(width: 120, height: 90)
+        case .combo: size = CGSize(width: 120, height: 24)
+        default: size = CGSize(width: 100, height: 24)
+        }
+        do {
+            let object = try sheet.insertWidget(ofKind: kind, frame: CGRect(origin: cell.origin, size: size))
+            gridView.select(objects: [object])
+        } catch {
+            present(error)
+        }
+    }
+
+    @objc func insertFrame(_ sender: Any?) { insertWidget(ofKind: .frame) }
+    @objc func insertButton(_ sender: Any?) { insertWidget(ofKind: .button) }
+    @objc func insertCheckbox(_ sender: Any?) { insertWidget(ofKind: .checkbox) }
+    @objc func insertRadioButton(_ sender: Any?) { insertWidget(ofKind: .radioButton) }
+    @objc func insertScrollbar(_ sender: Any?) { insertWidget(ofKind: .scrollbar) }
+    @objc func insertSpinButton(_ sender: Any?) { insertWidget(ofKind: .spinButton) }
+    @objc func insertSlider(_ sender: Any?) { insertWidget(ofKind: .slider) }
+    @objc func insertList(_ sender: Any?) { insertWidget(ofKind: .list) }
+    @objc func insertCombo(_ sender: Any?) { insertWidget(ofKind: .combo) }
 
     // MARK: Save as Image (the object context menu)
 

@@ -126,6 +126,14 @@ enum MainMenu {
         insertMenu.addItem(.separator())
         insertMenu.addItem(withTitle: "Chart…", action: Selector(("insertChart:")), keyEquivalent: "")
         insertMenu.addItem(withTitle: "Image…", action: Selector(("insertImage:")), keyEquivalent: "")
+        // The GTK Insert → Object menu's widgets.
+        let objectMenu = NSMenu(title: "Object")
+        for (title, action) in [("Frame", "insertFrame:"), ("Button", "insertButton:"), ("Checkbox", "insertCheckbox:"),
+                                ("Radio Button", "insertRadioButton:"), ("Scrollbar", "insertScrollbar:"), ("Spin Button", "insertSpinButton:"),
+                                ("Slider", "insertSlider:"), ("List", "insertList:"), ("Combo Box", "insertCombo:")] {
+            objectMenu.addItem(withTitle: title, action: Selector((action)), keyEquivalent: "")
+        }
+        insertMenu.addItem(submenu(objectMenu, title: "Object"))
         menuBar.addItem(submenu(insertMenu, title: "Insert"))
 
         let formatMenu = NSMenu(title: "Format")

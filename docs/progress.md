@@ -1621,6 +1621,31 @@
   Format → AutoFormat…; `autoformat.m` is a new test program; the
   `GNM_SNAPSHOT_AUTOFORMAT` hook drives it.
 
+## 2026-10-13: Widget editors and Insert → Object
+
+- `GnmWidgets.h`: `GnmWidgetSettings` (kind, label, linked cell, value,
+  range, direction, content, output as index), `GnmSheetObject.
+  widgetKind`, `GnmSheet.widgetSettingsOfSheetObject:` (the `text`
+  property, the `sheet_widget_*_get_link` getters, the adjustment's
+  `GtkAdjustment`, the list's links), `applyWidgetSettings:toSheetObject:`
+  (the per-kind `cmd_so_set_*` commands as the dialogs in
+  sheet-object-widget.c and dialog-so-list.c run them; links parsed as
+  the entries do, a radio value through `format_match`), and
+  `insertWidgetOfKind:frame:` (`g_object_new` of the widget type, then
+  the creation path images use).  `GnmSheetObject.sheet` is new.
+- Two reference lessons: the widget link getters return a new
+  reference (released after rendering the text), and a created object
+  must drop its construction reference once the sheet and the command
+  hold theirs, as the image and chart insertions do; both showed up as
+  "Leaked N nodes from expression pool" at shutdown.
+- `WidgetDialog.swift` builds the fields for the kind; Properties… on a
+  widget (double-click, the context menu, Format → Object Properties…)
+  opens it; Insert → Object ▸ Frame … Combo Box insert at the edit
+  position with default sizes.  `widgets.m` is a new test program over
+  `object-tests.gnumeric`; the `GNM_SNAPSHOT_WIDGET` hook drives both.
+  Images have no editor in the GTK either (`user_config` is NULL), so
+  that half of the gaps row is closed as such.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -1638,8 +1663,8 @@
    printing, formula range selection by mouse and keyboard, the font
    shortcuts, autocompletion, the function selector, and array formulas;
    and all 27 Statistics tools; next the rest of Phase 5 by usage
-   frequency: the image and widget editors, then the smaller Phase 3
-   gaps) from
+   frequency: the smaller Phase 3 gaps such as drag and drop, toolbars,
+   and the formula bar's multi-line editing) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -1662,8 +1687,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-13: `main` at the AutoFormat commit
-   (after scenarios and simulation, the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-13: `main` at the widget editors
+   commit (after AutoFormat, scenarios and simulation, the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

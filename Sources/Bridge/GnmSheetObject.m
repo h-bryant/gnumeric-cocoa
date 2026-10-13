@@ -89,6 +89,7 @@ cb_object_changed (G_GNUC_UNUSED SheetObject *so, gpointer owner)
 
 - (BOOL)canResize { return _so != NULL && sheet_object_can_resize (_so); }
 - (BOOL)canEdit { return _so != NULL && sheet_object_can_edit (_so); }
+- (GnmSheet *)sheet { return self._ownerSheet; }
 
 - (BOOL)isSelectable
 {

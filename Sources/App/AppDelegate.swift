@@ -1794,6 +1794,51 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_WIDGET"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // Widgets: a button inserted at B2 and configured through
+                // its dialog (label, link), a scrollbar at D2 configured
+                // (range, horizontal), both left in the window capture.
+                sheet.selectCell(atColumn: 1, row: 1)
+                controller.insertButton(nil)
+                if let button = controller.gridView.selectedObjects.first {
+                    NSLog("widget: inserted %@ kind %ld undo=%@", button.typeName, button.widgetKind.rawValue, sheet.workbook?.undoLabel ?? "nil")
+                    WidgetDialog.headlessDriver = { dialog in
+                        dialog.labelField.stringValue = "Go"
+                        dialog.linkField.stringValue = "C1"
+                        return true
+                    }
+                    controller.editObject(button)
+                    WidgetDialog.headlessDriver = nil
+                    let settings = sheet.widgetSettings(of: button)
+                    NSLog("widget: button label '%@' link '%@' undo=%@", settings?.label ?? "nil", settings?.linkText ?? "nil", sheet.workbook?.undoLabel ?? "nil")
+                }
+                sheet.selectCell(atColumn: 3, row: 1)
+                controller.insertScrollbar(nil)
+                if let scrollbar = controller.gridView.selectedObjects.first {
+                    WidgetDialog.headlessDriver = { dialog in
+                        dialog.minimumField.stringValue = "0"
+                        dialog.maximumField.stringValue = "50"
+                        dialog.horizontalBox.state = .on
+                        dialog.linkField.stringValue = "C2"
+                        return true
+                    }
+                    controller.editObject(scrollbar)
+                    WidgetDialog.headlessDriver = nil
+                    let settings = sheet.widgetSettings(of: scrollbar)
+                    let minimum: Int = settings?.minimum ?? -1
+                    let maximum: Int = settings?.maximum ?? -1
+                    let horizontal: Int = settings?.horizontal == true ? 1 : 0
+                    let link: String = settings?.linkText ?? "nil"
+                    let undo: String = sheet.workbook?.undoLabel ?? "nil"
+                    NSLog("widget: scrollbar %ld..%ld horizontal %d link '%@' undo=%@", minimum, maximum, horizontal, link, undo)
+                }
+                NSLog("widget: %ld objects on the sheet", sheet.sheetObjects.count)
+                controller.gridView.select(objects: [])
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FREEZE"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

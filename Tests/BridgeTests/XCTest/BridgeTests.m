@@ -100,5 +100,6 @@
 - (void)testPlugins { [self runProgram:@"plugins"]; }
 - (void)testScenarios { [self runProgram:@"scenarios"]; }
 - (void)testAutoFormat { [self runProgram:@"autoformat"]; }
+- (void)testWidgets { [self runProgram:@"widgets"]; }
 
 @end
