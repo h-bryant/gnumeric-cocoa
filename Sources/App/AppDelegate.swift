@@ -3,7 +3,7 @@ import SwiftUI
 import GnmCocoa
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var engine: Engine?
     private(set) var settings: PreferencesWindowController?
 
@@ -80,6 +80,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func helpWeb(_ sender: Any?) { openHelp("web") }
     @objc func helpIRC(_ sender: Any?) { openHelp("irc") }
     @objc func helpBug(_ sender: Any?) { openHelp("bug") }
+
+    /// The index of the bundled libraries' licenses that scripts/bundle.sh
+    /// writes (Resources/licenses/THIRD-PARTY.txt); nil in a development
+    /// build, which links Homebrew's libraries in place.
+    static var licensesIndexURL: URL? {
+        guard let url = Bundle.main.resourceURL?.appendingPathComponent("licenses/THIRD-PARTY.txt"),
+              FileManager.default.fileExists(atPath: url.path) else { return nil }
+        return url
+    }
+
+    /// Help → Third-Party Licenses: the index opens in the text editor
+    /// (the license texts sit in the directories beside it).
+    @objc func helpLicenses(_ sender: Any?) {
+        guard let url = Self.licensesIndexURL else { return }
+        if ProcessInfo.processInfo.environment["GNM_SNAPSHOT"] != nil {
+            NSLog("help: would open %@", url.path)
+            return
+        }
+        NSWorkspace.shared.open(url)
+    }
+
+    func validateMenuItem(_ item: NSMenuItem) -> Bool {
+        if item.action == Selector(("helpLicenses:")) {
+            return Self.licensesIndexURL != nil
+        }
+        return true
+    }
 
     /// Help → Functions (dialog_function_select_help): the catalog to read.
     @objc func helpFunctions(_ sender: Any?) {
@@ -2588,6 +2615,14 @@ enum Snapshot {
                     }
                 }
                 NSLog("bundle: png=%@ gif=%@ app=%@", pngResult, gifResult, Bundle.main.bundlePath)
+                // The licenses: a directory per library beside the index
+                // that Help → Third-Party Licenses opens.
+                let licensesPath: String = Bundle.main.resourceURL?.appendingPathComponent("licenses").path ?? ""
+                let licenseEntries: [String] = (try? FileManager.default.contentsOfDirectory(atPath: licensesPath)) ?? []
+                let licenseFolders: Int = licenseEntries.filter { !$0.hasSuffix(".txt") }.count
+                let indexState: String = AppDelegate.licensesIndexURL != nil ? "yes" : "no"
+                NSLog("bundle: licenses=%ld index=%@", licenseFolders, indexState)
+                (NSApp.delegate as? AppDelegate)?.helpLicenses(nil)
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }

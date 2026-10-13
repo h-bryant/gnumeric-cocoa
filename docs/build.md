@@ -64,8 +64,8 @@ not a Homebrew formula; `dylibbundler` 1.0.5 is (Phase 6).
 | `scripts/gen-xcconfig.sh` | write `build/engine.xcconfig` from pkg-config for `project.yml`; then `xcodegen generate` |
 | `scripts/build-app.sh` | swiftc build of `Sources/App` plus the bridge into `build/app/GnumericCocoa.app` (ad-hoc signed) |
 | `scripts/test-xcode.sh` | build the Xcode test bundle and run it with `xcrun xctest`; `--xcodebuild` uses `xcodebuild test` (needs developer mode) |
-| `scripts/bundle.sh` | make `build/dist/GnumericCocoa.app`, a relocatable bundle: the dylib closure in `Contents/Frameworks` rewritten to `@rpath`, the Gnumeric and goffice plugins, the templates, the GSettings schemas, and the gdk-pixbuf loaders under `Contents/Resources`, everything ad-hoc signed (see "Bundling") |
-| `scripts/verify-bundle.sh` | make the bundle and run it headlessly with `build/prefix` renamed away, logging what the engine found (`GNM_SNAPSHOT_BUNDLE=1`) |
+| `scripts/bundle.sh` | make `build/dist/GnumericCocoa.app`, a relocatable bundle: the dylib closure in `Contents/Frameworks` rewritten to `@rpath`, the Gnumeric and goffice plugins, the templates, the GSettings schemas, the gdk-pixbuf loaders, and every bundled library's license texts with an index under `Contents/Resources`, everything ad-hoc signed (see "Bundling") |
+| `scripts/verify-bundle.sh` | make the bundle and run it headlessly with `build/prefix` renamed away, logging what the engine found and whether the licenses are inside (`GNM_SNAPSHOT_BUNDLE=1`) |
 | `scripts/run-app.sh [file ...]` | launch that app directly; `GNM_SNAPSHOT=out.png` writes the grid (`out.png`), the whole window through `cacheDisplay` (`out-window.png`) and through `CALayer.render` (`out-layers.png`), then quits; `GNM_DEBUG_LAYOUT=1` logs view frames, layer state, and every grid and header draw with its transform |
 
 Configure flags used by `build-gnumeric.sh`: Homebrew's
@@ -295,17 +295,36 @@ follows Homebrew's oldest supported release (ADR-009).
   path to each plugin.  It fails if any load command still points outside
   the bundle.  Homebrew's plugin and loader directories are copied with
   `cp -RL`, since they link into the Cellar.
-- Everything is ad-hoc signed, inner files first.  The result is about 61
-  MB: 48 dylibs (38 MB) and 59 plugins.
+- The licenses travel with the libraries (HANDOFF.md Phase 6: they are
+  not system libraries).  The closure walk records what it copied in
+  `build/dist/closure.json`; a second step maps every copied dylib,
+  plugin, and loader back to its Homebrew keg (`Cellar/<formula>/<version>`)
+  or to the engine built from `build/prefix`, copies the keg's license
+  texts (`COPYING*`, `LICENSE*`, `Copyright`, `AUTHORS`, SPDX-named `.txt`
+  files, a `LICENSES/` directory) into
+  `Contents/Resources/licenses/<formula>-<version>/`, and writes
+  `licenses/THIRD-PARTY.txt`: for each of the 35 libraries its version,
+  SPDX license expression (the keg's `sbom.spdx.json`, else the formula's
+  `license` line), homepage and source URL (the formula's `.brew/*.rb`),
+  the texts, and the bundled files.  The engine's entry carries
+  `patches/` (the GPL asks for the modifications), and the application's
+  own `COPYING` files sit in `licenses/GnumericCocoa/`.  A keg without a
+  license text, or a copied file from no keg, fails the script.  Help →
+  Third-Party Licenses opens the index (`AppDelegate.helpLicenses`); the
+  item is disabled in a development build, which has no `licenses/`.
+- Everything is ad-hoc signed, inner files first.  The result is about 62
+  MB: 48 dylibs (38 MB), 59 plugins, and 1 MB of license texts.
 
 `scripts/verify-bundle.sh` runs it with `build/prefix` renamed away and
 `GNM_SNAPSHOT_BUNDLE=1`, which logs the engine's directories, the plugin
 counts, a chart (a goffice plugin), the autoformat categories (the data
-directory), and a PNG and a GIF (gdk-pixbuf's built-in and loaded codecs).
+directory), a PNG and a GIF (gdk-pixbuf's built-in and loaded codecs),
+the license directories and index (`licenses=36 index=yes`), and the
+path Help → Third-Party Licenses would open.
 Not yet done: running on a machine without Homebrew (fontconfig,
 GIO modules, and goffice's own compiled-in plugin directory are untested
-without it), locale data (the engine build makes none), and the sources
-and licenses of the bundled libraries (HANDOFF.md Phase 6).
+without it), locale data (the engine build makes none), and a real
+signature (HANDOFF.md Phase 6).
 
 ## Xcode build
 

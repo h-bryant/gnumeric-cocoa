@@ -337,6 +337,10 @@ enum MainMenu {
         helpMenu.addItem(withTitle: "Gnumeric on the Web", action: Selector(("helpWeb:")), keyEquivalent: "")
         helpMenu.addItem(withTitle: "Live Assistance", action: Selector(("helpIRC:")), keyEquivalent: "")
         helpMenu.addItem(withTitle: "Report a Problem", action: Selector(("helpBug:")), keyEquivalent: "")
+        helpMenu.addItem(.separator())
+        // The bundled libraries' licenses (scripts/bundle.sh); disabled in
+        // a development build, which has none inside.
+        helpMenu.addItem(withTitle: "Third-Party Licenses", action: Selector(("helpLicenses:")), keyEquivalent: "")
         menuBar.addItem(submenu(helpMenu, title: "Help"))
         NSApp.helpMenu = helpMenu
 

@@ -17,5 +17,5 @@ env -u GNM_PREFIX GNM_PERSIST_PREFS=0 GNM_SNAPSHOT="$out/bundle.png" GNM_SNAPSHO
 pid=$!
 for _ in $(seq 1 60); do sleep 1; kill -0 "$pid" 2>/dev/null || break; done
 if kill -0 "$pid" 2>/dev/null; then echo "STILL RUNNING"; kill "$pid"; fi
-grep -o "bundle: .*\|Gnumeric error.*\|CRITICAL.*" "$out/bundle.log" | cut -c1-240
+grep -o "bundle: .*\|help: .*\|Gnumeric error.*\|CRITICAL.*" "$out/bundle.log" | cut -c1-240
 ls -la "$out/bundle.png" 2>/dev/null | awk '{print $5, $9}'

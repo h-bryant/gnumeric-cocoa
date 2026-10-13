@@ -2125,6 +2125,28 @@
   with an object that draws nothing without its plugin, as in the GTK.
   Render-only support is the follow-up should Lasem ever be installed.
 
+### 2026-10-13 (later): the bundled libraries' licenses
+
+- `scripts/bundle.sh` now carries the licenses (HANDOFF.md Phase 6):
+  the closure walk records what it copied (`build/dist/closure.json`),
+  and a second step maps each dylib, plugin, and loader back to its
+  Homebrew keg or to the engine built from `build/prefix`, copies the
+  keg's license texts into `Contents/Resources/licenses/<formula>-
+  <version>/`, and writes `licenses/THIRD-PARTY.txt` with every
+  library's version, SPDX license (the keg's `sbom.spdx.json`), homepage
+  and source URL (the formula's `.brew/*.rb`), texts, and bundled files.
+  The engine's entry carries `patches/`; the application's own `COPYING`
+  files sit beside them.  35 libraries, 1 MB.  A keg without a license
+  text, or a copied file from no keg, fails the script.
+- Help → Third-Party Licenses (`AppDelegate.helpLicenses`) opens the
+  index; `validateMenuItem` disables it in a development build, which
+  links Homebrew's libraries in place and has no `licenses/`.
+- `GNM_SNAPSHOT_BUNDLE=1` also logs `licenses=36 index=yes` and the path
+  the Help item would open; `scripts/verify-bundle.sh` shows both.  The
+  same hook on the development build logs `licenses=0 index=no`.
+- The index names the GitHub remote as the application's source; nothing
+  has been pushed there yet (Henry's call).
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -2165,8 +2187,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-13: `main` at the toolbar extras
-   commit (after the workbook properties, multi-line editing, drag and drop, the toolbar, the widget editors, AutoFormat, scenarios and simulation, the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-13: `main` at the bundled licenses
+   commit (after the relocatable bundle, the workbook properties, multi-line editing, drag and drop, the toolbar, the widget editors, AutoFormat, scenarios and simulation, the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

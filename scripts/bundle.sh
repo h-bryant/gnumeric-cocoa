@@ -136,6 +136,135 @@ if bad:
     sys.exit(1)
 total = sum(os.path.getsize(os.path.join(fw, n)) for n in copied)
 print(f"{len(copied)} dylibs in Frameworks ({total // 1_000_000} MB), {len(plugins)} plugins")
+import json
+with open(os.path.join(os.path.dirname(dist), "closure.json"), "w") as f:
+    json.dump(copied, f, indent=1, sort_keys=True)
+PY
+
+# The licenses: every bundled library's texts and an index (HANDOFF.md
+# Phase 6: the libraries are not system libraries, so their licenses
+# travel with them; the engine is GPL, so its patches do too).
+source_url=$(git remote get-url origin 2>/dev/null | sed -E 's#^git@github.com:#https://github.com/#; s#\.git$##' || true)
+python3 - "$DIST" "$(brew --prefix 2>/dev/null || echo /opt/homebrew)" "$GNM_PREFIX" "$goffice_plugins" "$loaders" "$PWD" "$version" "${source_url:-}" <<'PY'
+import os, re, sys, glob, json, shutil
+dist, brew, prefix, goffice_plugins, loaders, repo, engine_version, source_url = sys.argv[1:9]
+res = os.path.join(dist, "Contents/Resources")
+out = os.path.join(res, "licenses")
+os.makedirs(out)
+cellar = re.compile(re.escape(os.path.realpath(os.path.join(brew, "Cellar"))) + r"/([^/]+)/([^/]+)/")
+prefix = os.path.realpath(prefix)
+with open(os.path.join(os.path.dirname(dist), "closure.json")) as f:
+    closure = json.load(f)
+
+# 1. what came from where: formula -> {version, files}
+entries = {}
+def note(real, shown):
+    real = os.path.realpath(real)
+    if real.startswith(prefix + "/"):
+        key, version = "gnumeric", engine_version
+    else:
+        m = cellar.match(real)
+        if not m:
+            print("no formula for", real)
+            sys.exit(1)
+        key, version = m.group(1), m.group(2)
+    entries.setdefault(key, {"version": version, "files": []})["files"].append(shown)
+for name, real in closure.items():
+    note(real, "Frameworks/" + name)
+for so in sorted(glob.glob(os.path.join(prefix, "lib/gnumeric", engine_version, "plugins/*/*.so"))):
+    note(so, "Resources/gnumeric/lib/plugins/" + os.path.relpath(so, os.path.join(prefix, "lib/gnumeric", engine_version, "plugins")))
+for so in sorted(glob.glob(os.path.join(goffice_plugins, "*/*.so"))):
+    note(so, "Resources/goffice/plugins/" + os.path.relpath(so, goffice_plugins))
+for so in sorted(glob.glob(os.path.join(loaders, "*.so"))):
+    note(so, "Resources/gdk-pixbuf/loaders/" + os.path.basename(so))
+
+# 2. each formula's texts and metadata
+texts = re.compile(r"^(COPYING|LICEN[CS]E|Copyright|NOTICE|AUTHORS|[\w.+-]*(GPL|MIT|BSD|MPL|Apache|Zlib|license)[\w.+-]*\.txt)", re.I)
+def keg_metadata(formula, version):
+    keg = os.path.join(brew, "Cellar", formula, version)
+    rb = open(os.path.join(keg, ".brew", formula + ".rb")).read()
+    url = re.search(r'^\s*url "([^"]+)"', rb, re.M)
+    homepage = re.search(r'^\s*homepage "([^"]+)"', rb, re.M)
+    license = None
+    sbom = os.path.join(keg, "sbom.spdx.json")
+    if os.path.exists(sbom):
+        with open(sbom) as f:
+            for package in json.load(f).get("packages", []):
+                if package.get("name") == formula and package.get("licenseConcluded") not in (None, "NOASSERTION"):
+                    license = package["licenseConcluded"]
+    if not license:
+        m = re.search(r"^\s*license (.+?)$", rb, re.M)
+        license = m.group(1).strip() if m else "(not stated)"
+    files = sorted(n for n in os.listdir(keg) if texts.match(n))
+    if os.path.isdir(os.path.join(keg, "LICENSES")):
+        files.append("LICENSES")
+    return keg, license, homepage.group(1) if homepage else "", url.group(1) if url else "", files
+
+index = []
+for formula in sorted(entries):
+    entry = entries[formula]
+    version = entry["version"]
+    folder = f"{formula}-{version}"
+    target = os.path.join(out, folder)
+    os.makedirs(target)
+    if formula == "gnumeric":
+        keg = os.path.join(repo, "upstream/gnumeric")
+        license = "GPL-2.0-only OR GPL-3.0-only"
+        homepage = "https://www.gnumeric.org/"
+        major = ".".join(version.split(".")[:2])
+        url = f"https://download.gnome.org/sources/gnumeric/{major}/gnumeric-{version}.tar.xz"
+        files = sorted(n for n in os.listdir(keg) if texts.match(n))
+        shutil.copytree(os.path.join(repo, "patches"), os.path.join(target, "patches"))
+        entry["note"] = "the engine, built from this release with the patches in patches/ (patches/README.md says what each changes)"
+    else:
+        keg, license, homepage, url, files = keg_metadata(formula, version)
+    if not files:
+        print("no license text in", keg)
+        sys.exit(1)
+    for name in files:
+        src = os.path.join(keg, name)
+        if os.path.isdir(src):
+            shutil.copytree(src, os.path.join(target, name))
+        else:
+            shutil.copy2(src, os.path.join(target, name))
+    shown = [n for n in files if not n.upper().startswith("AUTHORS")]
+    lines = [f"{formula} {version}",
+             f"  license:  {license}",
+             f"  homepage: {homepage}",
+             f"  source:   {url}",
+             f"  texts:    {folder}/{', '.join(shown)}"]
+    if "note" in entry:
+        lines.append(f"  note:     {entry['note']}")
+    files_shown = entry["files"]
+    lines.append(f"  bundled:  {len(files_shown)} file{'s' if len(files_shown) != 1 else ''}: " + ", ".join(files_shown[:4]) + (", …" if len(files_shown) > 4 else ""))
+    index.append("\n".join(lines))
+
+# 3. the application's own license beside them
+own = os.path.join(out, "GnumericCocoa")
+os.makedirs(own)
+for name in ("COPYING", "COPYING-gpl2", "COPYING-gpl3"):
+    shutil.copy2(os.path.join(repo, name), os.path.join(own, name))
+
+header = f"""Third-party software in GnumericCocoa.app
+=========================================
+
+GnumericCocoa is free software under the GNU General Public License,
+version 2 or version 3 (GnumericCocoa/COPYING beside this file); its
+source is at {source_url or "the repository it was built from"}.
+It is a Cocoa front end for the Gnumeric spreadsheet engine, and it
+carries the engine and the libraries below inside the application
+bundle, each as its own file under Contents/Frameworks or
+Contents/Resources that a user may replace with another build of the
+same library (the GNU Lesser General Public License's relinking
+condition, version 2.1 section 6b).  Each library's license texts are
+in the directory named under "texts", and the source of each release is
+at the URL under "source".  Versions are those of the Homebrew formulae
+the bundle was made from.
+
+"""
+with open(os.path.join(out, "THIRD-PARTY.txt"), "w") as f:
+    f.write(header + "\n\n".join(index) + "\n")
+print(f"{len(entries)} libraries' licenses in Resources/licenses (THIRD-PARTY.txt)")
 PY
 
 # Ad-hoc signatures, inner items first.
