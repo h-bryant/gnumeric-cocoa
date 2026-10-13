@@ -38,6 +38,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         super.init(window: window)
         window.delegate = self
         buildContent(in: window)
+        installToolbar(in: window)
         workbook.delegate = self
         workbook.resendDelegateState()
         rebuildTabs()
@@ -343,7 +344,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         }
     }
 
-    private func runSizeCommand(_ command: (Sheet) throws -> Void) {
+    func runSizeCommand(_ command: (Sheet) throws -> Void) {
         guard let sheet = gridView.sheet else { return }
         if gridView.isEditing { gridView.cancelEditing() }
         do {
@@ -351,6 +352,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         } catch {
             present(error)
         }
+        updateToolbarState()
     }
 
     @objc func setColumnWidth(_ sender: Any?) {
@@ -492,6 +494,10 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         setZoom(1)
     }
 
+    func validateToolbarItem(_ item: NSToolbarItem) -> Bool {
+        validateUserInterfaceItem(item)
+    }
+
     func validateUserInterfaceItem(_ item: any NSValidatedUserInterfaceItem) -> Bool {
         let zoom = gridView.sheet?.zoomFactor
         switch item.action {
@@ -556,7 +562,9 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(insertFrame(_:)), #selector(insertButton(_:)), #selector(insertCheckbox(_:)), #selector(insertRadioButton(_:)),
              #selector(insertScrollbar(_:)), #selector(insertSpinButton(_:)), #selector(insertSlider(_:)), #selector(insertList(_:)),
-             #selector(insertCombo(_:)):
+             #selector(insertCombo(_:)), #selector(alignLeft(_:)), #selector(alignCenter(_:)), #selector(alignRight(_:)),
+             #selector(centerAcrossSelection(_:)), #selector(formatAsAccounting(_:)), #selector(formatAsPercentage(_:)),
+             #selector(formatWithThousands(_:)), #selector(increasePrecision(_:)), #selector(decreasePrecision(_:)), #selector(autoSum(_:)):
             return gridView.sheet != nil
         case #selector(advancedFilter(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
@@ -2137,6 +2145,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
 
     func workbook(_ workbook: Workbook, selectionDescriptionDidChange text: String) {
         nameBox.stringValue = text
+        updateToolbarState()
     }
 
     func workbookModifiedStateDidChange(_ workbook: Workbook) {

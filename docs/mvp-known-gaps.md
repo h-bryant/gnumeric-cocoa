@@ -140,7 +140,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 
 | Feature | Status | Notes / Phase |
 |---|---|---|
-| Toolbars (standard, format, object) | no | Phase 3 |
+| Toolbars (standard, format, object) | partial | 2026-10-13: one customizable NSToolbar with the GTK standard items (New, Open, Save, Print, Cut, Copy, Paste, Undo, Redo, Hyperlink, AutoSum, Function, the sorts, Chart, a zoom pop-up) and the format items (font family and size, Bold, Italic, Underline, the alignments, Merge, Unmerge, Accounting, Percent, thousands, more and fewer decimals; `WorkbookToolbar.swift`, `GnmNumberFormats.h`); the toggles follow the cursor cell; no object toolbar, borders, colors, indent, super- and subscript, or print preview |
 | Status bar, auto-expression (sum/average of selection) | partial | auto-expression pull-down 2026-10-11; no progress or zoom fields |
 | Name box navigation (type a reference) | ported | 2026-10-12: a reference, a sheet-qualified reference, or a name; a new word names the selection |
 | Formula bar: multi-line editing | no | Phase 3 |

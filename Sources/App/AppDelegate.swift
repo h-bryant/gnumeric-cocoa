@@ -1839,6 +1839,39 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_TOOLBAR"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // The toolbar: 1234.5678 in C3 made bold, centered, a
+                // percentage with one more decimal through the buttons, the
+                // font size 14 through the combo, AutoSum in C5, zoom 150%.
+                try? sheet.setText("1234.5678", atColumn: 2, row: 2, autocorrect: false)
+                sheet.selectCell(atColumn: 2, row: 2)
+                NSLog("toolbar: %ld items; state %@", window.toolbar?.items.count ?? 0, controller.toolbarStateForTesting)
+                for identifier in ["bold", "alignCenter", "percent", "morePrecision"] { controller.performToolbarItemForTesting(identifier) }
+                let format = sheet.formatOfCell(atColumn: 2, row: 2)
+                NSLog("toolbar: C3 bold=%@ align=%@ format='%@' shows '%@' undo=%@", format.bold ?? -1, format.horizontalAlignment ?? -1,
+                      format.numberFormat ?? "nil", sheet.displayTextOfCell(atColumn: 2, row: 2) ?? "nil", sheet.workbook?.undoLabel ?? "nil")
+                NSLog("toolbar: state %@", controller.toolbarStateForTesting)
+                if let combo = window.toolbar?.items.first(where: { $0.itemIdentifier.rawValue == "fontSize" })?.view as? NSComboBox {
+                    combo.stringValue = "14"
+                    controller.fontSizeChosen(combo)
+                    NSLog("toolbar: font size %@", sheet.formatOfCell(atColumn: 2, row: 2).fontSize ?? -1)
+                }
+                sheet.selectCell(atColumn: 2, row: 4)
+                controller.performToolbarItemForTesting("autosum")
+                NSLog("toolbar: autosum editing=%d text='%@'", controller.gridView.isEditing ? 1 : 0, controller.gridView.editorTextForTesting)
+                controller.gridView.cancelEditing()
+                if let zoom = window.toolbar?.items.first(where: { $0.itemIdentifier.rawValue == "zoom" })?.view as? NSPopUpButton {
+                    zoom.selectItem(withTitle: "150%")
+                    controller.zoomChosen(zoom)
+                    NSLog("toolbar: zoom %g state %@", sheet.zoomFactor, controller.toolbarStateForTesting)
+                    zoom.selectItem(withTitle: "100%")
+                    controller.zoomChosen(zoom)
+                }
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FREEZE"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

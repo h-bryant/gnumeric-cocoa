@@ -110,7 +110,8 @@ GNM_SNAPSHOT=/tmp/grid.png scripts/run-app.sh upstream/gnumeric/samples/format-t
 `GNM_SNAPSHOT_PRINT=1`, `GNM_SNAPSHOT_FORMULA=1`, `GNM_SNAPSHOT_FUNC=1`,
 `GNM_SNAPSHOT_SHEET=1`, `GNM_SNAPSHOT_WHATIF=1`, `GNM_SNAPSHOT_OUTLINE=1`,
 `GNM_SNAPSHOT_ADVFILTER=1`, `GNM_SNAPSHOT_MANAGE=1`, `GNM_SNAPSHOT_PLUGINS=1`,
-`GNM_SNAPSHOT_SCENARIO=1`, `GNM_SNAPSHOT_AUTOFORMAT=1`, and `GNM_SNAPSHOT_WIDGET=1`
+`GNM_SNAPSHOT_SCENARIO=1`, `GNM_SNAPSHOT_AUTOFORMAT=1`, `GNM_SNAPSHOT_WIDGET=1`,
+and `GNM_SNAPSHOT_TOOLBAR=1`
 exercise zoom, editing and saving, the Format Cells model, the Phase 3
 commands, frozen panes, sheet management, the autofilter with the Sort
 command, a sheet resize, and a tab color, the sheet objects (select, move,
@@ -179,8 +180,11 @@ D1+D2 over two rounds, its results text logged), and AutoFormat (a 5 × 5
 block, the dialog on General's second template with the top edge off,
 captured to `-autoformat.png`, applied by OK), and widgets (a button
 inserted at B2 and configured through its dialog, a scrollbar at D2 made
-horizontal over 0…50, both in the window capture) before the capture
-(`AppDelegate.swift`, `Snapshot`). The typing hook saves as a
+horizontal over 0…50, both in the window capture), and the toolbar
+(1234.5678 in C3 made bold, centered, a percentage with one more decimal
+through the toolbar's items, the font size 14 through its combo, AutoSum
+in C5, zoom 150% through its pop-up; the toggles' state logged) before
+the capture (`AppDelegate.swift`, `Snapshot`). The typing hook saves as a
 Save As next to the snapshot; with `GNM_SNAPSHOT_SAVE_INPLACE=1` it saves
 the opened file in place instead (give it a copy). Should a quit ever go
 nowhere again (an alert sheet on the window did that once,

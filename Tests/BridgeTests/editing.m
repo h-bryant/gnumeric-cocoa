@@ -409,6 +409,37 @@ int main (void)
         [wb undo];
         GNM_ASSERT (wb.sheets.lastObject == apple && wb.sheets[wb.sheets.count - 2] == zebra, @"sorts undone: %@", [wb.sheets valueForKey:@"name"]);
         GNM_ASSERT ([wb removeSheet:zebra error:&error] && [wb removeSheet:apple error:&error], @"remove: %@", error);
+        /* the format toolbar's one-click changes */
+        GNM_ASSERT ([s setText:@"1234.5678" atColumn:7 row:7 autocorrect:NO error:&error], @"H8: %@", error);
+        [s selectCellAtColumn:7 row:7];
+        GNM_ASSERT ([s changeNumberFormatOfSelection:GnmNumberFormatPercentage error:&error], @"percent: %@", error);
+        GNM_ASSERT_EQ_STR ([s formatOfCellAtColumn:7 row:7].numberFormat ?: @"", @"0%");
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:7 row:7] ?: @"", @"123457%");
+        GNM_ASSERT_EQ_STR (wb.undoLabel ?: @"", @"Format as Percentage");
+        GNM_ASSERT ([s changeNumberFormatOfSelection:GnmNumberFormatIncreasePrecision error:&error], @"more decimals: %@", error);
+        GNM_ASSERT_EQ_STR ([s formatOfCellAtColumn:7 row:7].numberFormat ?: @"", @"0.0%");
+        GNM_ASSERT ([s changeNumberFormatOfSelection:GnmNumberFormatDecreasePrecision error:&error], @"fewer decimals: %@", error);
+        GNM_ASSERT_EQ_STR ([s formatOfCellAtColumn:7 row:7].numberFormat ?: @"", @"0%");
+        GNM_ASSERT ([s changeNumberFormatOfSelection:GnmNumberFormatGeneral error:&error], @"general: %@", error);
+        /* inc_dec on General counts the decimals the cell shows (the column
+         * width cuts 1234.5678 to what fits) and adds one */
+        NSString *shown = [s displayTextOfCellAtColumn:7 row:7] ?: @"";
+        NSUInteger shownDecimals = [shown containsString:@"."] ? shown.length - [shown rangeOfString:@"."].location - 1 : 0;
+        GNM_ASSERT ([s changeNumberFormatOfSelection:GnmNumberFormatIncreasePrecision error:&error], @"general plus one: %@", error);
+        NSLog (@"editing: general '%@' + 1 decimal -> '%@' shows '%@'", shown, [s formatOfCellAtColumn:7 row:7].numberFormat, [s displayTextOfCellAtColumn:7 row:7]);
+        NSString *expectedFixed = [@"0." stringByPaddingToLength:2 + shownDecimals + 1 withString:@"0" startingAtIndex:0];
+        GNM_ASSERT_EQ_STR ([s formatOfCellAtColumn:7 row:7].numberFormat ?: @"", expectedFixed);
+        GNM_ASSERT ([s changeNumberFormatOfSelection:GnmNumberFormatToggleThousands error:&error], @"thousands: %@", error);
+        GNM_ASSERT_EQ_STR ([s formatOfCellAtColumn:7 row:7].numberFormat ?: @"", [@"#,##" stringByAppendingString:expectedFixed]);
+        GNM_ASSERT ([s changeNumberFormatOfSelection:GnmNumberFormatAccounting error:&error], @"accounting: %@", error);
+        NSLog (@"editing: accounting '%@' shows '%@'", [s formatOfCellAtColumn:7 row:7].numberFormat, [s displayTextOfCellAtColumn:7 row:7]);
+        GNM_ASSERT ([[s formatOfCellAtColumn:7 row:7].numberFormat containsString:@"#,##0.00"], @"an accounting format: %@", [s formatOfCellAtColumn:7 row:7].numberFormat);
+        GNM_ASSERT ([s toggleHorizontalAlignmentOfSelection:8 error:&error] && [s formatOfCellAtColumn:7 row:7].horizontalAlignment.intValue == 8, @"centered: %@", error);
+        GNM_ASSERT_EQ_STR (wb.undoLabel ?: @"", @"Set Horizontal Alignment");
+        GNM_ASSERT ([s toggleHorizontalAlignmentOfSelection:8 error:&error] && [s formatOfCellAtColumn:7 row:7].horizontalAlignment.intValue == 1, @"back to general: %@", error);
+        GNM_ASSERT ([s toggleHorizontalAlignmentOfSelection:4 error:&error] && [s formatOfCellAtColumn:7 row:7].horizontalAlignment.intValue == 4, @"right: %@", error);
+        [wb undo];
+        GNM_ASSERT ([s formatOfCellAtColumn:7 row:7].horizontalAlignment.intValue == 1, @"alignment undone");
         /* the last sheet of a workbook stays (a fresh one: the engine's undo
          * stack keeps only a limited number of commands) */
         @autoreleasepool {

@@ -1496,6 +1496,26 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         return range.start.column != range.end.column || range.start.row != range.end.row
     }
 
+    func validateToolbarItem(_ item: NSToolbarItem) -> Bool {
+        validateUserInterfaceItem(item)
+    }
+
+    /// The toolbar's AutoSum (cb_autosum): "=SUM()" with the cursor
+    /// inside the parentheses, or, while a sum is being typed, the cursor
+    /// before its closing parenthesis.
+    func autoSum() {
+        guard sheet != nil else { return }
+        if isEditing {
+            let text = editor.stringValue
+            guard text.lowercased().hasPrefix("=sum(") else { return }
+            editor.currentEditor()?.selectedRange = NSRange(location: max(0, text.utf16.count - 1), length: 0)
+            return
+        }
+        beginEditing(initialText: "=SUM()")
+        editor.currentEditor()?.selectedRange = NSRange(location: 5, length: 0)
+        editingTextDidChange?(editor.stringValue)
+    }
+
     func validateUserInterfaceItem(_ item: any NSValidatedUserInterfaceItem) -> Bool {
         guard let sheet else { return false }
         switch item.action {
