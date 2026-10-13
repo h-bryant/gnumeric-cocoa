@@ -39,6 +39,11 @@ enum MainMenu {
         let printAreaMenu = NSMenu(title: "Print Area")
         printAreaMenu.addItem(withTitle: "Set Print Area", action: Selector(("setPrintArea:")), keyEquivalent: "")
         printAreaMenu.addItem(withTitle: "Clear Print Area", action: Selector(("clearPrintArea:")), keyEquivalent: "")
+        printAreaMenu.addItem(withTitle: "Show Print Area", action: Selector(("showPrintArea:")), keyEquivalent: "")
+        printAreaMenu.addItem(.separator())
+        printAreaMenu.addItem(withTitle: "Add Column Page Break", action: Selector(("toggleColumnPageBreak:")), keyEquivalent: "")
+        printAreaMenu.addItem(withTitle: "Add Row Page Break", action: Selector(("toggleRowPageBreak:")), keyEquivalent: "")
+        printAreaMenu.addItem(withTitle: "Clear All Page Breaks", action: Selector(("clearPageBreaks:")), keyEquivalent: "")
         fileMenu.addItem(submenu(printAreaMenu, title: "Print Area"))
         fileMenu.addItem(withTitle: "Print…", action: Selector(("printSheet:")), keyEquivalent: "p")
         menuBar.addItem(submenu(fileMenu, title: "File"))
@@ -304,6 +309,14 @@ enum MainMenu {
         NSApp.windowsMenu = windowMenu
 
         let helpMenu = NSMenu(title: "Help")
+        // The GTK Help menu: the manual, the function reference, the
+        // website, the IRC channel, the issue tracker.
+        helpMenu.addItem(withTitle: "Gnumeric Help", action: Selector(("helpDocs:")), keyEquivalent: "?")
+        helpMenu.addItem(withTitle: "Functions…", action: Selector(("helpFunctions:")), keyEquivalent: "")
+        helpMenu.addItem(.separator())
+        helpMenu.addItem(withTitle: "Gnumeric on the Web", action: Selector(("helpWeb:")), keyEquivalent: "")
+        helpMenu.addItem(withTitle: "Live Assistance", action: Selector(("helpIRC:")), keyEquivalent: "")
+        helpMenu.addItem(withTitle: "Report a Problem", action: Selector(("helpBug:")), keyEquivalent: "")
         menuBar.addItem(submenu(helpMenu, title: "Help"))
         NSApp.helpMenu = helpMenu
 

@@ -665,6 +665,23 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         case #selector(moveSheetRight(_:)):
             guard let sheet = gridView.sheet else { return false }
             return sheet.index < workbook.sheets.count - 1
+        case #selector(showPrintArea(_:)):
+            var area = CellRange()
+            return gridView.sheet?.getPrintArea(&area) ?? false
+        case #selector(toggleColumnPageBreak(_:)), #selector(toggleRowPageBreak(_:)):
+            // wb_control_menu_state_update's MS_PAGE_BREAKS: the label says
+            // what the item does; the first column (row) takes no break.
+            guard let sheet = gridView.sheet else { return false }
+            let edit = sheet.editPosition
+            let columns = item.action == #selector(toggleColumnPageBreak(_:))
+            let has = columns ? sheet.columnPageBreaks.contains(NSNumber(value: edit.column))
+                              : sheet.rowPageBreaks.contains(NSNumber(value: edit.row))
+            if let menuItem = item as? NSMenuItem {
+                menuItem.title = (has ? "Remove " : "Add ") + (columns ? "Column" : "Row") + " Page Break"
+            }
+            return columns ? edit.column != 0 : edit.row != 0
+        case #selector(clearPageBreaks(_:)):
+            return gridView.sheet?.hasManualPageBreaks ?? false
         case #selector(toggleBold(_:)), #selector(toggleItalic(_:)), #selector(toggleUnderline(_:)),
              #selector(toggleDoubleUnderline(_:)), #selector(toggleSingleLowUnderline(_:)), #selector(toggleDoubleLowUnderline(_:)),
              #selector(toggleStrikethrough(_:)), #selector(toggleSuperscript(_:)), #selector(toggleSubscript(_:)):
@@ -1325,6 +1342,24 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     @objc func clearPrintArea(_ sender: Any?) {
         runSizeCommand { try $0.setPrintArea(nil) }
     }
+
+    /// File → Print Area → Show Print Area (cb_file_print_area_show):
+    /// select the area and bring its first cell into view.
+    @objc func showPrintArea(_ sender: Any?) {
+        guard let sheet = gridView.sheet else { return }
+        var area = CellRange()
+        guard sheet.getPrintArea(&area) else { return }
+        sheet.selectRange(area, editPosition: area.start)
+        gridView.scrollToVisible(sheet.frameOfCell(atColumn: area.start.column, row: area.start.row).insetBy(dx: -2, dy: -2))
+        gridView.needsDisplay = true
+    }
+
+    /// File → Print Area → Add/Remove Column (Row) Page Break and Clear
+    /// All Page Breaks (cb_file_print_area_toggle_col/_row,
+    /// cb_file_print_area_clear_pagebreaks).
+    @objc func toggleColumnPageBreak(_ sender: Any?) { runSizeCommand { try $0.togglePageBreakAtEditPosition(forColumns: true) } }
+    @objc func toggleRowPageBreak(_ sender: Any?) { runSizeCommand { try $0.togglePageBreakAtEditPosition(forColumns: false) } }
+    @objc func clearPageBreaks(_ sender: Any?) { runSizeCommand { try $0.clearPageBreaks() } }
 
     // MARK: Solver
 

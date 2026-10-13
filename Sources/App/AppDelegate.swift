@@ -48,6 +48,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settings?.show()
     }
 
+    // MARK: Help
+
+    /// The GTK Help items (cb_help_docs, cb_help_web, cb_help_irc,
+    /// cb_help_bug): the manual, the website, the IRC channel, and the
+    /// issue tracker open in the browser (or the IRC client, when one
+    /// handles irc: links).
+    static let helpURLs: [String: String] = [
+        "docs": "https://help.gnome.org/users/gnumeric/stable/",
+        "web": "https://www.gnumeric.org/",
+        "irc": "irc://irc.gnome.org/gnumeric",
+        "bug": "https://gitlab.gnome.org/GNOME/gnumeric/issues",
+    ]
+
+    private func openHelp(_ key: String) {
+        guard let string = Self.helpURLs[key], let url = URL(string: string) else { return }
+        if ProcessInfo.processInfo.environment["GNM_SNAPSHOT"] != nil {
+            NSLog("help: would open %@", url.absoluteString)
+            return
+        }
+        NSWorkspace.shared.open(url)
+    }
+
+    @objc func helpDocs(_ sender: Any?) { openHelp("docs") }
+    @objc func helpWeb(_ sender: Any?) { openHelp("web") }
+    @objc func helpIRC(_ sender: Any?) { openHelp("irc") }
+    @objc func helpBug(_ sender: Any?) { openHelp("bug") }
+
+    /// Help → Functions (dialog_function_select_help): the catalog to read.
+    @objc func helpFunctions(_ sender: Any?) {
+        guard let engine else { return }
+        let dialog = FunctionSelectorDialog(engine: engine, helpOnly: true)
+        if let window = NSApp.keyWindow, window.windowController is WorkbookWindowController, window.attachedSheet == nil {
+            dialog.present(in: window) { _ in }
+        } else {
+            dialog.runModal()
+        }
+    }
+
     func applicationWillFinishLaunching(_ notification: Notification) {
         NSApp.mainMenu = MainMenu.build()
         do {
@@ -2069,6 +2107,35 @@ enum Snapshot {
                 controller.gridView.select(objects: [])
                 sheet.selectCell(atColumn: 0, row: 0)
                 NSLog("fontmenu: A1 strike-on=%d", controller.fontMenuItemIsOn(#selector(WorkbookWindowController.toggleStrikethrough(_:))) ? 1 : 0)
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_PAGEBREAK"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // Print Area: A1:D10 set, a column break before C and a row
+                // break above row 5 (dashed lines in the capture), Show
+                // Print Area selecting it; the Help items log their URLs.
+                for row in 0..<12 {
+                    for column in 0..<6 { try? sheet.setText("\(row + 1)", atColumn: column, row: row, autocorrect: false) }
+                }
+                try? sheet.setPrintArea("A1:D10")
+                sheet.selectCell(atColumn: 2, row: 0)
+                controller.toggleColumnPageBreak(nil)
+                sheet.selectCell(atColumn: 0, row: 4)
+                controller.toggleRowPageBreak(nil)
+                let menuItem = NSMenuItem(title: "", action: #selector(WorkbookWindowController.toggleRowPageBreak(_:)), keyEquivalent: "")
+                let enabled = controller.validateUserInterfaceItem(menuItem)
+                controller.showPrintArea(nil)
+                let selected = sheet.selectedRange
+                let breaks = "columns=\(sheet.columnPageBreaks) rows=\(sheet.rowPageBreaks) has=\(sheet.hasManualPageBreaks)"
+                let item = "item='\(menuItem.title)' enabled=\(enabled)"
+                let selection = "selection=\(selected.start.column),\(selected.start.row)-\(selected.end.column),\(selected.end.row)"
+                let undo = "undo=" + (sheet.workbook?.undoLabel ?? "nil")
+                NSLog("pagebreak: %@ %@ %@ %@", breaks, item, selection, undo)
+                let delegate = NSApp.delegate as? AppDelegate
+                delegate?.helpDocs(nil)
+                delegate?.helpBug(nil)
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }

@@ -1794,6 +1794,31 @@
   `formatOfSelection` and `fontScriptOfSelection` when the menu opens.
   `GNM_SNAPSHOT_FONTMENU=1` exercises them.
 
+### 2026-10-13 (later): page breaks, Show Print Area, the Help menu
+
+- `GnmSheet (Printing)` gained `getPrintArea:`, `columnPageBreaks` /
+  `rowPageBreaks` (the manual entries of the print info's
+  `page_breaks.v` / `.h`), `hasManualPageBreaks`,
+  `togglePageBreakAtEditPositionForColumns:` (`cmd_page_break_toggle`;
+  the engine names the command after the reverse action, so adding a
+  break leaves "Undo Remove Column Page Break", as in the GTK) and
+  `clearPageBreaksWithError:` (`cmd_page_breaks_clear`).  `printing.m`
+  checks the breaks, that the pagination honors them (A1:B80, then
+  A1:B3), the labels, and the undos.
+- File → Print Area gained Show Print Area (cb_file_print_area_show),
+  Add/Remove Column Page Break, Add/Remove Row Page Break (titles from
+  the edit position as `wb_control_menu_state_update` sets them; the
+  first column and row take none; note that function checks the row
+  breaks with the column index, a GTK bug the port does not copy), and
+  Clear All Page Breaks.  The grid draws manual breaks as dashed blue
+  lines (the GTK grid draws none).
+- The Help menu: Gnumeric Help (the GNOME manual online; the GTK spawns
+  yelp), Functions… (the function selector in a help-only mode:
+  `FunctionSelectorDialog(engine:helpOnly:)`), Gnumeric on the Web, Live
+  Assistance (an irc: link), and Report a Problem.  Under `GNM_SNAPSHOT`
+  the links are logged instead of opened.  `GNM_SNAPSHOT_PAGEBREAK=1`
+  covers the breaks, Show Print Area, and the Help links.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and

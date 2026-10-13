@@ -19,12 +19,17 @@ final class FunctionSelectorDialog: NSObject, NSTableViewDataSource, NSTableView
     let details = NSTextField(wrappingLabelWithString: "")
     private(set) var shown: [FunctionInfo] = []
 
-    init(engine: Engine) {
+    /// Help → Functions (dialog_function_select_help): the same catalog
+    /// to read, with nothing to insert.
+    let helpOnly: Bool
+
+    init(engine: Engine, helpOnly: Bool = false) {
         groups = engine.functionGroups
+        self.helpOnly = helpOnly
         super.init()
-        alert.messageText = "Insert Function"
-        alert.addButton(withTitle: "Insert")
-        alert.addButton(withTitle: "Cancel")
+        alert.messageText = helpOnly ? "Functions" : "Insert Function"
+        alert.addButton(withTitle: helpOnly ? "Close" : "Insert")
+        if !helpOnly { alert.addButton(withTitle: "Cancel") }
         groupPopUp.addItems(withTitles: ["All functions"] + groups.map(\.name))
         groupPopUp.target = self
         groupPopUp.action = #selector(filterChanged(_:))
@@ -139,8 +144,15 @@ final class FunctionSelectorDialog: NSObject, NSTableViewDataSource, NSTableView
         }
         alert.window.initialFirstResponder = search
         alert.beginSheetModal(for: window) { [self] response in
-            guard response == .alertFirstButtonReturn, let function = selectedFunction else { return }
+            guard !helpOnly, response == .alertFirstButtonReturn, let function = selectedFunction else { return }
             insert(function)
         }
+    }
+
+    /// Present as an application-modal window (Help → Functions with no
+    /// workbook window open).
+    func runModal() {
+        alert.window.initialFirstResponder = search
+        _ = alert.runModal()
     }
 }

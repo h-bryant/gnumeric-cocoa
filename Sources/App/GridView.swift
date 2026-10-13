@@ -426,6 +426,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     /// Everything the sheet shows in `dirtyRect` (sheet coordinates).
     private func drawPass(_ sheet: Sheet, context: CGContext, dirtyRect: NSRect) {
         sheet.drawCells(in: dirtyRect, context: context, backgroundColor: NSColor.white.cgColor)
+        drawPageBreaks(of: sheet, dirtyRect: dirtyRect)
         sheet.drawSheetObjects(in: dirtyRect, context: context)
         drawFilterButtons(of: sheet, dirtyRect: dirtyRect)
         drawCommentMarkers(of: sheet, dirtyRect: dirtyRect)
@@ -436,6 +437,31 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         drawFunctionTooltip(of: sheet, dirtyRect: dirtyRect)
         drawFormulaRange(of: sheet, dirtyRect: dirtyRect)
         drawObjectSelection(dirtyRect: dirtyRect)
+    }
+
+    /// The manual page breaks as dashed blue lines along the left of a
+    /// column and the top of a row (the GTK grid shows none; the print
+    /// preview is the system panel's).
+    private func drawPageBreaks(of sheet: Sheet, dirtyRect: NSRect) {
+        let columns = sheet.columnPageBreaks, rows = sheet.rowPageBreaks
+        guard !columns.isEmpty || !rows.isEmpty else { return }
+        let path = NSBezierPath()
+        path.lineWidth = 1
+        path.setLineDash([6, 3], count: 2, phase: 0)
+        for column in columns {
+            let x = sheet.frameOfCell(atColumn: column.intValue, row: 0).minX - 0.5
+            guard x >= dirtyRect.minX - 1, x <= dirtyRect.maxX + 1 else { continue }
+            path.move(to: NSPoint(x: x, y: dirtyRect.minY))
+            path.line(to: NSPoint(x: x, y: dirtyRect.maxY))
+        }
+        for row in rows {
+            let y = sheet.frameOfCell(atColumn: 0, row: row.intValue).minY - 0.5
+            guard y >= dirtyRect.minY - 1, y <= dirtyRect.maxY + 1 else { continue }
+            path.move(to: NSPoint(x: dirtyRect.minX, y: y))
+            path.line(to: NSPoint(x: dirtyRect.maxX, y: y))
+        }
+        NSColor.systemBlue.withAlphaComponent(0.7).setStroke()
+        path.stroke()
     }
 
     private func drawSelection(of sheet: Sheet, dirtyRect: NSRect) {

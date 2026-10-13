@@ -708,6 +708,79 @@ print_page_cells (PangoContext *pcontext, cairo_t *cr, Sheet const *sheet, GnmRa
     return name;
 }
 
+- (BOOL)getPrintArea:(GnmCellRange *)range
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    Sheet *sheet = self.engineSheet;
+    if (!sheet)
+        return NO;
+    GnmRange *r = sheet_get_nominal_printarea (sheet);
+    if (!r)
+        return NO;
+    if (range)
+        *range = GnmCellRangeMake (r->start.col, r->start.row, r->end.col, r->end.row);
+    g_free (r);
+    return YES;
+}
+
+static NSArray<NSNumber *> *manual_breaks (GnmPageBreaks const *breaks)
+{
+    NSMutableArray *result = [NSMutableArray array];
+    if (!breaks || !breaks->details)
+        return result;
+    for (guint i = 0; i < breaks->details->len; i++) {
+        GnmPageBreak const *pb = &g_array_index (breaks->details, GnmPageBreak, i);
+        if (pb->type == GNM_PAGE_BREAK_MANUAL)
+            [result addObject:@(pb->pos)];
+    }
+    return result;
+}
+
+- (NSArray<NSNumber *> *)columnPageBreaks
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    Sheet *sheet = self.engineSheet;
+    return sheet && sheet->print_info ? manual_breaks (sheet->print_info->page_breaks.v) : @[];
+}
+
+- (NSArray<NSNumber *> *)rowPageBreaks
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    Sheet *sheet = self.engineSheet;
+    return sheet && sheet->print_info ? manual_breaks (sheet->print_info->page_breaks.h) : @[];
+}
+
+- (BOOL)hasManualPageBreaks
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    Sheet *sheet = self.engineSheet;
+    return sheet && sheet->print_info && print_info_has_manual_breaks (sheet->print_info);
+}
+
+- (BOOL)togglePageBreakAtEditPositionForColumns:(BOOL)columns error:(NSError **)error
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    Sheet *sheet = self.engineSheet;
+    GnmWorkbook *workbook = self.workbook;
+    if (!sheet || !workbook)
+        return NO;
+    return [workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_page_break_toggle (wbc, sheet, columns);
+    } description:@"Could not change the page break." error:error];
+}
+
+- (BOOL)clearPageBreaksWithError:(NSError **)error
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    Sheet *sheet = self.engineSheet;
+    GnmWorkbook *workbook = self.workbook;
+    if (!sheet || !workbook)
+        return NO;
+    return [workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_page_breaks_clear (wbc, sheet);
+    } description:@"Could not clear the page breaks." error:error];
+}
+
 - (BOOL)setPrintArea:(NSString *)rangeName error:(NSError **)error
 {
     NSAssert (NSThread.isMainThread, @"engine access off the main thread");

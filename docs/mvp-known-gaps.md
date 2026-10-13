@@ -19,7 +19,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | FileOpen | ported | every engine opener; CSV with default options |
 | FileSave, FileSaveAs | ported | `.gnumeric`, uncompressed `.xml`, `.xlsx`; other savers need Save As types |
 | FilePageSetup, FilePrint, FilePrintArea set and clear | ported | File → Page Setup… (⇧⌘P), Print… (⌘P) through the system print panel, Print Area → Set and Clear (2026-10-12); the engine's pagination and page drawing in the bridge |
-| FilePrintPreview, FilePrintArea show, page break actions | no | the system print panel previews; no page-break editing |
+| FilePrintPreview, FilePrintArea show, page break actions | partial | the system print panel previews (no separate preview window); 2026-10-13: File → Print Area → Show Print Area selects the area, Add/Remove Column (Row) Page Break at the edit position and Clear All Page Breaks run the engine's commands (`cmd_page_break_toggle`, whose undo label names the reverse action, as in the GTK), the pagination honors them, and the grid draws manual breaks as dashed blue lines (the GTK grid shows none) |
 | FileSend | no | Phase 5 |
 | FileMetaData (Properties) | partial | 2026-10-13: File → Properties… edits the nine standard string properties (title, subject, description, keywords, author, initial author, manager, company, category) as one undoable command (`GnmWorkbook.setDocumentProperties`, `DocumentPropertiesDialog`); no statistics page, no custom properties |
 | FileHistoryFull | ported | `NSDocumentController` recents |
@@ -135,7 +135,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | Action | Status | Notes / Phase |
 |---|---|---|
 | HelpAbout | ported | standard About panel, no version details |
-| HelpDocs, HelpFunctions, HelpWeb, HelpIRC, HelpBug | no | Phase 5 |
+| HelpDocs, HelpFunctions, HelpWeb, HelpIRC, HelpBug | ported | 2026-10-13: Help → Gnumeric Help (the GNOME manual online, instead of yelp), Functions… (the function catalog to read), Gnumeric on the Web, Live Assistance (irc:, needs a client), Report a Problem (the GNOME GitLab tracker) |
 
 ## Not menu items
 

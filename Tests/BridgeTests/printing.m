@@ -132,7 +132,39 @@ int main (void)
         GNM_ASSERT_EQ_STR (s.printAreaName, @"");
         [wb undo];
         GNM_ASSERT_EQ_STR (s.printAreaName, @"A1:C3");
+        GnmCellRange area;
+        GNM_ASSERT ([s getPrintArea:&area] && area.end.column == 2 && area.end.row == 2, @"the area as a range");
         [wb undo];
+        GNM_ASSERT (![s getPrintArea:&area], @"no area now");
+
+        /* manual page breaks */
+        GNM_ASSERT (!s.hasManualPageBreaks && s.columnPageBreaks.count == 0 && s.rowPageBreaks.count == 0, @"no breaks at first");
+        [s selectCellAtColumn:2 row:0];
+        GNM_ASSERT ([s togglePageBreakAtEditPositionForColumns:YES error:&error], @"column break: %@", error);
+        GNM_ASSERT_EQ_STR (wb.undoLabel ?: @"", @"Remove Column Page Break");   /* the engine's (reversed) name */
+        NSArray *columnBreaks = s.columnPageBreaks;
+        GNM_ASSERT (columnBreaks.count == 1 && [columnBreaks.firstObject integerValue] == 2, @"a break before C: %@", columnBreaks);
+        GNM_ASSERT (s.hasManualPageBreaks, @"has breaks");
+        job = [s printJobForSelectionOnly:NO ignoringPrintArea:YES];
+        GNM_ASSERT_EQ_STR ([job rangeNameOfPage:0], @"A1:B80");
+        [s selectCellAtColumn:0 row:3];
+        GNM_ASSERT ([s togglePageBreakAtEditPositionForColumns:NO error:&error], @"row break: %@", error);
+        NSArray *rowBreaks = s.rowPageBreaks;
+        GNM_ASSERT (rowBreaks.count == 1 && [rowBreaks.firstObject integerValue] == 3, @"a break above row 4: %@", rowBreaks);
+        job = [s printJobForSelectionOnly:NO ignoringPrintArea:YES];
+        GNM_ASSERT_EQ_STR ([job rangeNameOfPage:0], @"A1:B3");
+        GNM_ASSERT ([s togglePageBreakAtEditPositionForColumns:NO error:&error], @"row break off: %@", error);
+        GNM_ASSERT_EQ_STR (wb.undoLabel ?: @"", @"Add Row Page Break");
+        GNM_ASSERT (s.rowPageBreaks.count == 0, @"row break gone");
+        GNM_ASSERT ([s clearPageBreaksWithError:&error], @"clear: %@", error);
+        GNM_ASSERT_EQ_STR (wb.undoLabel ?: @"", @"Clear All Page Breaks");
+        GNM_ASSERT (!s.hasManualPageBreaks && s.columnPageBreaks.count == 0, @"cleared");
+        [wb undo];
+        GNM_ASSERT (s.columnPageBreaks.count == 1, @"the column break back after undo");
+        [wb undo];   /* the row break off */
+        [wb undo];   /* the row break on */
+        [wb undo];   /* the column break */
+        GNM_ASSERT (!s.hasManualPageBreaks, @"none after undoing all");
         settings.scaling = GnmPrintScalingPercentage;
         settings.scalePercentage = 100;
         settings.repeatTop = @"$1:$1";

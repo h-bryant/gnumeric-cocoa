@@ -103,6 +103,24 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(PrintJob)
 /// Set the print area to a range, or clear it with nil ("Set Print Area
 /// to …", "Clear Print Area"; the `Print_Area` name).
 - (BOOL)setPrintArea:(nullable NSString *)rangeName error:(NSError **)error NS_SWIFT_NAME(setPrintArea(_:));
+/// The print area as a range (`sheet_get_nominal_printarea`); NO when
+/// the whole sheet prints.
+- (BOOL)getPrintArea:(GnmCellRange *)range NS_SWIFT_NAME(getPrintArea(_:));
+/// The manual page breaks: the columns a page starts at (a break to the
+/// left of each) and the rows (a break above each), ascending.
+@property (nonatomic, readonly, copy) NSArray<NSNumber *> *columnPageBreaks;
+@property (nonatomic, readonly, copy) NSArray<NSNumber *> *rowPageBreaks;
+/// Whether any manual page break is set (`print_info_has_manual_breaks`).
+@property (nonatomic, readonly) BOOL hasManualPageBreaks;
+/// The GTK File → Print Area → Add/Remove Column (Row) Page Break
+/// (`cmd_page_break_toggle`): a manual break to the left of the edit
+/// column (above the edit row) is set when none is there and removed
+/// when one is.  The engine names the command after the action that
+/// reverses it ("Remove Column Page Break" when one was added), and the
+/// undo label follows.
+- (BOOL)togglePageBreakAtEditPositionForColumns:(BOOL)columns error:(NSError **)error NS_SWIFT_NAME(togglePageBreakAtEditPosition(forColumns:));
+/// Clear All Page Breaks (`cmd_page_breaks_clear`, undoable).
+- (BOOL)clearPageBreaksWithError:(NSError **)error NS_SWIFT_NAME(clearPageBreaks());
 @end
 
 NS_ASSUME_NONNULL_END
