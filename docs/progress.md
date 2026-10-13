@@ -1819,6 +1819,20 @@
   the links are logged instead of opened.  `GNM_SNAPSHOT_PAGEBREAK=1`
   covers the breaks, Show Print Area, and the Help links.
 
+### 2026-10-13 (later): File → Send To…
+
+- `GnmWorkbook` gained `writeCopyToURL:saverIdentifier:error:`:
+  `workbook_view_save_to_uri` alone, so the document's location, saver,
+  and modified flag stay (the other saves record the saver and clear the
+  flag).  `workbook_io.m` checks the copy holds an unsaved edit, the
+  state stays, and the two refusals.
+- File → Send To… (cb_file_sendto) writes the copy with the document's
+  saver (Gnumeric's format for text imported through the assistant) into
+  a temporary folder, hands it to `NSSharingService(named:
+  .composeEmail)` when Mail can take it and to the sharing picker
+  otherwise, and removes the folder a minute later.  Headlessly the
+  copy is written and logged only (`GNM_SNAPSHOT_SENDTO=1`).
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and

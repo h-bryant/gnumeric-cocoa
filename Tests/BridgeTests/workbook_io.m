@@ -137,6 +137,22 @@ int main (void)
         NSURL *unwritable = [NSURL fileURLWithPath:@"/nonexistent-dir/x.gnumeric"];
         GNM_ASSERT (![wb writeToURL:unwritable error:&error] && error.code == GnmErrorSaveFailed, @"unwritable: %@", error);
         NSLog (@"unwritable error: %@ / %@", error.localizedDescription, error.localizedRecoverySuggestion);
+
+        /* a copy for Send To: the document's state stays */
+        GnmSheet *copySheet = wb.sheets.firstObject;
+        GNM_ASSERT ([copySheet setText:@"changed" atColumn:0 row:0 autocorrect:NO error:&error], @"edit before copy: %@", error);
+        GNM_ASSERT (wb.isModified, @"modified before the copy");
+        NSURL *copy = [NSURL fileURLWithPath:[outdir stringByAppendingPathComponent:@"bridge-copy.gnumeric"]];
+        error = nil;
+        GNM_ASSERT ([wb writeCopyToURL:copy saverIdentifier:@"Gnumeric_XmlIO:sax:0" error:&error], @"copy: %@", error);
+        GNM_ASSERT (wb.isModified, @"still modified after the copy");
+        GNM_ASSERT ([wb.fileURL.lastPathComponent isEqualToString:gnm.lastPathComponent], @"location kept: %@", wb.fileURL);
+        NSString *copied = [NSString stringWithContentsOfURL:copy encoding:NSUTF8StringEncoding error:NULL];
+        GNM_ASSERT ([copied containsString:@"changed"], @"the copy holds the edit: %lu bytes", (unsigned long) copied.length);
+        error = nil;
+        GNM_ASSERT (![wb writeCopyToURL:unwritable saverIdentifier:@"Gnumeric_XmlIO:sax" error:&error] && error.code == GnmErrorSaveFailed, @"copy unwritable: %@", error);
+        error = nil;
+        GNM_ASSERT (![wb writeCopyToURL:copy saverIdentifier:@"No_Such:saver" error:&error] && error.code == GnmErrorUnknownFormat, @"copy unknown saver");
         wb = nil;
 
         GNM_ASSERT (stray.count == 0, @"stray engine messages: %@", stray);

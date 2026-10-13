@@ -2139,6 +2139,19 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_SENDTO"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet, let document = controller.document as? WorkbookDocument {
+                // Send To…: an edit, then the copy written for the mailer;
+                // the document stays edited and where it was.
+                try? sheet.setText("sent", atColumn: 0, row: 0, autocorrect: false)
+                controller.sendTo(nil)
+                let copy = controller.lastSentCopyURL
+                let size = copy.flatMap { (try? FileManager.default.attributesOfItem(atPath: $0.path)[.size] as? Int) } ?? -1
+                let state = "edited=\(document.isDocumentEdited) modified=\(sheet.workbook?.isModified ?? false)"
+                let location = "fileURL=" + (document.fileURL?.lastPathComponent ?? "nil") + " engine=" + (sheet.workbook?.fileURL?.lastPathComponent ?? "nil")
+                NSLog("sendto: copy=%@ size=%ld %@ %@", copy?.lastPathComponent ?? "nil", size, state, location)
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FREEZE"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

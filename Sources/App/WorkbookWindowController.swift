@@ -1330,6 +1330,54 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         }
     }
 
+    // MARK: Send To
+
+    /// The copy the last Send To… wrote (for the headless check).
+    private(set) var lastSentCopyURL: URL?
+
+    /// File → Send To… (cb_file_sendto): a copy written with the
+    /// document's saver to a temporary folder and handed to Mail as an
+    /// attachment (the GTK opens a mailto: with it attached); when no mail
+    /// service can take it, the sharing picker offers the others.  The
+    /// copy goes away after a while, as the GTK's does.
+    @objc func sendTo(_ sender: Any?) {
+        guard let document = workbookDocument, let workbook = document.workbook else { return }
+        var type = document.fileType ?? WorkbookDocument.gnumericType
+        var name = document.fileURL?.lastPathComponent ?? (document.displayName + ".gnumeric")
+        if type == WorkbookDocument.textType {
+            // The import assistant's text has no saver of its own: send
+            // Gnumeric's format, as the GTK's default saver would.
+            type = WorkbookDocument.gnumericType
+            name = ((name as NSString).deletingPathExtension) + ".gnumeric"
+        }
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("gnm-sendto-" + UUID().uuidString, isDirectory: true)
+        let copy = folder.appendingPathComponent(name)
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            try workbook.writeCopy(to: copy, saverIdentifier: WorkbookDocument.saverIdentifier(for: type))
+        } catch {
+            try? FileManager.default.removeItem(at: folder)
+            presentError(error)
+            return
+        }
+        lastSentCopyURL = copy
+        let headless = ProcessInfo.processInfo.environment["GNM_SNAPSHOT"] != nil
+        if !headless {
+            if let mail = NSSharingService(named: .composeEmail), mail.canPerform(withItems: [copy]) {
+                mail.perform(withItems: [copy])
+            } else {
+                let picker = NSSharingServicePicker(items: [copy])
+                let visible = gridView.visibleRect
+                picker.show(relativeTo: NSRect(x: visible.minX, y: visible.minY, width: 1, height: 1), of: gridView, preferredEdge: .minY)
+            }
+        }
+        // The mailer has long read the attachment by then (the GTK waits
+        // ten seconds).
+        DispatchQueue.main.asyncAfter(deadline: .now() + (headless ? 0.5 : 60)) {
+            try? FileManager.default.removeItem(at: folder)
+        }
+    }
+
     /// File → Print Area → Set Print Area: the selection.
     @objc func setPrintArea(_ sender: Any?) {
         guard let sheet = gridView.sheet else { return }

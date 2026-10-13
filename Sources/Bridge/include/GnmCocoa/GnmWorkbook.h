@@ -175,6 +175,10 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Workbook)
 /// Make `url` the document's location (`go_doc_set_uri`): after a save
 /// that did not adopt it, or a Save As that moved the file.
 - (void)adoptFileURL:(NSURL *)url NS_SWIFT_NAME(adoptFileURL(_:));
+/// Write a copy with a saver, the document untouched: its location,
+/// saver, and modified flag stay as they were (the GTK File → Send To
+/// writes such a copy to attach; `workbook_view_save_to_uri`).
+- (BOOL)writeCopyToURL:(NSURL *)url saverIdentifier:(NSString *)saverIdentifier error:(NSError **)error NS_SWIFT_NAME(writeCopy(to:saverIdentifier:));
 
 @end
 

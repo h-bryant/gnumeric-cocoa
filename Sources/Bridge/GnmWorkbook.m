@@ -797,6 +797,37 @@ uri_for_url (NSURL *url)
     return ok;
 }
 
+- (BOOL)writeCopyToURL:(NSURL *)url saverIdentifier:(NSString *)saverIdentifier error:(NSError **)error
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    GOFileSaver *fs = go_file_saver_for_id (saverIdentifier.UTF8String);
+    if (fs == NULL) {
+        if (error)
+            *error = [_engine _errorWithCode:GnmErrorUnknownFormat
+                                 description:[NSString stringWithFormat:@"Unknown file saver “%@”.", saverIdentifier]
+                                   collected:@[]];
+        return NO;
+    }
+    char *uri = uri_for_url (url);
+    [_engine _beginCollectingMessages];
+    GOCmdContext *cc = _engine.commandContext;
+    GOIOContext *io_context = go_io_context_new (cc);
+    go_cmd_context_set_sensitive (cc, FALSE);
+    workbook_view_save_to_uri (_wbv, fs, uri, io_context);
+    go_cmd_context_set_sensitive (cc, TRUE);
+    gboolean has_error = go_io_error_occurred (io_context);
+    if (has_error || go_io_warning_occurred (io_context))
+        go_io_error_display (io_context);
+    g_object_unref (io_context);
+    NSArray<NSError *> *messages = [_engine _endCollectingMessages];
+    g_free (uri);
+    if (has_error && error)
+        *error = [_engine _errorWithCode:GnmErrorSaveFailed
+                             description:[NSString stringWithFormat:@"Could not write “%@”.", url.lastPathComponent]
+                               collected:messages];
+    return !has_error;
+}
+
 - (void)adoptFileURL:(NSURL *)url
 {
     char *uri = uri_for_url (url);
