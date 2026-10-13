@@ -1657,6 +1657,14 @@ enum Snapshot {
                     dialog.toggleVisible(row: 0)
                     dialog.setTabColors(background: NSColor.systemTeal.cgColor, text: nil, of: dialog.sheets[0])
                     NSLog("manage: after append, rename, lock, hide, color: %@ undo=%@", names(), workbook.undoLabel ?? "nil")
+                    // a text color on the last sheet: its tab carries the name as an image
+                    dialog.setTabColors(background: NSColor.systemYellow.cgColor, text: NSColor.systemRed.cgColor, of: dialog.sheets[dialog.sheets.count - 1])
+                    let tabTexts: String = (0..<controller.tabCount).map { controller.tabDescriptionForTesting($0) }.joined(separator: "; ")
+                    NSLog("manage: tabs %@", tabTexts)
+                    controller.toggleStatusBar(nil)
+                    let hidden: Bool = !controller.statusBarIsShown
+                    controller.toggleStatusBar(nil)
+                    NSLog("manage: status bar hidden=%d shown again=%d", hidden ? 1 : 0, controller.statusBarIsShown ? 1 : 0)
                     dialog.sortDescending(nil)
                     NSLog("manage: sorted descending: %@", names())
                     dialog.undo(nil)

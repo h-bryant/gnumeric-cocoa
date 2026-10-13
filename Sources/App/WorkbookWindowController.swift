@@ -119,6 +119,24 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         window.setFrameAutosaveName("WorkbookWindow")
         autosaveTime = Engine.shared?.preferences.autosaveTime ?? 0
         scheduleAutosave()
+        UserDefaults.standard.register(defaults: [Self.statusBarDefaultsKey: true])
+        autoExpression.isHidden = !UserDefaults.standard.bool(forKey: Self.statusBarDefaultsKey)
+    }
+
+    // MARK: View → Status Bar
+
+    /// The GTK View → View Statusbar (wbcg_toggle_visibility): the status
+    /// area, here the auto-expression at the right of the tab bar, shown
+    /// or hidden for every window, remembered in the defaults.
+    static let statusBarDefaultsKey = "ShowStatusBar"
+    var statusBarIsShown: Bool { !autoExpression.isHidden }
+
+    @objc func toggleStatusBar(_ sender: Any?) {
+        let show = autoExpression.isHidden
+        UserDefaults.standard.set(show, forKey: Self.statusBarDefaultsKey)
+        for window in NSApp.windows {
+            (window.windowController as? WorkbookWindowController)?.autoExpression.isHidden = !show
+        }
     }
 
     // MARK: Auto Save
@@ -409,15 +427,24 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         tabSheets = workbook.sheets.filter { $0.isVisible }
         tabs.segmentCount = tabSheets.count
         for (i, sheet) in tabSheets.enumerated() {
-            tabs.setLabel(sheet.name, forSegment: i)
             tabs.setWidth(0, forSegment: i)
             // The tab color as a swatch before the name: a segmented control
-            // has no per-segment background (the text color is not shown).
-            if let color = sheet.tabColor().flatMap(NSColor.init(cgColor:)) {
-                tabs.setImage(Self.swatch(color), forSegment: i)
+            // has no per-segment background.  A text color cannot color a
+            // segment's label either, so such a tab carries its name drawn
+            // in that color as its image (over the background, when set).
+            let background = sheet.tabColor().flatMap(NSColor.init(cgColor:))
+            if let text = sheet.tabTextColor().flatMap(NSColor.init(cgColor:)) {
+                tabs.setLabel("", forSegment: i)
+                tabs.setImage(Self.coloredName(sheet.name, text: text, background: background, font: tabs.font), forSegment: i)
                 tabs.setImageScaling(.scaleNone, forSegment: i)
             } else {
-                tabs.setImage(nil, forSegment: i)
+                tabs.setLabel(sheet.name, forSegment: i)
+                if let background {
+                    tabs.setImage(Self.swatch(background), forSegment: i)
+                    tabs.setImageScaling(.scaleNone, forSegment: i)
+                } else {
+                    tabs.setImage(nil, forSegment: i)
+                }
             }
         }
         if let current = gridView.sheet, let index = tabSheets.firstIndex(of: current) {
@@ -432,6 +459,30 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         if ProcessInfo.processInfo.environment["GNM_DEBUG_LAYOUT"] != nil {
             NSLog("tabs: %d segments, natural width %.1f", tabs.segmentCount, tabs.frame.width)
         }
+    }
+
+    /// A tab's name in its text color, on its background color when it
+    /// has one (the GTK draws the label so over the tab).
+    private static func coloredName(_ name: String, text: NSColor, background: NSColor?, font: NSFont?) -> NSImage {
+        let attributes: [NSAttributedString.Key: Any] = [.font: font ?? NSFont.systemFont(ofSize: NSFont.systemFontSize), .foregroundColor: text]
+        let size = (name as NSString).size(withAttributes: attributes)
+        let padding: CGFloat = background == nil ? 0 : 4
+        let image = NSImage(size: NSSize(width: ceil(size.width) + 2 * padding, height: ceil(size.height) + 2), flipped: false) { rect in
+            if let background {
+                background.setFill()
+                NSBezierPath(roundedRect: rect, xRadius: 3, yRadius: 3).fill()
+            }
+            (name as NSString).draw(at: NSPoint(x: padding, y: 1), withAttributes: attributes)
+            return true
+        }
+        return image
+    }
+
+    /// A tab as shown: its label and image size (the headless checks).
+    func tabDescriptionForTesting(_ segment: Int) -> String {
+        guard segment >= 0, segment < tabs.segmentCount else { return "none" }
+        let image = tabs.image(forSegment: segment)
+        return "label='\(tabs.label(forSegment: segment) ?? "")' image=\(image.map { "\(Int($0.size.width))x\(Int($0.size.height))" } ?? "none")"
     }
 
     private static func swatch(_ color: NSColor) -> NSImage {
@@ -744,6 +795,9 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         case #selector(moveSheetRight(_:)):
             guard let sheet = gridView.sheet else { return false }
             return sheet.index < workbook.sheets.count - 1
+        case #selector(toggleStatusBar(_:)):
+            if let menuItem = item as? NSMenuItem { menuItem.state = statusBarIsShown ? .on : .off }
+            return true
         case #selector(showPrintArea(_:)):
             var area = CellRange()
             return gridView.sheet?.getPrintArea(&area) ?? false

@@ -59,7 +59,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 |---|---|---|
 | ViewNew | no | second window on one workbook (`control_new` slot), Phase 3 |
 | ViewFreezeThawPanes | ported | View → Freeze/Unfreeze Panes with the GTK placement rules; files with frozen panes open frozen |
-| ViewStatusbar | partial | the auto-expression (Sum/Min/Max/Average/Count of the selection) sits at the right of the tab bar; no hide toggle, no other status fields |
+| ViewStatusbar | ported | the auto-expression (Sum/Min/Max/Average/Count of the selection) sits at the right of the tab bar; View → Status Bar (2026-10-13) hides and shows it for every window, remembered in the defaults; the GTK's other status fields are its "END" text and the file-loading progress bar, neither of which applies here (loads are synchronous) |
 | ViewFullScreen | ported | View → Enter Full Screen (⌃⌘F), the window's full-screen behavior (2026-10-12) |
 | FormatWorkbook (workbook properties) | ported | 2026-10-13: Format → Workbook… sets the view's attributes (scrollbars, sheet tabs, autocompletion, the two cell markers, protection; `GnmWorkbook (ViewAttributes)`); the window hides its scrollers and tab bar accordingly, the markers are kept for the file |
 | ViewZoom | ported | View → Zoom In/Out/Actual Size, and View → Zoom… (also Format → Sheet → Zoom…) with the presets or a typed percentage and "All sheets", over `cmd_zoom` (undoable, "Zoom Sheet1 to 150%") (2026-10-12) |
@@ -142,7 +142,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | Feature | Status | Notes / Phase |
 |---|---|---|
 | Toolbars (standard, format, object) | ported | 2026-10-13: one customizable NSToolbar with the GTK standard items (New, Open, Save, Print, Cut, Copy, Paste, Undo, Redo, Hyperlink, AutoSum, Function, the sorts, Chart, a zoom pop-up) and the format items (font family and size, Bold, Italic, Underline, the alignments, Merge, Unmerge, Accounting, Percent, thousands, more and fewer decimals, less and more indent, superscript, subscript, a border preset pull-down, text and fill color wells, No Fill; `WorkbookToolbar.swift`, `GnmNumberFormats.h`); the toggles and wells follow the cursor cell; no object toolbar (Insert → Object covers it) or print preview; a Print Preview item since 2026-10-13; the object toolbar is an Objects pull-down with the GTK's thirteen creations (rectangle, ellipse, frame, line, arrow, the widgets) and Insert → Object lists the shapes too (`insertShape(ofKind:frame:)`, `shapeKind`; `objects.m`) |
-| Status bar, auto-expression (sum/average of selection) | partial | auto-expression pull-down 2026-10-11; no progress or zoom fields |
+| Status bar, auto-expression (sum/average of selection) | ported | auto-expression pull-down 2026-10-11; View → Status Bar 2026-10-13; the GTK's progress bar shows file loading, which is synchronous here |
 | Name box navigation (type a reference) | ported | 2026-10-12: a reference, a sheet-qualified reference, or a name; a new word names the selection |
 | Formula bar: multi-line editing | ported | 2026-10-13: Option+Return adds a line break (the GTK's Alt+Return) in the cell editor and the formula bar; the in-cell editor grows to show every line (item-edit.c) and the formula bar shows up to five |
 | In-cell editor: function tooltips and F4 | ported | 2026-10-12: the call around the cursor with its argument marked, or the names a prefix completes to, drawn under the editor (`gee_check_tooltip`; `GnmSheet.functionTooltip`); F4 completes a single name or cycles the reference at the cursor relative → absolute → row → column (`formulaText:cursorAt:cycleReferenceIn:`) |
@@ -159,7 +159,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | Marching ants animation | ported | 2026-10-13: the dash steps every 75 ms (item-cursor.c) from the cut or copy until the clipboard range goes |
 | Drag and drop (cells, files, sheet tabs) | ported | 2026-10-13: the selection dragged by its border moves the cells (Option drops a copy; `GnmSheet.dropSelection`, the GTK item cursor's cut or copy and paste), image files dropped on the grid are placed where they land and other files open as documents, and a sheet tab dragged onto another's place moves the sheet (`SheetTabControl`) |
 | Column and row header drag resizing, double-click autosize | ported | 2026-10-11; resizes every selected column (row) when the dragged one is selected |
-| Sheet tab context menu, tab colors | partial | context menu 2026-10-11; Tab Color… 2026-10-12 shows the background as a swatch before the name (the text color is kept in the file, not shown) |
+| Sheet tab context menu, tab colors | ported | context menu 2026-10-11; Tab Color… 2026-10-12 shows the background as a swatch before the name; 2026-10-13: a tab with a text color carries its name drawn in that color (over the background) as the segment's image, since a segmented control cannot color a label |
 | Printing and page setup | ported | 2026-10-12: `NSPrintOperation` over `PrintView`, the engine's `print-cell.c` and a port of print.c's pagination and page drawing in `GnmPrinting.m` |
 | Preferences window | partial | see EditPreferences (2026-10-12) |
 | Plugin manager | ported | 2026-10-12, see ToolsPlugins above |

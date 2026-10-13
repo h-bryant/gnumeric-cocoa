@@ -129,6 +129,8 @@ enum MainMenu {
         let fullScreen = viewMenu.addItem(withTitle: "Enter Full Screen", action: #selector(NSWindow.toggleFullScreen(_:)), keyEquivalent: "f")
         fullScreen.keyEquivalentModifierMask = [.control, .command]
         viewMenu.addItem(.separator())
+        viewMenu.addItem(withTitle: "Status Bar", action: Selector(("toggleStatusBar:")), keyEquivalent: "")
+        viewMenu.addItem(.separator())
         viewMenu.addItem(withTitle: "Freeze Panes", action: Selector(("freezePanes:")), keyEquivalent: "")
         menuBar.addItem(submenu(viewMenu, title: "View"))
 

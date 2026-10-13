@@ -398,10 +398,11 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    shapes with the object toolbar's pull-down, Go to Top/Bottom/First/
    Last, the marching ants' animation, and File → Print Preview
    (`PrintPreviewWindow.swift`), the Sort dialog's remembered setups,
-   and the Settings' Tools, markers, and Screen entries.  Next, by
-   usage: the "partial" rows of `docs/mvp-known-gaps.md` (status bar
-   fields, the tab text color) and the "no" rows (ViewNew, data
-   slicers, goffice components).
+   the Settings' Tools, markers, and Screen entries, View → Status Bar,
+   and tab text colors.  Next, by usage: the remaining "partial" rows
+   of `docs/mvp-known-gaps.md` (the Properties statistics page,
+   DataImportOther/ExportRepeat, the sheet direction) and the "no" rows
+   (ViewNew, data slicers, goffice components).
 6. Headless checks for all of it: `GNM_SNAPSHOT=out.png scripts/run-app.sh
    file` plus `GNM_SNAPSHOT_TYPE`, `_FORMAT`, `_PHASE3`, `_FREEZE`,
    `_SHEETS`, `_FILTER`, `_OBJECTS`, `_CHART`, `_EDITOR`, `_EVERYDAY`, `_FIND`, `_PREFS`, `_TEXT`, `_IMPORT`, `_COMMENT`, `_NAMES`, `_FILL`, `_GOAL`, `_COND`, `_STATS`, `_VALID`, `_LINK`, `_SOLVE`, `_PRINT`, `_FORMULA`, `_FUNC`, `_ZOOM` (`docs/build.md`); compare `out.png` with

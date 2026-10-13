@@ -1974,6 +1974,20 @@
   only `gnumeric-conf.c` touches `printsetup/hf-font`, so the setting
   changes nothing when printing.
 
+### 2026-10-13 (later): View → Status Bar, tab text colors
+
+- View → Status Bar (the GTK View Statusbar toggle) hides and shows the
+  auto-expression at the right of the tab bar in every window, kept in
+  the defaults (`ShowStatusBar`).  The GTK's other status fields, the
+  "END" text and the file-loading progress bar, have no counterpart:
+  there is no End mode, and loads are synchronous.
+- A sheet tab with a text color shows its name drawn in that color
+  (over the tab color when set) as the segment's image with an empty
+  label, since `NSSegmentedControl` cannot color a label
+  (`coloredName`, `tabDescriptionForTesting`).  The `GNM_SNAPSHOT_MANAGE`
+  hook colors the last sheet's text red on yellow and toggles the
+  status bar.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
