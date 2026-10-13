@@ -48,4 +48,19 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)setDocumentProperties:(NSDictionary<NSString *, NSString *> *)changes error:(NSError **)error NS_SWIFT_NAME(setDocumentProperties(_:));
 @end
 
+/// The GTK Properties dialog's Calculation page (dialog-doc-metadata.c):
+/// automatic or manual recalculation and the iteration settings, set
+/// on the workbook at once (not undoable there either) and saved with
+/// the file.  The Statistics page's counts are here too.
+@interface GnmWorkbook (Calculation)
+/// `workbook_get_recalcmode` / `workbook_set_recalcmode`.
+@property (nonatomic) BOOL recalculatesAutomatically;
+/// `workbook_iteration_enabled`, `_max_number`, `_tolerance`.
+@property (nonatomic) BOOL iterationEnabled;
+@property (nonatomic) NSInteger iterationMaximum;
+@property (nonatomic) double iterationTolerance;
+/// The cells with content over every sheet (the GTK shows "Unknown").
+@property (nonatomic, readonly) NSInteger cellCount;
+@end
+
 NS_ASSUME_NONNULL_END

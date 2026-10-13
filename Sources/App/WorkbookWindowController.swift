@@ -70,16 +70,22 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     @objc func documentProperties(_ sender: Any?) {
         guard let window, window.attachedSheet == nil else { return }
         if gridView.isEditing { gridView.cancelEditing() }
-        let dialog = DocumentPropertiesDialog(workbook: workbook)
-        dialog.present(in: window) { [weak self] values in
+        let dialog = DocumentPropertiesDialog(workbook: workbook, fileURL: workbookDocument?.fileURL)
+        dialog.present(in: window) { [weak self] values, calculation in
             guard let self else { return true }
             do {
                 try workbook.setDocumentProperties(values)
-                return true
             } catch {
                 present(error)
                 return false
             }
+            // The Calculation page sets the workbook at once, as the GTK does.
+            workbook.recalculatesAutomatically = calculation.automatic
+            workbook.iterationEnabled = calculation.iterates
+            workbook.iterationMaximum = calculation.maximum
+            workbook.iterationTolerance = calculation.tolerance
+            if calculation.automatic { workbook.recalculate() }
+            return true
         }
     }
 

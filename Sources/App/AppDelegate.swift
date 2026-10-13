@@ -2042,12 +2042,19 @@ enum Snapshot {
                 DocumentPropertiesDialog.headlessDriver = { dialog in
                     dialog.setValue("Quarterly figures", for: "dc:title")
                     dialog.setValue("Henry", for: "dc:creator")
+                    let statistics: String = dialog.statistics.map { "\($0.0)=\($0.1)" }.joined(separator: "; ")
+                    NSLog("props: statistics %@", statistics)
+                    dialog.setCalculation(DocumentPropertiesDialog.Calculation(automatic: false, iterates: true, maximum: 50, tolerance: 0.01))
                     return true
                 }
                 controller.documentProperties(nil)
                 DocumentPropertiesDialog.headlessDriver = nil
                 NSLog("props: title '%@' author '%@' undo=%@", controller.workbook.documentProperties["dc:title"] ?? "nil",
                       controller.workbook.documentProperties["dc:creator"] ?? "nil", controller.workbook.undoLabel ?? "nil")
+                let calc: String = "automatic=\(controller.workbook.recalculatesAutomatically) iterates=\(controller.workbook.iterationEnabled) max=\(controller.workbook.iterationMaximum) tol=\(controller.workbook.iterationTolerance)"
+                NSLog("props: calculation %@", calc)
+                controller.workbook.recalculatesAutomatically = true
+                controller.workbook.iterationEnabled = false
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }

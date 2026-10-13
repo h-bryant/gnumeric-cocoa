@@ -1988,6 +1988,24 @@
   hook colors the last sheet's text red on yellow and toggles the
   status bar.
 
+### 2026-10-13 (later): the Properties dialog's Statistics and Calculation pages
+
+- `GnmWorkbook (Calculation)`: `recalculatesAutomatically`
+  (`workbook_get/set_recalcmode`), `iterationEnabled`,
+  `iterationMaximum`, `iterationTolerance` (the `workbook_iteration_*`
+  setters; each marks the document, as they save with the file), and
+  `cellCount` (`sheet_cells_count` over the sheets).  A new workbook
+  iterates by default (workbook.c), which `properties.m` records.
+- `DocumentPropertiesDialog` became three tabs: Description (the nine
+  properties), Statistics (file, location, created, modified, size,
+  sheets, cells; the GTK shows the dates and owner and leaves cells and
+  pages "Unknown"), and Calculation (Automatic/Manual, iterative
+  calculation, maximum, tolerance; OK is refused for a non-number).
+  The controller applies the calculation settings after the properties
+  command and recalculates when automatic is chosen.  The
+  `GNM_SNAPSHOT_PROPS` hook logs the statistics and sets manual
+  iteration through the dialog.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and

@@ -74,6 +74,26 @@ int main (void)
         NSString *label = wb.undoLabel;
         GNM_ASSERT ([wb setDocumentProperties:same error:&error] && [wb.undoLabel isEqualToString:label], @"no change, no command");
 
+        /* the Calculation page and the statistics */
+        /* a new workbook recalculates automatically with iteration enabled (workbook.c) */
+        GNM_ASSERT (wb.recalculatesAutomatically && wb.iterationEnabled, @"calculation defaults %d %d", wb.recalculatesAutomatically, wb.iterationEnabled);
+        NSInteger defaultMaximum = wb.iterationMaximum;
+        wb.iterationEnabled = NO;
+        GNM_ASSERT (!wb.iterationEnabled, @"iteration off");
+        wb.recalculatesAutomatically = NO;
+        wb.iterationEnabled = YES;
+        wb.iterationMaximum = 50;
+        wb.iterationTolerance = 0.01;
+        GNM_ASSERT (!wb.recalculatesAutomatically && wb.iterationEnabled && wb.iterationMaximum == 50 && fabs (wb.iterationTolerance - 0.01) < 1e-12,
+                    @"calculation set %d %d %ld %g", wb.recalculatesAutomatically, wb.iterationEnabled, (long) wb.iterationMaximum, wb.iterationTolerance);
+        GNM_ASSERT (wb.isModified, @"calculation settings mark the document");
+        wb.recalculatesAutomatically = YES;
+        wb.iterationEnabled = YES;
+        wb.iterationMaximum = defaultMaximum;
+        NSInteger cells = wb.cellCount;
+        GNM_ASSERT (cells >= 7, @"cells counted: %ld", (long) cells);
+        NSLog (@"statistics: %lu sheets, %ld cells, default iteration maximum %ld", (unsigned long) wb.sheets.count, (long) cells, (long) defaultMaximum);
+
         /* Go to Top/Bottom/First/Last around a block I1:K5, apart from
          * the other data (the guess joins adjacent columns) */
         for (NSInteger r = 0; r < 5; r++)

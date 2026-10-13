@@ -399,8 +399,9 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    Last, the marching ants' animation, and File → Print Preview
    (`PrintPreviewWindow.swift`), the Sort dialog's remembered setups,
    the Settings' Tools, markers, and Screen entries, View → Status Bar,
-   and tab text colors.  Next, by usage: the remaining "partial" rows
-   of `docs/mvp-known-gaps.md` (the Properties statistics page,
+   tab text colors, and the Properties dialog's Statistics and
+   Calculation pages.  Next, by usage: the remaining "partial" rows of
+   `docs/mvp-known-gaps.md` (custom document properties,
    DataImportOther/ExportRepeat, the sheet direction) and the "no" rows
    (ViewNew, data slicers, goffice components).
 6. Headless checks for all of it: `GNM_SNAPSHOT=out.png scripts/run-app.sh

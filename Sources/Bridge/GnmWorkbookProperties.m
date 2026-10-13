@@ -6,6 +6,7 @@
 #include <sheet-view.h>
 #include <selection.h>
 #include <workbook-view.h>
+#include <workbook-priv.h>
 #include <workbook.h>
 #include <gsf/gsf-doc-meta-data.h>
 #include <gsf/gsf-meta-names.h>
@@ -144,6 +145,80 @@ cb_collect_string (gpointer key, gpointer value, gpointer user)
     return [self _runCommand:^gboolean (WorkbookControl *wbc) {
         return cmd_change_meta_data (wbc, changed, removed);   /* takes both lists */
     } description:@"Could not change the document's properties." error:error];
+}
+
+@end
+
+@implementation GnmWorkbook (Calculation)
+
+- (BOOL)recalculatesAutomatically
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    return workbook_get_recalcmode (self.engineWorkbook);
+}
+
+- (void)setRecalculatesAutomatically:(BOOL)automatic
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    if (workbook_get_recalcmode (self.engineWorkbook) == (automatic != NO))
+        return;
+    workbook_set_recalcmode (self.engineWorkbook, automatic);
+    go_doc_set_dirty (GO_DOC (self.engineWorkbook), TRUE);
+}
+
+- (BOOL)iterationEnabled
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    return self.engineWorkbook->iteration.enabled;
+}
+
+- (void)setIterationEnabled:(BOOL)enabled
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    if (self.engineWorkbook->iteration.enabled == (enabled != NO))
+        return;
+    workbook_iteration_enabled (self.engineWorkbook, enabled);
+    go_doc_set_dirty (GO_DOC (self.engineWorkbook), TRUE);
+}
+
+- (NSInteger)iterationMaximum
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    return self.engineWorkbook->iteration.max_number;
+}
+
+- (void)setIterationMaximum:(NSInteger)maximum
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    if (self.engineWorkbook->iteration.max_number == (int) maximum)
+        return;
+    workbook_iteration_max_number (self.engineWorkbook, (int) MAX (maximum, 1));
+    go_doc_set_dirty (GO_DOC (self.engineWorkbook), TRUE);
+}
+
+- (double)iterationTolerance
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    return self.engineWorkbook->iteration.tolerance;
+}
+
+- (void)setIterationTolerance:(double)tolerance
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    if (self.engineWorkbook->iteration.tolerance == tolerance)
+        return;
+    workbook_iteration_tolerance (self.engineWorkbook, tolerance);
+    go_doc_set_dirty (GO_DOC (self.engineWorkbook), TRUE);
+}
+
+- (NSInteger)cellCount
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    NSInteger count = 0;
+    Workbook *wb = self.engineWorkbook;
+    for (int i = 0; i < workbook_sheet_count (wb); i++)
+        count += sheet_cells_count (workbook_sheet_by_index (wb, i));
+    return count;
 }
 
 @end
