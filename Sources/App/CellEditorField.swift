@@ -47,7 +47,8 @@ final class CellEditorField: NSTextField, NSTextFieldDelegate {
         textColor = .black
         focusRingType = .none
         lineBreakMode = .byClipping
-        cell?.usesSingleLineMode = true
+        cell?.usesSingleLineMode = false   // Option+Return adds a line (the GTK's Alt+Return)
+        cell?.wraps = false
         cell?.isScrollable = true
         delegate = self
         isHidden = true
@@ -81,6 +82,9 @@ final class CellEditorField: NSTextField, NSTextFieldDelegate {
 
     func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
         switch commandSelector {
+        case #selector(NSResponder.insertNewlineIgnoringFieldEditor(_:)):
+            // Option+Return: a line break in the cell's text
+            textView.insertText("\n", replacementRange: textView.selectedRange())
         case #selector(NSResponder.insertNewline(_:)):
             onCommit?(stringValue, .enter)
         case #selector(NSResponder.insertTab(_:)):

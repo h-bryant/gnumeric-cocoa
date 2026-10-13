@@ -1912,6 +1912,36 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_MULTILINE"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // Multi-line editing: "first", Option+Return, "second" typed in
+                // A1 through the field editor; the editor grows, the entry
+                // keeps the line break, the formula bar shows two lines.
+                func key(_ code: UInt16, _ character: String, _ flags: NSEvent.ModifierFlags) {
+                    if let event = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: flags, timestamp: ProcessInfo.processInfo.systemUptime,
+                                                   windowNumber: window.windowNumber, context: nil, characters: character,
+                                                   charactersIgnoringModifiers: character, isARepeat: false, keyCode: code) {
+                        window.sendEvent(event)
+                    }
+                }
+                sheet.selectCell(atColumn: 0, row: 0)
+                controller.gridView.beginEditing(initialText: "first")
+                let before = controller.gridView.editorFrameForTesting.height
+                key(36, "\r", [.option])
+                for ch in "second" { key(0, String(ch), []) }
+                let text = controller.gridView.editorTextForTesting
+                NSLog("multiline: editor text %@ lines=%ld height %.0f -> %.0f", text.replacingOccurrences(of: "\n", with: "⏎"),
+                      text.components(separatedBy: "\n").count, before, controller.gridView.editorFrameForTesting.height)
+                key(36, "\r", [])   // Return commits
+                NSLog("multiline: A1 entered '%@' display lines=%ld editing=%d", (sheet.enteredTextOfCell(atColumn: 0, row: 0) ?? "nil").replacingOccurrences(of: "\n", with: "⏎"),
+                      (sheet.displayTextOfCell(atColumn: 0, row: 0) ?? "").components(separatedBy: "\n").count, controller.gridView.isEditing ? 1 : 0)
+                sheet.selectCell(atColumn: 0, row: 0)
+                NSLog("multiline: formula bar height %.0f for A1, %.0f for B1", controller.formulaBarHeightForTesting, { sheet.selectCell(atColumn: 1, row: 0); return controller.formulaBarHeightForTesting }())
+                sheet.selectCell(atColumn: 0, row: 0)
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FREEZE"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

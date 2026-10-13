@@ -205,9 +205,33 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
                 }
             }
             editingTextDidChange?(text)
+            fitEditorToText()
             updateFunctionTooltip()
         }
     }
+
+    /// item-edit.c: the in-cell editor grows down (and right) to show every
+    /// line of a multi-line text, never shrinking below the cell.
+    private func fitEditorToText() {
+        guard isEditing, let sheet, let cell = editingCell else { return }
+        let frame = sheet.frameOfCell(atColumn: cell.column, row: cell.row)
+        let zoom = sheet.zoomFactor
+        let font = editor.font ?? NSFont.systemFont(ofSize: 13)
+        let lines = editor.stringValue.components(separatedBy: "\n")
+        let lineHeight = ceil(font.ascender - font.descender + font.leading) + 1
+        let widest = lines.map { ($0 as NSString).size(withAttributes: [.font: font]).width }.max() ?? 0
+        let minimum = NSRect(x: frame.minX, y: frame.minY, width: max(frame.width, 80 * zoom), height: max(frame.height, 16 * zoom))
+        let height = lines.count > 1 ? max(minimum.height, lineHeight * CGFloat(lines.count) + 4) : minimum.height
+        let width = max(minimum.width, widest + 8)
+        let fitted = NSRect(x: minimum.minX, y: minimum.minY, width: width, height: height)
+        if fitted != editor.frame {
+            editor.frame = fitted
+            needsDisplay = true
+        }
+    }
+
+    /// The editor's frame, for the checks.
+    var editorFrameForTesting: NSRect { editor.frame }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("not used") }

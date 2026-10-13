@@ -384,9 +384,10 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    patch 0008), and the widget editors with Insert → Object
    (`GnmWidgets.h`, `WidgetDialog.swift`, `widgets.m`), and the toolbar
    (`WorkbookToolbar.swift`, `GnmNumberFormats.h`), and drag and drop
-   of cells, files, and sheet tabs (`GnmDragging.h`).  Next, by usage:
-   the formula bar's multi-line editing, the toolbar's borders, colors,
-   and indent, and widgets that act.
+   of cells, files, and sheet tabs (`GnmDragging.h`), and multi-line
+   editing (Option+Return; the editor and the formula bar grow).  Next,
+   by usage: the toolbar's borders, colors, and indent, widgets that
+   act, and what `docs/mvp-known-gaps.md` still lists as "no".
 6. Headless checks for all of it: `GNM_SNAPSHOT=out.png scripts/run-app.sh
    file` plus `GNM_SNAPSHOT_TYPE`, `_FORMAT`, `_PHASE3`, `_FREEZE`,
    `_SHEETS`, `_FILTER`, `_OBJECTS`, `_CHART`, `_EDITOR`, `_EVERYDAY`, `_FIND`, `_PREFS`, `_TEXT`, `_IMPORT`, `_COMMENT`, `_NAMES`, `_FILL`, `_GOAL`, `_COND`, `_STATS`, `_VALID`, `_LINK`, `_SOLVE`, `_PRINT`, `_FORMULA`, `_FUNC`, `_ZOOM` (`docs/build.md`); compare `out.png` with

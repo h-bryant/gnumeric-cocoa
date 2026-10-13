@@ -14,6 +14,22 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     private let scrollView = NSScrollView()
     private let nameBox = NSTextField(labelWithString: "")
     private let formulaField = NSTextField(labelWithString: "")
+    private var formulaFieldHeight: NSLayoutConstraint?
+    private var formulaBarHeight: NSLayoutConstraint?
+
+    /// The edit line shows up to five lines of a multi-line text (the
+    /// GTK entry scrolls them; here the bar grows).
+    private func fitFormulaBar(to text: String) {
+        let lines = min(max(text.components(separatedBy: "\n").count, 1), 5)
+        let height = 24 + CGFloat(lines - 1) * 17
+        if formulaFieldHeight?.constant != height {
+            formulaFieldHeight?.constant = height
+            formulaBarHeight?.constant = height + 8
+        }
+    }
+
+    /// The formula bar's height, for the checks.
+    var formulaBarHeightForTesting: CGFloat { formulaBarHeight?.constant ?? 0 }
     private let tabs = SheetTabControl()
     /// The status bar's auto-expression: a pull-down showing "Sum = 42"
     /// whose items choose the function, as the GTK status bar does.
@@ -64,11 +80,12 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         nameBox.cell?.usesSingleLineMode = true
         formulaField.isBezeled = true
         formulaField.bezelStyle = .roundedBezel
-        formulaField.lineBreakMode = .byTruncatingTail
+        formulaField.lineBreakMode = .byClipping
         formulaField.isSelectable = true
         formulaField.isEditable = true
         formulaField.delegate = self
-        formulaField.cell?.usesSingleLineMode = true
+        formulaField.cell?.usesSingleLineMode = false   // multi-line texts show every line
+        formulaField.cell?.wraps = false
         formulaField.cell?.isScrollable = true
         formulaField.setContentHuggingPriority(NSLayoutConstraint.Priority(1), for: .horizontal)
         let formulaBar = NSStackView(views: [nameBox, formulaField])
@@ -80,10 +97,12 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         // Fixed heights: the SwiftUI-backed text fields of macOS 26 report a
         // taller intrinsic size once drawn, which re-laid out the window
         // under the first capture (2026-10-11).
+        formulaFieldHeight = formulaField.heightAnchor.constraint(equalToConstant: 24)
+        formulaBarHeight = formulaBar.heightAnchor.constraint(equalToConstant: 32)
         NSLayoutConstraint.activate([
             nameBox.heightAnchor.constraint(equalToConstant: 24),
-            formulaField.heightAnchor.constraint(equalToConstant: 24),
-            formulaBar.heightAnchor.constraint(equalToConstant: 32),
+            formulaFieldHeight!,
+            formulaBarHeight!,
         ])
 
         scrollView.contentView = GridClipView()   // clamps scrolling under frozen panes
@@ -231,6 +250,10 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         }
         guard control === formulaField else { return false }
         switch commandSelector {
+        case #selector(NSResponder.insertNewlineIgnoringFieldEditor(_:)):
+            textView.insertText("\n", replacementRange: textView.selectedRange())
+            fitFormulaBar(to: formulaField.stringValue)
+            return true
         case #selector(NSResponder.insertNewline(_:)):
             gridView.setEditCellText(formulaField.stringValue)
             window?.makeFirstResponder(gridView)
@@ -2147,6 +2170,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
 
     func workbook(_ workbook: Workbook, editLineDidChange text: String) {
         formulaField.stringValue = text
+        fitFormulaBar(to: text)
     }
 
     func workbook(_ workbook: Workbook, autoExpressionDidChange text: String) {

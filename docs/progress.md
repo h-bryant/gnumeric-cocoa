@@ -1695,6 +1695,19 @@
   tests the engine side; the `GNM_SNAPSHOT_DRAG` hook drives the grid's
   drop, a dropped PNG, and a tab reorder.
 
+## 2026-10-13: Multi-line editing
+
+- Option+Return inserts a line break (gnm-expr-entry.c's Alt+Return)
+  in the in-cell editor and in the formula bar: both fields allow
+  several lines now (`usesSingleLineMode` off, no wrapping), the
+  `insertNewlineIgnoringFieldEditor:` command inserts the newline, plain
+  Return still commits.  The in-cell editor grows down and right to
+  show every line as item-edit.c does (`fitEditorToText` on each text
+  change, never below the cell); the formula bar's height constraint
+  follows the text, up to five lines.  The `GNM_SNAPSHOT_MULTILINE`
+  hook types through the field editor and checks the editor's frame,
+  the entered text, and the bar's height.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -1712,8 +1725,8 @@
    printing, formula range selection by mouse and keyboard, the font
    shortcuts, autocompletion, the function selector, and array formulas;
    and all 27 Statistics tools; next the rest of Phase 5 by usage
-   frequency: the formula bar's multi-line editing, the toolbar's
-   missing items, widgets that act) from
+   frequency: the toolbar's missing items, widgets that act, the
+   remaining Phase 5 rows) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -1736,8 +1749,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-13: `main` at the drag and drop
-   commit (after the toolbar, the widget editors, AutoFormat, scenarios and simulation, the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-13: `main` at the multi-line editing
+   commit (after drag and drop, the toolbar, the widget editors, AutoFormat, scenarios and simulation, the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in
