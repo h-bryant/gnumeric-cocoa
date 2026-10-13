@@ -98,7 +98,7 @@ final class CellEditorField: NSTextField, NSTextFieldDelegate {
         case #selector(NSResponder.moveDown(_:)):
             if !arrow(0, 1) { onCommit?(stringValue, .down) }
         case #selector(NSResponder.moveLeft(_:)):
-            return arrow(-1, 0)
+            return arrow(-1, 0)   // a typed entry ends and moves; an F2 edit moves in the text
         case #selector(NSResponder.moveRight(_:)):
             return arrow(1, 0)
         case #selector(NSResponder.moveUpAndModifySelection(_:)):

@@ -116,7 +116,7 @@ GNM_SNAPSHOT=/tmp/grid.png scripts/run-app.sh upstream/gnumeric/samples/format-t
 `GNM_SNAPSHOT_PAGEBREAK=1`, `GNM_SNAPSHOT_SENDTO=1`, `GNM_SNAPSHOT_AUTOSAVE=1`,
 `GNM_SNAPSHOT_MERGE=1`, `GNM_SNAPSHOT_COMPARE=1`, `GNM_SNAPSHOT_PROTECT=1`,
 `GNM_SNAPSHOT_SHAPES=1`, `GNM_SNAPSHOT_PREVIEW=1`, `GNM_SNAPSHOT_SORTSETUP=1`,
-and `GNM_SNAPSHOT_REPEAT=1`
+`GNM_SNAPSHOT_REPEAT=1`, and `GNM_SNAPSHOT_XMLOPEN=1`
 exercise zoom, editing and saving, the Format Cells model, the Phase 3
 commands, frozen panes, sheet management, the autofilter with the Sort
 command, a sheet resize, and a tab color, the sheet objects (select, move,
@@ -232,8 +232,14 @@ the Sort dialog built on the range again coming back filled and captured
 to `-sortsetup.png`, another range coming back empty), and Repeat Export
 (the sheet written as CSV beside the capture through the document, an
 edit, then File → Repeat Export rewriting it; the remembered place, the
-exporter, and the file's content logged) before the capture
-(`AppDelegate.swift`, `Snapshot`). The typing hook saves as a
+exporter, and the file's content logged), and the fixes of Henry's first
+on-screen report (a workbook written as uncompressed XML opened again
+through the document controller, which calls the file `public.xml`; a
+typed entry ended by a Right arrow and an F2 edit keeping it; the Tab
+Color dialog's well clearing its None box) before the capture
+(`AppDelegate.swift`, `Snapshot`).  The freeze hook also walks the cursor
+up from row 31 into the frozen rows and counts the rows left under the
+strip (none). The typing hook saves as a
 Save As next to the snapshot; with `GNM_SNAPSHOT_SAVE_INPLACE=1` it saves
 the opened file in place instead (give it a copy). Should a quit ever go
 nowhere again (an alert sheet on the window did that once,

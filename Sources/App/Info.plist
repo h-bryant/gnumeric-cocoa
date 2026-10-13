@@ -77,7 +77,10 @@
 			<key>LSHandlerRank</key>
 			<string>None</string>
 			<key>LSItemContentTypes</key>
-			<array><string>io.github.h-bryant.gnumeric-cocoa.gnumeric-xml</string></array>
+			<array>
+				<string>io.github.h-bryant.gnumeric-cocoa.gnumeric-xml</string>
+				<string>public.xml</string>
+			</array>
 			<key>NSDocumentClass</key>
 			<string>GnumericCocoa.WorkbookDocument</string>
 		</dict>

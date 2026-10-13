@@ -2484,6 +2484,51 @@ enum Snapshot {
                 NSLog("repeat: none at first=%d remembered=%@ exporter='%@' single=%d after='%@'", before ? 1 : 0, remembered,
                       controller.workbook.lastExporterDescription ?? "nil", single ? 1 : 0, contents.trimmingCharacters(in: .whitespacesAndNewlines))
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_XMLOPEN"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet, let workbook = sheet.workbook {
+                // A workbook saved as uncompressed XML opens again through
+                // the document controller (Henry: it did not, 2026-10-13),
+                // and the typed-edit arrow keys commit and move.
+                try? sheet.setText("xml round trip", atColumn: 0, row: 0, autocorrect: false)
+                let xmlURL = URL(fileURLWithPath: (path as NSString).deletingPathExtension + "-roundtrip.xml")
+                try? FileManager.default.removeItem(at: xmlURL)
+                do {
+                    try workbook.writeCopy(to: xmlURL, saverIdentifier: "Gnumeric_XmlIO:sax:0")
+                } catch {
+                    NSLog("xmlopen: write failed %@", error.localizedDescription)
+                }
+                let guessed: String = (try? NSDocumentController.shared.typeForContents(of: xmlURL)) ?? "none"
+                NSLog("xmlopen: type for contents %@", guessed)
+                NSDocumentController.shared.openDocument(withContentsOf: xmlURL, display: false) { document, _, error in
+                    let opened = document as? WorkbookDocument
+                    let a1: String = opened?.workbook?.sheets.first?.displayTextOfCell(atColumn: 0, row: 0) ?? "nil"
+                    NSLog("xmlopen: opened=%d fileType=%@ A1='%@' error=%@", opened != nil ? 1 : 0, opened?.fileType ?? "nil", a1,
+                          error?.localizedDescription ?? "none")
+                    opened?.close()
+                }
+                // arrows end a typed entry and move; an F2 edit keeps them
+                let grid = controller.gridView
+                sheet.selectCell(atColumn: 2, row: 2)
+                grid.beginEditing(initialText: "typed")
+                let typedKeyEvent = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber,
+                                                     context: nil, characters: "\u{F703}", charactersIgnoringModifiers: "\u{F703}", isARepeat: false, keyCode: 124)
+                if let typedKeyEvent { window.sendEvent(typedKeyEvent) }
+                let afterTyped: String = "editing=\(grid.isEditing) C3='\(sheet.displayTextOfCell(atColumn: 2, row: 2) ?? "nil")' edit=\(sheet.editPosition.column),\(sheet.editPosition.row)"
+                sheet.selectCell(atColumn: 2, row: 2)
+                grid.beginEditing(initialText: nil)
+                if let typedKeyEvent { window.sendEvent(typedKeyEvent) }
+                let afterF2: String = "editing=\(grid.isEditing) edit=\(sheet.editPosition.column),\(sheet.editPosition.row)"
+                grid.cancelEditing()
+                NSLog("xmlopen: typed arrow: %@; F2 arrow: %@", afterTyped, afterF2)
+                // the Tab Color dialog's wells: a chosen color clears None
+                let none = NSButton(checkboxWithTitle: "None", target: nil, action: nil)
+                none.state = .on
+                let well = TabColorWell(frame: .zero)
+                well.noneBox = none
+                well.color = .systemRed
+                NSLog("xmlopen: tab color well none=%d", none.state == .on ? 1 : 0)
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FREEZE"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {
@@ -2499,6 +2544,21 @@ enum Snapshot {
                 grid.enclosingScrollView?.reflectScrolledClipView(grid.enclosingScrollView!.contentView)
                 sheet.selectCell(atColumn: 4, row: 30)
                 NSLog("freeze: visible=%@ scrolling=%@", NSStringFromRect(grid.visibleRect), NSStringFromRect(grid.scrollingVisibleRect))
+                // Keyboard moves never leave the cursor under the frozen
+                // strips (Henry saw that, 2026-10-13): from row 31 up to the
+                // frozen rows, every scrolling row must clear the strip.
+                var hidden = 0
+                sheet.selectCell(atColumn: 5, row: 30)
+                grid.sheet(sheet, makeVisibleColumn: 5, row: 30)
+                for _ in 0..<32 {
+                    grid.moveUp(nil)
+                    let edit = sheet.editPosition
+                    let frame = sheet.frameOfCell(atColumn: edit.column, row: edit.row)
+                    if grid.panes != nil, edit.row >= sheet.unfrozenTopLeft.row, frame.minY < grid.scrollingVisibleRect.minY - 0.5 { hidden += 1 }
+                }
+                let origin = grid.enclosingScrollView?.contentView.bounds.origin ?? .zero
+                let where_: String = "row=\(sheet.editPosition.row) hidden=\(hidden) origin=\(NSStringFromPoint(origin)) minimum=\(NSStringFromPoint(grid.minimumScrollOrigin))"
+                NSLog("freeze: after moving up %@", where_)
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }

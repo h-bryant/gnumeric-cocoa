@@ -1022,7 +1022,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         alert.addButton(withTitle: "Set")
         alert.addButton(withTitle: "Cancel")
         func well(_ color: CGColor?, none: NSButton) -> NSColorWell {
-            let well = NSColorWell(frame: NSRect(x: 0, y: 0, width: 60, height: 24))
+            let well = TabColorWell(frame: NSRect(x: 0, y: 0, width: 60, height: 24))
             well.widthAnchor.constraint(equalToConstant: 60).isActive = true
             well.heightAnchor.constraint(equalToConstant: 24).isActive = true
             if let color, let nsColor = NSColor(cgColor: color) {
@@ -1030,6 +1030,9 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             } else {
                 none.state = .on
             }
+            // Picking a color means a color: the None box clears itself
+            // (it stayed checked before, so Set changed nothing).
+            well.noneBox = none
             return well
         }
         let noBackground = NSButton(checkboxWithTitle: "None", target: nil, action: nil)
@@ -2716,6 +2719,16 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
 /// The sheet tabs: a right-click selects the tab under the mouse before
 /// its context menu opens, so the menu's commands apply to that sheet.
 @MainActor
+/// A color well of the Tab Color dialog: choosing a color unchecks its
+/// "None" box.
+final class TabColorWell: NSColorWell {
+    weak var noneBox: NSButton?
+
+    override var color: NSColor {
+        didSet { noneBox?.state = .off }
+    }
+}
+
 final class SheetTabControl: NSSegmentedControl {
     /// A tab dragged onto another's place: (from, to) segment indexes.
     var onReorder: ((Int, Int) -> Void)?

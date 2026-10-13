@@ -408,7 +408,9 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    has the reasoning for all three.  Custom document properties came
    last (the Properties dialog's fourth tab).  Next: the sheet
    direction row of `docs/mvp-known-gaps.md` (right-to-left, a Phase 7
-   item), the later-phase rows, and above all Henry's on-screen checks.
+   item), the later-phase rows, and Henry's on-screen checks (his first
+   report on 2026-10-13 found four faults, all fixed the same day:
+   `docs/progress.md`).
 6. Headless checks for all of it: `GNM_SNAPSHOT=out.png scripts/run-app.sh
    file` plus `GNM_SNAPSHOT_TYPE`, `_FORMAT`, `_PHASE3`, `_FREEZE`,
    `_SHEETS`, `_FILTER`, `_OBJECTS`, `_CHART`, `_EDITOR`, `_EVERYDAY`, `_FIND`, `_PREFS`, `_TEXT`, `_IMPORT`, `_COMMENT`, `_NAMES`, `_FILL`, `_GOAL`, `_COND`, `_STATS`, `_VALID`, `_LINK`, `_SOLVE`, `_PRINT`, `_FORMULA`, `_FUNC`, `_ZOOM` (`docs/build.md`); compare `out.png` with

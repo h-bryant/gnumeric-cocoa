@@ -206,6 +206,9 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     private let editor = CellEditorField()
     private var editingCell: CellCoordinate?
     var isEditing: Bool { editingCell != nil }
+    /// Whether the edit began with typing (an arrow key then ends it)
+    /// rather than F2 or a double-click (the arrows move in the text).
+    private(set) var editingStartedByTyping = false
 
     // MARK: Dropped files
 
@@ -262,7 +265,16 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         editor.onCommit = { [weak self] text, movement in self?.commitEditing(text: text, movement: movement) }
         editor.onCancel = { [weak self] in self?.cancelEditing() }
         editor.onArrow = { [weak self] columns, rows, extend, jump in
-            self?.moveFormulaRange(columns: columns, rows: rows, extend: extend, jump: jump) ?? false
+            guard let self else { return false }
+            if moveFormulaRange(columns: columns, rows: rows, extend: extend, jump: jump) { return true }
+            // An entry started by typing ends on an arrow key, which then
+            // moves the cursor (the GTK's wbcg_edit_start without the
+            // cursor keys in the entry); an F2 or double-click edit keeps
+            // the arrows for the text.
+            guard editingStartedByTyping, !extend else { return false }
+            let movement: CellEditorField.Movement = rows < 0 ? .up : rows > 0 ? .down : columns < 0 ? .left : .right
+            commitEditing(text: editor.stringValue, movement: movement)
+            return true
         }
         editor.onArrayCommit = { [weak self] text in self?.commitArrayFormula(text: text) }
         editor.onSelectionChange = { [weak self] in self?.updateFunctionTooltip() }
@@ -619,6 +631,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     /// (typing starts fresh).
     func beginEditing(initialText: String?) {
         guard let sheet else { return }
+        editingStartedByTyping = initialText != nil
         let cell = sheet.editPosition
         let frame = sheet.frameOfCell(atColumn: cell.column, row: cell.row)
         let zoom = sheet.zoomFactor
@@ -1356,7 +1369,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         }
         formulaRangeBase = range.start == target && range.end == target ? target : base
         takeFormulaRange(range, replacing: replace)
-        scrollToVisible(sheet.frameOfCell(atColumn: target.column, row: target.row).insetBy(dx: -2, dy: -2))
+        self.sheet(sheet, makeVisibleColumn: target.column, row: target.row)
         return true
     }
 
@@ -2250,7 +2263,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
             dragAnchor = target
             sheet.selectCell(atColumn: target.column, row: target.row)
         }
-        scrollToVisible(sheet.frameOfCell(atColumn: target.column, row: target.row).insetBy(dx: -2, dy: -2))
+        self.sheet(sheet, makeVisibleColumn: target.column, row: target.row)
     }
 
     private func farCorner(of range: CellRange, from anchor: CellCoordinate) -> CellCoordinate {
@@ -2307,7 +2320,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     override func scrollToBeginningOfDocument(_ sender: Any?) {
         guard let sheet else { return }
         sheet.selectCell(atColumn: 0, row: sheet.editPosition.row)
-        scrollToVisible(sheet.frameOfCell(atColumn: 0, row: sheet.editPosition.row))
+        self.sheet(sheet, makeVisibleColumn: 0, row: sheet.editPosition.row)
     }
     override func insertTab(_ sender: Any?) {
         if selectedObjects.isEmpty { move(columns: 1, rows: 0, extend: false) } else { selectNextObject(reverse: false) }

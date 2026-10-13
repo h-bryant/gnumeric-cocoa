@@ -2041,6 +2041,33 @@
   as its own command as the GTK page runs them.  The `GNM_SNAPSHOT_PROPS`
   hook stages a text and an integer property.
 
+### 2026-10-13: Henry's first on-screen report, and four fixes
+
+- Henry tried the app on screen for the first time since the blank-grid
+  fix.  Fine: ⌘S and ⌘Q, editing, the ⌘-arrow jumps, Print Preview,
+  Save As to a new name and to `.xml`, an `.xlsx` opening elsewhere, the
+  Properties dialog.  Four things were not:
+- An arrow key while typing into a cell should end the entry and move.
+  The editor's Left and Right went to the text (Up and Down already
+  committed).  Now an entry begun by typing ends on any arrow key and
+  the cursor moves (`editingStartedByTyping`; the GTK's wbcg_edit_start
+  without the cursor keys in the entry), while an F2 or double-click
+  edit keeps the arrows for the text.
+- The selection could end up under the frozen strips: keyboard moves
+  revealed the cell with `scrollToVisible`, which knows nothing of the
+  overlays.  They now go through the pane-aware
+  `sheet(_:makeVisibleColumn:row:)`.  The freeze hook walks the cursor
+  up from row 31 and finds no row left under the strip.
+- A workbook saved as `.xml` would not open: Launch Services types a
+  `.xml` file as `public.xml`, not as the exported Gnumeric XML type,
+  and the document types did not list it.  `public.xml` is now a
+  document type; a read of it becomes the Gnumeric XML type so later
+  saves stay uncompressed.  `GNM_SNAPSHOT_XMLOPEN=1` round-trips one.
+- Tab Color… changed nothing: the wells' "None" boxes start checked
+  when a tab has no color and stayed checked after a color was picked,
+  so Set applied nil.  `TabColorWell` clears its None box when its
+  color changes.
+
 ### 2026-10-13 (later): ViewNew left out
 
 - Henry chose to leave View → New View… out.  The bridge assumes one

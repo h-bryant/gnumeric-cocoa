@@ -47,6 +47,11 @@ final class WorkbookDocument: NSDocument {
     /// NSDocument declares reading nonisolated (it may read concurrently when
     /// asked to); this document never asks, so the read happens on the main
     /// thread and the engine call is safe.
+    /// Launch Services calls a `.xml` file `public.xml`, not our exported
+    /// type, so that is what opens arrive as; they are Gnumeric's
+    /// uncompressed XML to the engine and to every save afterwards.
+    nonisolated static let publicXMLType = "public.xml"
+
     override nonisolated func read(from url: URL, ofType typeName: String) throws {
         try MainActor.assumeIsolated {
             guard let engine = Engine.shared else {
@@ -65,6 +70,7 @@ final class WorkbookDocument: NSDocument {
                 workbook = try engine.importText(assistant.model.session)
             } else {
                 workbook = try engine.openWorkbook(at: url)
+                if typeName == Self.publicXMLType { fileType = Self.xmlType }
             }
         }
     }
@@ -85,7 +91,7 @@ final class WorkbookDocument: NSDocument {
     override func fileNameExtension(forType typeName: String, saveOperation: NSDocument.SaveOperationType) -> String? {
         switch typeName {
         case Self.gnumericType: return "gnumeric"
-        case Self.xmlType: return "xml"
+        case Self.xmlType, Self.publicXMLType: return "xml"
         case Self.xlsxType: return "xlsx"
         case Self.csvType: return "csv"
         case Self.textType: return "txt"
@@ -119,7 +125,7 @@ final class WorkbookDocument: NSDocument {
     nonisolated static func saverIdentifier(for typeName: String) -> String {
         switch typeName {
         case gnumericType: return "Gnumeric_XmlIO:sax"
-        case xmlType: return "Gnumeric_XmlIO:sax:0"
+        case xmlType, publicXMLType: return "Gnumeric_XmlIO:sax:0"
         case csvType: return "Gnumeric_stf:stf_csv"
         case textType: return "Gnumeric_stf:stf_assistant"
         default:
