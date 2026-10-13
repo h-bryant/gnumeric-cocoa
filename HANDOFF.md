@@ -370,9 +370,10 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    `SheetHeaderView.swift`, `outline.m`), then the advanced filter,
    sheet Hide / Unhide, and full screen (`GnmAdvancedFilter`,
    `setSheet:visible:`, `filter_visibility.m`), and the Sort dialog's
-   six key rows and locale.  Next, by usage: a Manage Sheets dialog,
-   Data → Consolidate and Shuffle, a plugin manager, the scenarios and
-   simulation tools;
+   six key rows and locale, and Data → Consolidate… and Shuffle…
+   (`GnmConsolidateAnalysis`, `shuffleRange:by:`).  Next, by usage: a
+   Manage Sheets dialog, a plugin manager, the scenarios and simulation
+   tools, Format → AutoFormat;
    image and widget editors (`cmd_so_set_*`) later; the smaller Phase 3
    gaps (Insert/Delete Cells,
    Goto and the name box, the formula bar, autocomplete, drag and drop,

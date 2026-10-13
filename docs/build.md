@@ -158,7 +158,7 @@ Gridlines, Hide Row Headers, R1C1 column names, and Zoom… to 150%
 through its dialog, captured to `-zoom.png`), and the what-if tools
 (a data table over C1:E3 through its dialog, captured to `-table.png`,
 normal random numbers into H1, a tabulation of A3 over A1 onto a new
-sheet), and outlines (rows 2–4 and 2–3 and columns B–C grouped, the
+sheet, K1:L2 and K4:L5 consolidated into N1, K1:L2 shuffled), and outlines (rows 2–4 and 2–3 and columns B–C grouped, the
 inner rows hidden, the row header's toggle, hidden again for the
 window capture's header strips), and the advanced filter (A1:B6 with
 Qty > 4 in place through its dialog, captured to `-advfilter.png`, then

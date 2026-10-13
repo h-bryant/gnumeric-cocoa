@@ -16,6 +16,7 @@ final class AnalysisDialog {
         case twoMedianSignTest, twoMedianSignedRank, mannWhitney
         case anovaTwoFactor, homogeneity, independence
         case randomNumbers, correlatedRandomNumbers
+        case consolidate
 
         var title: String {
             switch self {
@@ -45,6 +46,7 @@ final class AnalysisDialog {
             case .independence: return "Test of Independence"
             case .randomNumbers: return "Random Number Generation"
             case .correlatedRandomNumbers: return "Correlated Random Number Generation"
+            case .consolidate: return "Data Consolidation"
             }
         }
 
@@ -160,6 +162,12 @@ final class AnalysisDialog {
     let secondParameterField = NSTextField(string: "1")
     let valueRangeField = NSTextField(string: "")
     let matrixKind = NSPopUpButton(frame: .zero, pullsDown: false)
+    // Consolidation
+    let consolidateFunction = NSPopUpButton(frame: .zero, pullsDown: false)
+    let sourceFields = (0..<4).map { _ in NSTextField(string: "") }
+    let topRowLabels = NSButton(checkboxWithTitle: "Labels in top row", target: nil, action: nil)
+    let leftColumnLabels = NSButton(checkboxWithTitle: "Labels in left column", target: nil, action: nil)
+    let copyLabels = NSButton(checkboxWithTitle: "Copy labels", target: nil, action: nil)
     private var relay: PopUpRelay?
     private weak var parameterGrid: NSGridView?
     // Descriptive statistics
@@ -218,6 +226,9 @@ final class AnalysisDialog {
             RandomNumbersAnalysis.label(for: RandomNumbersAnalysis.Distribution(rawValue: $0.intValue) ?? .uniform)
         })
         matrixKind.addItems(withTitles: ["Covariance matrix", "Cholesky decomposition"])
+        consolidateFunction.addItems(withTitles: ["SUM", "MIN", "MAX", "AVERAGE", "COUNT", "PRODUCT", "STDEV", "STDEVP", "VAR", "VARP"])
+        sourceFields[0].stringValue = selection
+        for field in sourceFields { field.widthAnchor.constraint(greaterThanOrEqualToConstant: 220).isActive = true }
         if tool == .correlatedRandomNumbers { countField.stringValue = "2" }
         for field in [inputField, xField, yField, outputField, cutoffRangeField, timeField, censorField, groupsRangeField, groupsField, valueRangeField] {
             field.widthAnchor.constraint(greaterThanOrEqualToConstant: 220).isActive = true
@@ -328,6 +339,11 @@ final class AnalysisDialog {
             rows = [[heading("Input"), NSGridCell.emptyContentView],
                     [label("Matrix is:"), matrixKind], [label("Matrix range:"), inputField],
                     [label("Number of random numbers:"), countField]]
+        case .consolidate:
+            rows += [[label("Function:"), consolidateFunction]]
+            for (i, field) in sourceFields.enumerated() { rows.append([label(i == 0 ? "Source areas:" : ""), field]) }
+            rows += [[NSGridCell.emptyContentView, topRowLabels], [NSGridCell.emptyContentView, leftColumnLabels],
+                     [NSGridCell.emptyContentView, copyLabels]]
         default:
             rows += [[label("Input range:"), inputField], [label("Grouped by:"), grouping], [NSGridCell.emptyContentView, labels]]
             switch tool {
@@ -603,6 +619,14 @@ final class AnalysisDialog {
             random.isCholesky = matrixKind.indexOfSelectedItem == 1
             random.count = Int(countField.stringValue) ?? 0
             return random
+        case .consolidate:
+            let consolidate = ConsolidateAnalysis()
+            consolidate.function = ConsolidateAnalysis.Function(rawValue: consolidateFunction.indexOfSelectedItem) ?? .sum
+            consolidate.sourceRanges = sourceFields.map(\.stringValue).filter { !$0.isEmpty }
+            consolidate.hasTopRowLabels = topRowLabels.state == .on
+            consolidate.hasLeftColumnLabels = leftColumnLabels.state == .on
+            consolidate.copiesLabels = copyLabels.state == .on
+            return consolidate
         }
     }
 

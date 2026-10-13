@@ -541,7 +541,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
              #selector(solver(_:)), #selector(pageSetup(_:)), #selector(printSheet(_:)), #selector(setPrintArea(_:)), #selector(clearPrintArea(_:)),
              #selector(toggleBold(_:)), #selector(toggleItalic(_:)), #selector(toggleUnderline(_:)), #selector(insertFunction(_:)),
              #selector(dataTable(_:)), #selector(tabulate(_:)), #selector(randomNumbers(_:)), #selector(correlatedRandomNumbers(_:)),
-             #selector(groupOutline(_:)), #selector(ungroupOutline(_:)), #selector(hideDetail(_:)), #selector(showDetail(_:)):
+             #selector(groupOutline(_:)), #selector(ungroupOutline(_:)), #selector(hideDetail(_:)), #selector(showDetail(_:)),
+             #selector(consolidate(_:)), #selector(shuffle(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(removeSheet(_:)):
             return gridView.sheet != nil && workbook.canRemoveSheets
@@ -1329,6 +1330,23 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     @objc func homogeneity(_ sender: Any?) { runAnalysisDialog(.homogeneity) }
     @objc func independence(_ sender: Any?) { runAnalysisDialog(.independence) }
     @objc func randomNumbers(_ sender: Any?) { runAnalysisDialog(.randomNumbers) }
+    @objc func consolidate(_ sender: Any?) { runAnalysisDialog(.consolidate) }
+
+    /// Data → Shuffle…: the GTK dialog, in place.
+    @objc func shuffle(_ sender: Any?) {
+        guard let window, let sheet = gridView.sheet, window.attachedSheet == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        ShuffleDialog(sheet: sheet).present(in: window) { [weak self] range, kind in
+            guard let self else { return true }
+            do {
+                try sheet.shuffle(range, by: kind)
+                return true
+            } catch {
+                presentMessage(error.localizedDescription)
+                return false
+            }
+        }
+    }
     @objc func correlatedRandomNumbers(_ sender: Any?) { runAnalysisDialog(.correlatedRandomNumbers) }
     // The GTK's four Claims About Two Means items preselect the kind.
     @objc func meanTestPaired(_ sender: Any?) { runAnalysisDialog(.meanTest) { $0.meanTestKind.selectItem(at: 0) } }

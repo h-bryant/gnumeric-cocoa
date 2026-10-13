@@ -552,6 +552,54 @@ NS_SWIFT_NAME(AdvancedFilter)
     NS_SWIFT_NAME(applyAdvancedFilter(_:output:));
 @end
 
+/// consolidate.ui's functions, in its order.
+typedef NS_ENUM(NSInteger, GnmConsolidateFunction) {
+    GnmConsolidateFunctionSum = 0,
+    GnmConsolidateFunctionMin,
+    GnmConsolidateFunctionMax,
+    GnmConsolidateFunctionAverage,
+    GnmConsolidateFunctionCount,
+    GnmConsolidateFunctionProduct,
+    GnmConsolidateFunctionStandardDeviation,
+    GnmConsolidateFunctionPopulationStandardDeviation,
+    GnmConsolidateFunctionVariance,
+    GnmConsolidateFunctionPopulationVariance,
+} NS_SWIFT_NAME(ConsolidateAnalysis.Function);
+
+/// Data → Consolidate… (dialog-consolidate.c): one function over the
+/// matching cells of several source areas, by position or by the labels
+/// in their top row or left column.  The output's values-or-formulas
+/// choice decides whether the results are written as values.
+NS_SWIFT_NAME(ConsolidateAnalysis)
+@interface GnmConsolidateAnalysis : GnmAnalysis
+- (instancetype)init;
+/// SUM at first.
+@property (nonatomic) GnmConsolidateFunction function;
+/// The source areas, each a range in the sheet's syntax.
+@property (nonatomic, copy) NSArray<NSString *> *sourceRanges;
+/// "Labels in top row": the top row holds keys, not data.
+@property (nonatomic) BOOL hasTopRowLabels;
+/// "Labels in left column".
+@property (nonatomic) BOOL hasLeftColumnLabels;
+/// "Copy labels" into the output.
+@property (nonatomic) BOOL copiesLabels;
+@end
+
+/// Data → Shuffle… (dialog-shuffle.c): how a range's cells are mixed.
+typedef NS_ENUM(NSInteger, GnmShuffleKind) {
+    /// Each column's cells among themselves.
+    GnmShuffleColumns = 0,
+    /// Each row's cells among themselves.
+    GnmShuffleRows,
+    /// All the cells.
+    GnmShuffleArea,
+} NS_SWIFT_NAME(Sheet.ShuffleKind);
+
+@interface GnmSheet (Shuffling)
+/// Shuffle a range in place (`cmd_data_shuffle`, "Shuffled", undoable).
+- (BOOL)shuffleRange:(NSString *)rangeText by:(GnmShuffleKind)kind error:(NSError **)error NS_SWIFT_NAME(shuffle(_:by:));
+@end
+
 @interface GnmSheet (Analysis)
 /// Run a tool with its ranges read relative to this sheet, writing as the
 /// output says, as one undoable command named for the tool.  The sheet

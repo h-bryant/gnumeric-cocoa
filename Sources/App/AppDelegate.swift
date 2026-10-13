@@ -861,6 +861,37 @@ enum Snapshot {
                 NSLog("whatif: tabulation on '%@' of %ld sheets: B2=%@ B5=%@ undo=%@", shown?.name ?? "nil", sheet.workbook?.sheets.count ?? 0,
                       shown?.displayTextOfCell(atColumn: 1, row: 1) ?? "nil", shown?.displayTextOfCell(atColumn: 1, row: 4) ?? "nil",
                       sheet.workbook?.undoLabel ?? "nil")
+                // Back on the first sheet: K1:L2 and K4:L5 consolidated by SUM
+                // into N1 through the dialog, then K1:L2 shuffled in place.
+                controller.workbook.select(sheet)
+                do {
+                    for (i, text) in ["1", "2", "3", "4"].enumerated() { try sheet.setText(text, atColumn: 10 + i % 2, row: i / 2, autocorrect: false) }
+                    for (i, text) in ["10", "20", "30", "40"].enumerated() { try sheet.setText(text, atColumn: 10 + i % 2, row: 3 + i / 2, autocorrect: false) }
+                } catch {
+                    NSLog("whatif: consolidate data failed: %@", error.localizedDescription)
+                }
+                AnalysisDialog.headlessDriver = { dialog in
+                    dialog.sourceFields[0].stringValue = "K1:L2"
+                    dialog.sourceFields[1].stringValue = "K4:L5"
+                    dialog.destination.selectItem(at: 1)
+                    dialog.outputField.stringValue = "N1"
+                    return true
+                }
+                controller.consolidate(nil)
+                AnalysisDialog.headlessDriver = nil
+                NSLog("whatif: consolidated N1=%@ O2=%@ undo=%@", sheet.displayTextOfCell(atColumn: 13, row: 0) ?? "nil",
+                      sheet.displayTextOfCell(atColumn: 14, row: 1) ?? "nil", sheet.workbook?.undoLabel ?? "nil")
+                ShuffleDialog.headlessDriver = { dialog in
+                    dialog.rangeField.stringValue = "K1:L2"
+                    dialog.method.selectItem(at: 2)
+                    return true
+                }
+                controller.shuffle(nil)
+                ShuffleDialog.headlessDriver = nil
+                NSLog("whatif: shuffled K1:L2 = %@ %@ %@ %@ undo=%@", sheet.displayTextOfCell(atColumn: 10, row: 0) ?? "nil",
+                      sheet.displayTextOfCell(atColumn: 11, row: 0) ?? "nil", sheet.displayTextOfCell(atColumn: 10, row: 1) ?? "nil",
+                      sheet.displayTextOfCell(atColumn: 11, row: 1) ?? "nil", sheet.workbook?.undoLabel ?? "nil")
+                if let tabulation = controller.workbook.sheets.last, tabulation != sheet { controller.workbook.select(tabulation) }
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }

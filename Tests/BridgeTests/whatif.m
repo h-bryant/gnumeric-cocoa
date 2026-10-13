@@ -181,6 +181,50 @@ int main (void)
         GNM_ASSERT ([s runAnalysis:cor output:[GnmAnalysisOutput inRangeNamed:@"P1"] error:&error] == nil
                     && [error.localizedDescription containsString:@"matrix range"], @"not square: %@", error);
 
+        /* consolidation: AA1:AB2 and AA4:AB5 summed into AD1 */
+        NSArray *first = @[@"1", @"2", @"3", @"4"], *secondArea = @[@"10", @"20", @"30", @"40"];
+        for (int i = 0; i < 4; i++) {
+            GNM_ASSERT ([s setText:first[i] atColumn:26 + i % 2 row:i / 2 autocorrect:NO error:&error], @"area 1: %@", error);
+            GNM_ASSERT ([s setText:secondArea[i] atColumn:26 + i % 2 row:3 + i / 2 autocorrect:NO error:&error], @"area 2: %@", error);
+        }
+        GnmConsolidateAnalysis *con = [[GnmConsolidateAnalysis alloc] init];
+        con.sourceRanges = @[@"AA1:AB2", @"AA4:AB5"];
+        GNM_ASSERT ([s runAnalysis:con output:[GnmAnalysisOutput inRangeNamed:@"AD1"] error:&error] == s, @"consolidate: %@", error);
+        NSLog (@"consolidate: %@ %@ / %@ %@ entered '%@' undo '%@'", cell (s, 29, 0), cell (s, 30, 0), cell (s, 29, 1), cell (s, 30, 1),
+               [s enteredTextOfCellAtColumn:29 row:0], wb.undoLabel);
+        GNM_ASSERT (number (s, 29, 0) == 11 && number (s, 30, 1) == 44, @"sums by position");
+        [wb undo];
+        con.function = GnmConsolidateFunctionMax;
+        GnmAnalysisOutput *formulas = [GnmAnalysisOutput inRangeNamed:@"AD1"];
+        formulas.entersFormulas = YES;
+        GNM_ASSERT ([s runAnalysis:con output:formulas error:&error] == s, @"consolidate max: %@", error);
+        NSLog (@"consolidate max: %@ entered '%@'", cell (s, 29, 0), [s enteredTextOfCellAtColumn:29 row:0]);
+        GNM_ASSERT (number (s, 29, 0) == 10 && [[s enteredTextOfCellAtColumn:29 row:0] hasPrefix:@"="], @"a formula for the max");
+        [wb undo];
+        error = nil;
+        con.sourceRanges = @[@"AA1:AB2", @"junk"];
+        GNM_ASSERT ([s runAnalysis:con output:[GnmAnalysisOutput inRangeNamed:@"AD1"] error:&error] == nil
+                    && [error.localizedDescription containsString:@"does not define a region"], @"bad source: %@", error);
+        error = nil;
+        con.sourceRanges = @[@"AA1:AB2", @"AA4:AB5"];
+        GNM_ASSERT ([s runAnalysis:con output:[GnmAnalysisOutput inRangeNamed:@"AA1"] error:&error] == nil
+                    && [error.localizedDescription containsString:@"overlaps"], @"overlapping output: %@", error);
+        error = nil;
+        /* shuffling AA1:AB2 keeps the values */
+        GNM_ASSERT ([s shuffleRange:@"AA1:AB2" by:GnmShuffleArea error:&error], @"shuffle: %@", error);
+        NSMutableArray *values = [NSMutableArray array];
+        for (int i = 0; i < 4; i++)
+            [values addObject:@(number (s, 26 + i % 2, i / 2))];
+        [values sortUsingSelector:@selector(compare:)];
+        NSLog (@"shuffle: %@ undo '%@'", values, wb.undoLabel);
+        NSArray *expected = @[@1, @2, @3, @4];
+        GNM_ASSERT ([values isEqualToArray:expected], @"the same values: %@", values);
+        [wb undo];
+        GNM_ASSERT (number (s, 26, 0) == 1 && number (s, 27, 1) == 4, @"undone");
+        error = nil;
+        GNM_ASSERT (![s shuffleRange:@"nowhere" by:GnmShuffleRows error:&error] && [error.localizedDescription containsString:@"input range"], @"bad range: %@", error);
+        error = nil;
+
         GNM_ASSERT (stray.count == 0, @"stray messages: %@", stray);
         wb = nil;
       }

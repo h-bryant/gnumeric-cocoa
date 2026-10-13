@@ -20,6 +20,8 @@
 #include <tools/random-generator.h>
 #include <tools/random-generator-cor.h>
 #include <tools/filter.h>
+#include <consolidate.h>
+#include <tools/data-shuffling.h>
 
 static NSError *
 analysis_error (GnmEngine *engine, NSString *message)
@@ -142,6 +144,11 @@ single_range (Sheet *sheet, NSString *text)
 - (NSArray<NSString *> *)_requiredPluginIdentifiers
 {
     return @[];
+}
+
+- (BOOL)_acceptsOutput:(data_analysis_output_t *)dao tool:(GnmAnalysisTool *)tool engine:(GnmEngine *)engine error:(NSError **)error
+{
+    return YES;
 }
 
 @end
@@ -1413,6 +1420,110 @@ random_strings_find (GnmRandomDistribution distribution)
 
 @end
 
+#pragma mark - Consolidation and shuffling
+
+@implementation GnmConsolidateAnalysis
+
+- (instancetype)init
+{
+    if (!(self = [super initWithTitle:@"Data Consolidation"]))
+        return nil;
+    _sourceRanges = @[];
+    return self;
+}
+
+- (GnmAnalysisTool *)_engineToolForSheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error
+{
+    /* construct_consolidate */
+    static const char *const names[] = { "SUM", "MIN", "MAX", "AVERAGE", "COUNT", "PRODUCT", "STDEV", "STDEVP", "VAR", "VARP" };
+    if (_function < 0 || _function >= (NSInteger) G_N_ELEMENTS (names)) {
+        if (error)
+            *error = analysis_error (engine, @"Unknown function.");
+        return NULL;
+    }
+    GnmConsolidate *cs = gnm_consolidate_new ();
+    gnm_consolidate_set_function (cs, gnm_func_lookup (names[_function], NULL));
+    GnmConsolidateMode mode = 0;
+    if (_hasTopRowLabels)
+        mode |= CONSOLIDATE_COL_LABELS;
+    if (_hasLeftColumnLabels)
+        mode |= CONSOLIDATE_ROW_LABELS;
+    if (_copiesLabels)
+        mode |= CONSOLIDATE_COPY_LABELS;
+    gnm_consolidate_set_mode (cs, mode);
+    NSInteger added = 0;
+    for (NSString *source in _sourceRanges) {
+        if (source.length == 0)
+            continue;
+        GnmValue *range = value_new_cellrange_str (sheet, source.UTF8String);
+        if (!range) {
+            gnm_consolidate_free (cs, FALSE);
+            if (error)
+                *error = analysis_error (engine, [NSString stringWithFormat:@"Specification %@ does not define a region", source]);
+            return NULL;
+        }
+        if (!gnm_consolidate_add_source (cs, range)) {
+            gnm_consolidate_free (cs, FALSE);
+            if (error)
+                *error = analysis_error (engine, [NSString stringWithFormat:@"Source region %@ overlaps with the destination region", source]);
+            return NULL;
+        }
+        added++;
+    }
+    if (added == 0) {
+        gnm_consolidate_free (cs, FALSE);
+        if (error)
+            *error = analysis_error (engine, @"At least one source area is needed.");
+        return NULL;
+    }
+    return gnm_consolidate_tool_new (cs);   /* takes the consolidation */
+}
+
+- (BOOL)_acceptsOutput:(data_analysis_output_t *)dao tool:(GnmAnalysisTool *)tool engine:(GnmEngine *)engine error:(NSError **)error
+{
+    GnmConsolidate *cs = GNM_CONSOLIDATE_TOOL (tool)->cs;
+    /* the output's Values choice (construct_consolidate's dao_put_formulas) */
+    if (!dao_put_formulas (dao))
+        gnm_consolidate_set_mode (cs, cs->mode | CONSOLIDATE_PUT_VALUES);
+    if (!gnm_consolidate_check_destination (cs, dao)) {
+        if (error)
+            *error = analysis_error (engine, @"The output range overlaps with the input ranges.");
+        return NO;
+    }
+    return YES;
+}
+
+@end
+
+@implementation GnmSheet (Shuffling)
+
+- (BOOL)shuffleRange:(NSString *)rangeText by:(GnmShuffleKind)kind error:(NSError **)error
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    Sheet *sheet = self.engineSheet;
+    GnmWorkbook *workbook = self.workbook;
+    if (!sheet || !workbook)
+        return NO;
+    GnmValue *input = single_range (sheet, rangeText);
+    if (!input) {
+        if (error)
+            *error = analysis_error (workbook.engine, @"The input range is invalid.");
+        return NO;
+    }
+    /* shuffle_ok_clicked_cb */
+    return [workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        data_analysis_output_t *dao = dao_init (GNM_DAO_OUTPUT_INPLACE);
+        dao_load_from_value (dao, input);
+        dao_prepare_output (wbc, dao, "Shuffled");
+        GnmDataShuffle *ds = gnm_data_shuffle_new (dao, sheet, input, (GnmDataShuffleType) kind);
+        gboolean failed = cmd_data_shuffle (wbc, ds, sheet);
+        value_release (input);
+        return failed;
+    } description:@"Could not shuffle." error:error];
+}
+
+@end
+
 #pragma mark - Running
 
 @implementation GnmSheet (Analysis)
@@ -1452,6 +1563,11 @@ random_strings_find (GnmRandomDistribution distribution)
         return nil;
     data_analysis_output_t *dao = [output _outputForSheet:sheet engine:engine error:error];
     if (!dao) {
+        g_object_unref (tool);
+        return nil;
+    }
+    if (![analysis _acceptsOutput:dao tool:tool engine:engine error:error]) {
+        dao_free (dao);
         g_object_unref (tool);
         return nil;
     }

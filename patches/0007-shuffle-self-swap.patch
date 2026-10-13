@@ -1,0 +1,44 @@
+Skip a shuffle swap of a cell, column, or row with itself.
+
+The data shuffling tool pairs cells (columns, rows) at random and swaps
+each pair through a temporary area with three sheet_move_range calls.
+When a pair is one and the same, the second move has no offset and
+sheet_move_range refuses it with a CRITICAL assertion (origin_sheet !=
+target_sheet || col_offset != 0 || row_offset != 0); the cells end up
+right, but every shuffle of a small range logs the assertion, twice for
+the undo.  Found through the Cocoa front end on 2026-10-12; the GTK
+front end runs the same code.  Return before the moves when there is
+nothing to swap.
+
+--- a/src/tools/data-shuffling.c	2026-10-12 20:31:03
++++ b/src/tools/data-shuffling.c	2026-10-12 20:31:03
+@@ -145,6 +145,9 @@
+ {
+         GnmExprRelocateInfo reverse;
+ 
++	if (sw->a.col == sw->b.col && sw->a.row == sw->b.row)
++		return;
++
+ 	reverse.reloc_type = GNM_EXPR_RELOCATE_MOVE_RANGE;
+         reverse.target_sheet = st->sheet;
+         reverse.origin_sheet = st->sheet;
+@@ -179,6 +182,9 @@
+ {
+         GnmExprRelocateInfo reverse;
+ 
++	if (sw->a.col == sw->b.col)
++		return;
++
+ 	reverse.reloc_type = GNM_EXPR_RELOCATE_MOVE_RANGE;
+         reverse.target_sheet = st->sheet;
+         reverse.origin_sheet = st->sheet;
+@@ -213,6 +219,9 @@
+ {
+         GnmExprRelocateInfo reverse;
+ 
++	if (sw->a.row == sw->b.row)
++		return;
++
+ 	reverse.reloc_type = GNM_EXPR_RELOCATE_MOVE_RANGE;
+         reverse.target_sheet = st->sheet;
+         reverse.origin_sheet = st->sheet;

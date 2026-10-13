@@ -203,6 +203,9 @@ GType gnm_cocoa_sheet_control_get_type (void);
 - (nullable NSString *)_failureDescriptionForEngineTool:(GnmAnalysisTool *)tool;
 /// The function plugins the GTK dialog checks for (its `plugins[]`).
 - (NSArray<NSString *> *)_requiredPluginIdentifiers;
+/// A last look at the tool and the output together before the command
+/// (the consolidation's destination check); NO with the message.
+- (BOOL)_acceptsOutput:(data_analysis_output_t *)dao tool:(GnmAnalysisTool *)tool engine:(GnmEngine *)engine error:(NSError **)error;
 @end
 
 @interface GnmAdvancedFilter ()

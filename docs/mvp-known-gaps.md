@@ -112,7 +112,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | DataSort | partial | Data → Sort… (2026-10-12): rows or columns, header, six key rows with order and case, the collation's locale (a pop-up of common ones or typed), keep formats; no saved setups, the GTK's open-ended key list is six rows |
 | DataValidate | ported | Data → Validation… (2026-10-12): the criteria, the action's alerts on entry, the in-cell list, the input message |
 | DataTable | ported | Data → Table… (2026-10-12): the GTK dialog's row and column input cells over the selection, `cmd_create_data_table` |
-| DataShuffle, DataConsolidate | no | Phase 5 |
+| DataShuffle, DataConsolidate | ported | Data → Shuffle… (columns, rows, or area in place, `cmd_data_shuffle`) and Data → Consolidate… (the ten functions, four source areas, top-row and left-column labels, copy labels, the Output page's values or formulas; `gnm_consolidate_tool_new`) (2026-10-12) |
 | DataTextToColumns | ported | Data → Text to Columns… through the import assistant (2026-10-12) |
 | CopyDown, CopyRight | ported | Edit → Fill → Down ⌘D, Right ⌘R |
 | EditFillAutofill | ported | the fill handle on the selection; Option makes a single number count up (the GTK Ctrl) |
