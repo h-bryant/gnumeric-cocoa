@@ -1380,12 +1380,26 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             guard let self else { return true }
             do {
                 try sheet.setPrintSettings(settings, forAllSheets: all)
+                if let preview = printPreview, preview.window.isVisible { preview.reload() }
                 return true
             } catch {
                 presentMessage(error.localizedDescription)
                 return false
             }
         }
+    }
+
+    // MARK: Print Preview
+
+    private(set) var printPreview: PrintPreviewController?
+
+    /// File → Print Preview (cb_file_print_preview): the pages in a
+    /// window of their own, one per workbook window, kept between uses.
+    @objc func printPreview(_ sender: Any?) {
+        guard gridView.sheet != nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        if printPreview == nil { printPreview = PrintPreviewController(controller: self) }
+        printPreview?.show()
     }
 
     /// File → Print…: the sheet's print area (or the whole used range)

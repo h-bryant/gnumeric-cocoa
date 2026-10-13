@@ -1932,6 +1932,19 @@
   copy, stopped when the frames go or the window hides.
   `GNM_SNAPSHOT_SHAPES=1`.
 
+### 2026-10-13 (later): File → Print Preview
+
+- `PrintPreviewWindow.swift`: `PrintPreviewController` (a window per
+  workbook window, kept between uses) over `PrintPreviewView`, which
+  stacks the job's pages at a scale on white with shadows, each drawn
+  by `PrintJob.drawPage` as `PrintView` draws them for the printer.
+  Previous/Next and the page label follow the scroll position; the
+  zoom offers Fit Width (recomputed on resize) and 50–200%; Page Setup…
+  and Print… are the controller's actions, and an applied page setup
+  reloads an open preview (as does the window becoming key).  The GTK
+  hands the sheet to GTK's own preview (cb_file_print_preview).
+  `GNM_SNAPSHOT_PREVIEW=1`; the toolbar gained a Print Preview item.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and

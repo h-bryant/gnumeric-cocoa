@@ -115,7 +115,7 @@ GNM_SNAPSHOT=/tmp/grid.png scripts/run-app.sh upstream/gnumeric/samples/format-t
 `GNM_SNAPSHOT_PROPS=1`, `GNM_SNAPSHOT_WIDGETACT=1`, `GNM_SNAPSHOT_FONTMENU=1`,
 `GNM_SNAPSHOT_PAGEBREAK=1`, `GNM_SNAPSHOT_SENDTO=1`, `GNM_SNAPSHOT_AUTOSAVE=1`,
 `GNM_SNAPSHOT_MERGE=1`, `GNM_SNAPSHOT_COMPARE=1`, `GNM_SNAPSHOT_PROTECT=1`,
-and `GNM_SNAPSHOT_SHAPES=1`
+`GNM_SNAPSHOT_SHAPES=1`, and `GNM_SNAPSHOT_PREVIEW=1`
 exercise zoom, editing and saving, the Format Cells model, the Phase 3
 commands, frozen panes, sheet management, the autofilter with the Sort
 command, a sheet resize, and a tab color, the sheet objects (select, move,
@@ -223,8 +223,10 @@ typing into B2 commits, typing into A1 is refused with the message and
 the editor stays open), and the shapes (a rectangle, an ellipse, a line,
 and an arrow inserted at four cells, Go to Bottom and Last around a
 block, a copy starting the marching ants; the kinds, the selections, and
-the ants timer logged) before the capture (`AppDelegate.swift`,
-`Snapshot`). The typing hook saves as a
+the ants timer logged), and Print Preview (a block of 70 rows, the window
+opened at Fit Width and captured to `-preview.png`, then the second page at
+100%; the page count, scale, and page logged) before the capture
+(`AppDelegate.swift`, `Snapshot`). The typing hook saves as a
 Save As next to the snapshot; with `GNM_SNAPSHOT_SAVE_INPLACE=1` it saves
 the opened file in place instead (give it a copy). Should a quit ever go
 nowhere again (an alert sheet on the window did that once,

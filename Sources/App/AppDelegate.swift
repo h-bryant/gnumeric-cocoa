@@ -2371,6 +2371,39 @@ enum Snapshot {
                 view.displayIfNeeded()
                 NSLog("shapes: ants frames=%ld marching=%d", sheet.marchingAntsFrames.count, controller.gridView.antsAreMarchingForTesting ? 1 : 0)
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_PREVIEW"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // Print Preview: a block of 70 rows (two pages), the window
+                // opened and captured to -preview.png at Fit Width, then
+                // the second page at 100%.
+                for row in 0..<70 {
+                    for column in 0..<4 { try? sheet.setText("\(column + 1)×\(row + 1)", atColumn: column, row: row, autocorrect: false) }
+                }
+                controller.printPreview(nil)
+                if let preview = controller.printPreview {
+                    preview.window.setContentSize(NSSize(width: 700, height: 800))
+                    preview.window.layoutIfNeeded()
+                    preview.reload()
+                    let pages: Int = preview.job?.pageCount ?? -1
+                    let scale: Double = Double(preview.scale)
+                    NSLog("preview: pages=%ld scale=%.3f page=%ld title='%@'", pages, scale, preview.currentPage + 1, preview.window.title)
+                    if let content = preview.window.contentView {
+                        content.layoutSubtreeIfNeeded()
+                        if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                            content.cacheDisplay(in: content.bounds, to: rep)
+                            let previewPath = (path as NSString).deletingPathExtension + "-preview.png"
+                            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: previewPath))
+                            NSLog("preview: captured %@ (%@)", previewPath, NSStringFromRect(content.bounds))
+                        }
+                    }
+                    preview.selectZoom(at: 3)
+                    preview.go(to: 1)
+                    let after: String = "scale=\(preview.scale) page=\(preview.currentPage + 1)"
+                    NSLog("preview: %@", after)
+                    preview.window.orderOut(nil)
+                }
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FREEZE"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

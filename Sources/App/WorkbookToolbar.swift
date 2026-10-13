@@ -24,6 +24,7 @@ extension WorkbookWindowController: NSToolbarDelegate {
         ToolbarSpec(identifier: "open", label: "Open", symbol: "folder", action: #selector(NSDocumentController.openDocument(_:)), toggles: false),
         ToolbarSpec(identifier: "save", label: "Save", symbol: "square.and.arrow.down", action: #selector(NSDocument.save(_:)), toggles: false),
         ToolbarSpec(identifier: "print", label: "Print", symbol: "printer", action: Selector(("printSheet:")), toggles: false),
+        ToolbarSpec(identifier: "printPreview", label: "Print Preview", symbol: "doc.text.magnifyingglass", action: Selector(("printPreview:")), toggles: false),
         ToolbarSpec(identifier: "cut", label: "Cut", symbol: "scissors", action: Selector(("cut:")), toggles: false),
         ToolbarSpec(identifier: "copy", label: "Copy", symbol: "doc.on.doc", action: Selector(("copy:")), toggles: false),
         ToolbarSpec(identifier: "paste", label: "Paste", symbol: "doc.on.clipboard", action: Selector(("paste:")), toggles: false),
@@ -57,7 +58,7 @@ extension WorkbookWindowController: NSToolbarDelegate {
     ]
 
     static let defaultToolbarItems: [NSToolbarItem.Identifier] = {
-        let names = ["new", "open", "save", "print", "|", "cut", "copy", "paste", "|", "undo", "redo", "|",
+        let names = ["new", "open", "save", "print", "printPreview", "|", "cut", "copy", "paste", "|", "undo", "redo", "|",
                      "autosum", "function", "sortAscending", "sortDescending", "chart", "objects", "zoom", "~",
                      "fontFamily", "fontSize", "bold", "italic", "underline", "|", "alignLeft", "alignCenter", "alignRight", "merge", "|",
                      "accounting", "percent", "thousands", "morePrecision", "lessPrecision", "|",

@@ -46,6 +46,7 @@ enum MainMenu {
         printAreaMenu.addItem(withTitle: "Add Row Page Break", action: Selector(("toggleRowPageBreak:")), keyEquivalent: "")
         printAreaMenu.addItem(withTitle: "Clear All Page Breaks", action: Selector(("clearPageBreaks:")), keyEquivalent: "")
         fileMenu.addItem(submenu(printAreaMenu, title: "Print Area"))
+        fileMenu.addItem(withTitle: "Print Preview", action: Selector(("printPreview:")), keyEquivalent: "")
         fileMenu.addItem(withTitle: "Print…", action: Selector(("printSheet:")), keyEquivalent: "p")
         menuBar.addItem(submenu(fileMenu, title: "File"))
 
