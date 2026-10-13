@@ -118,6 +118,9 @@ GSF_CLASS_FULL (GnmCocoaCmdContext, gnm_cocoa_cmd_context,
     c.persistsPreferences = self.persistsPreferences;
     c.settingsSchemaDirectory = self.settingsSchemaDirectory;
     c.extraPluginDirectories = self.extraPluginDirectories;
+    c.libraryDirectory = self.libraryDirectory;
+    c.dataDirectory = self.dataDirectory;
+    c.localeDirectory = self.localeDirectory;
     c.integratesMainRunLoop = self.integratesMainRunLoop;
     c.xmlCompressionLevel = self.xmlCompressionLevel;
     return c;
@@ -174,6 +177,12 @@ static BOOL engineWasStarted;   /* gnm_init cannot be repeated in one process */
 
     if (_configuration.settingsSchemaDirectory.length)
         setenv ("GSETTINGS_SCHEMA_DIR", _configuration.settingsSchemaDirectory.fileSystemRepresentation, 1);
+    if (_configuration.libraryDirectory.length)
+        setenv ("GNUMERIC_LIBDIR", _configuration.libraryDirectory.fileSystemRepresentation, 1);
+    if (_configuration.dataDirectory.length)
+        setenv ("GNUMERIC_DATADIR", _configuration.dataDirectory.fileSystemRepresentation, 1);
+    if (_configuration.localeDirectory.length)
+        setenv ("GNUMERIC_LOCALEDIR", _configuration.localeDirectory.fileSystemRepresentation, 1);
     if (_configuration.extraPluginDirectories.count)
         setenv ("GNUMERIC_PLUGIN_PATH",
                 [_configuration.extraPluginDirectories componentsJoinedByString:@":"].UTF8String, 1);

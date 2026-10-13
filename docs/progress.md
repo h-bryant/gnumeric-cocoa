@@ -2068,6 +2068,30 @@
   so Set applied nil.  `TabColorWell` clears its None box when its
   color changes.
 
+### 2026-10-13: Phase 6 begins, a relocatable bundle
+
+- Engine patch 0010: `gutils_init` honors `GNUMERIC_LIBDIR`,
+  `GNUMERIC_DATADIR`, `GNUMERIC_LOCALEDIR`, and
+  `GNUMERIC_EXTERNPLUGINDIR`, so an engine inside an application bundle
+  looks there (`docs/architecture.md` §10 item 2, settled on the
+  relocatable-prefix side).  `GnmEngineConfiguration` gained
+  `libraryDirectory`, `dataDirectory`, `localeDirectory`, set in the
+  environment before `gnm_pre_parse_init`; `GnmEngine` reports
+  `dataDirectory` and `localeDirectory`.
+- `EngineLocator` recognizes the bundled layout and configures the
+  engine, the schemas, the goffice plugins, and the gdk-pixbuf loaders
+  from `Contents/Resources`; `GNM_PREFIX` still overrides.
+- `scripts/bundle.sh` builds `build/dist/GnumericCocoa.app` (the dylib
+  closure rewritten to `@rpath`, 48 dylibs and 59 plugins, 61 MB, ad-hoc
+  signed) and `scripts/verify-bundle.sh` runs it with `build/prefix`
+  renamed away: the engine's directories inside the bundle, 56 plugins
+  available and 44 active, a chart, six autoformat categories, a PNG and
+  a GIF.  Lessons: Homebrew's brotli refers to its sibling by `@rpath`,
+  so the closure walk must resolve such names beside the referrer; the
+  plugin and loader directories are symlinks into the Cellar (`cp -RL`);
+  a loader's own install name is listed by `otool -L` and must be
+  skipped.  `docs/build.md` "Bundling" has the rest and what is left.
+
 ### 2026-10-13 (later): ViewNew left out
 
 - Henry chose to leave View → New View… out.  The bridge assumes one
@@ -2146,4 +2170,4 @@
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in
-   `build/prefix` has patches 0001–0009 applied.
+   `build/prefix` has patches 0001–0010 applied.

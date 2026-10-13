@@ -199,7 +199,7 @@ The MVP is Phases 1, 2, and this one. It must be usable for daily spreadsheet wo
 
 ### Phase 6 — Packaging
 
-- Bundle dylibs and plugins inside the `.app` with rewritten install names (`dylibbundler` 1.0.5 is in Homebrew; `gtk-mac-bundler` is not a Homebrew formula, so plan on `dylibbundler` plus a script; **verified**). Also ship compiled GSettings schemas and set `GSETTINGS_SCHEMA_DIR`, and settle how lib/data/locale paths are found (`docs/architecture.md` §10).
+- Bundle dylibs and plugins inside the `.app` with rewritten install names (`dylibbundler` 1.0.5 is in Homebrew; `gtk-mac-bundler` is not a Homebrew formula, so plan on `dylibbundler` plus a script; **verified**). Also ship compiled GSettings schemas and set `GSETTINGS_SCHEMA_DIR`, and settle how lib/data/locale paths are found (`docs/architecture.md` §10). **Done 2026-10-13** without `dylibbundler`: `scripts/bundle.sh` (its own closure walk over `otool -L` and `install_name_tool`), engine patch 0010 for the directories, `scripts/verify-bundle.sh` running the bundle with `build/prefix` hidden (`docs/build.md` "Bundling"). Not yet: a machine without Homebrew, locale data, a real signature.
 - Ad-hoc signing for development; Developer ID signing and notarization for releases.
 - Include the sources/licenses of all bundled third-party libraries (GLib, cairo, Pango, libxml2, …). These are not covered by the system-library exception.
 
@@ -408,9 +408,11 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    has the reasoning for all three.  Custom document properties came
    last (the Properties dialog's fourth tab).  Next: the sheet
    direction row of `docs/mvp-known-gaps.md` (right-to-left, a Phase 7
-   item), the later-phase rows, and Henry's on-screen checks (his first
-   report on 2026-10-13 found four faults, all fixed the same day:
-   `docs/progress.md`).
+   item), Phase 6's remaining items (the bundled libraries' sources and
+   licenses, a run on a Mac without Homebrew, a real signature; the
+   relocatable bundle itself works since 2026-10-13), and Henry's
+   on-screen checks (his first report on 2026-10-13 found four faults,
+   all fixed the same day: `docs/progress.md`).
 6. Headless checks for all of it: `GNM_SNAPSHOT=out.png scripts/run-app.sh
    file` plus `GNM_SNAPSHOT_TYPE`, `_FORMAT`, `_PHASE3`, `_FREEZE`,
    `_SHEETS`, `_FILTER`, `_OBJECTS`, `_CHART`, `_EDITOR`, `_EVERYDAY`, `_FIND`, `_PREFS`, `_TEXT`, `_IMPORT`, `_COMMENT`, `_NAMES`, `_FILL`, `_GOAL`, `_COND`, `_STATS`, `_VALID`, `_LINK`, `_SOLVE`, `_PRINT`, `_FORMULA`, `_FUNC`, `_ZOOM` (`docs/build.md`); compare `out.png` with

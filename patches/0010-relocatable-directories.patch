@@ -1,0 +1,31 @@
+Let the environment relocate the library, data, locale, and plugin directories.
+
+gutils_init takes the lib, data, locale, and external plugin directories
+from compile-time constants (an in-tree build or GNM_TEST_TOP_BUILDDIR
+aside), so an installation moved elsewhere, such as a macOS application
+bundle that carries the engine inside Contents/Resources, keeps looking
+where it was built.  Honor GNUMERIC_LIBDIR, GNUMERIC_DATADIR,
+GNUMERIC_LOCALEDIR, and GNUMERIC_EXTERNPLUGINDIR when set, as
+GNUMERIC_PLUGIN_PATH already is.  The Cocoa front end sets them before
+gnm_pre_parse_init.  2026-10-13.
+
+--- a/src/gutils.c	2026-10-13 12:00:00
++++ b/src/gutils.c	2026-10-13 12:00:00
+@@ -125,11 +125,13 @@
+ 		g_free (top_builddir);
+ 	}
+ 
++	/* A relocated installation (an application bundle) names its
++	 * directories in the environment; the configured ones otherwise. */
+ 	if (!gnumeric_lib_dir)
+-		gnumeric_lib_dir = g_strdup (GNUMERIC_LIBDIR);
+-	gnumeric_data_dir = g_strdup (GNUMERIC_DATADIR);
+-	gnumeric_locale_dir = g_strdup (GNUMERIC_LOCALEDIR);
+-	gnumeric_extern_plugin_dir = g_strdup (GNUMERIC_EXTERNPLUGINDIR);
++		gnumeric_lib_dir = g_strdup (g_getenv ("GNUMERIC_LIBDIR") ?: GNUMERIC_LIBDIR);
++	gnumeric_data_dir = g_strdup (g_getenv ("GNUMERIC_DATADIR") ?: GNUMERIC_DATADIR);
++	gnumeric_locale_dir = g_strdup (g_getenv ("GNUMERIC_LOCALEDIR") ?: GNUMERIC_LOCALEDIR);
++	gnumeric_extern_plugin_dir = g_strdup (g_getenv ("GNUMERIC_EXTERNPLUGINDIR") ?: GNUMERIC_EXTERNPLUGINDIR);
+ #endif
+ 	home_dir = g_get_home_dir ();
+ 	gnumeric_usr_dir_unversioned = home_dir

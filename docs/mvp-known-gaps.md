@@ -164,4 +164,4 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | Preferences window | partial | see EditPreferences (2026-10-12) |
 | Plugin manager | ported | 2026-10-12, see ToolsPlugins above |
 | Localization of the UI (the engine's messages follow the process locale) | no | Phase 7 |
-| Bundled distribution (dylibs, plugins, schemas inside the `.app`) | no | Phase 6 |
+| Bundled distribution (dylibs, plugins, schemas inside the `.app`) | partial | 2026-10-13: `scripts/bundle.sh` makes `build/dist/GnumericCocoa.app` with the dylib closure, both plugin sets, the templates, the schemas, and the gdk-pixbuf loaders inside, rewritten to `@rpath` and ad-hoc signed; engine patch 0010 relocates the engine's directories through the environment; `scripts/verify-bundle.sh` runs it with `build/prefix` hidden (`docs/build.md` "Bundling"); not yet: a machine without Homebrew, locale data, the bundled libraries' sources and licenses, a real signature |

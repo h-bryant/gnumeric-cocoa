@@ -64,6 +64,8 @@ not a Homebrew formula; `dylibbundler` 1.0.5 is (Phase 6).
 | `scripts/gen-xcconfig.sh` | write `build/engine.xcconfig` from pkg-config for `project.yml`; then `xcodegen generate` |
 | `scripts/build-app.sh` | swiftc build of `Sources/App` plus the bridge into `build/app/GnumericCocoa.app` (ad-hoc signed) |
 | `scripts/test-xcode.sh` | build the Xcode test bundle and run it with `xcrun xctest`; `--xcodebuild` uses `xcodebuild test` (needs developer mode) |
+| `scripts/bundle.sh` | make `build/dist/GnumericCocoa.app`, a relocatable bundle: the dylib closure in `Contents/Frameworks` rewritten to `@rpath`, the Gnumeric and goffice plugins, the templates, the GSettings schemas, and the gdk-pixbuf loaders under `Contents/Resources`, everything ad-hoc signed (see "Bundling") |
+| `scripts/verify-bundle.sh` | make the bundle and run it headlessly with `build/prefix` renamed away, logging what the engine found (`GNM_SNAPSHOT_BUNDLE=1`) |
 | `scripts/run-app.sh [file ...]` | launch that app directly; `GNM_SNAPSHOT=out.png` writes the grid (`out.png`), the whole window through `cacheDisplay` (`out-window.png`) and through `CALayer.render` (`out-layers.png`), then quits; `GNM_DEBUG_LAYOUT=1` logs view frames, layer state, and every grid and header draw with its transform |
 
 Configure flags used by `build-gnumeric.sh`: Homebrew's
@@ -116,7 +118,7 @@ GNM_SNAPSHOT=/tmp/grid.png scripts/run-app.sh upstream/gnumeric/samples/format-t
 `GNM_SNAPSHOT_PAGEBREAK=1`, `GNM_SNAPSHOT_SENDTO=1`, `GNM_SNAPSHOT_AUTOSAVE=1`,
 `GNM_SNAPSHOT_MERGE=1`, `GNM_SNAPSHOT_COMPARE=1`, `GNM_SNAPSHOT_PROTECT=1`,
 `GNM_SNAPSHOT_SHAPES=1`, `GNM_SNAPSHOT_PREVIEW=1`, `GNM_SNAPSHOT_SORTSETUP=1`,
-`GNM_SNAPSHOT_REPEAT=1`, and `GNM_SNAPSHOT_XMLOPEN=1`
+`GNM_SNAPSHOT_REPEAT=1`, `GNM_SNAPSHOT_XMLOPEN=1`, and `GNM_SNAPSHOT_BUNDLE=1`
 exercise zoom, editing and saving, the Format Cells model, the Phase 3
 commands, frozen panes, sheet management, the autofilter with the Sort
 command, a sheet resize, and a tab color, the sheet objects (select, move,
@@ -265,6 +267,45 @@ macOS is requested, because Homebrew bottles target the OS they were built
 on. `build-bridge.sh` therefore passes no `-mmacosx-version-min`;
 `project.yml` and `Info.plist` carry the product minimum, macOS 15.0, which
 follows Homebrew's oldest supported release (ADR-009).
+
+## Bundling (Phase 6, 2026-10-13)
+
+`scripts/bundle.sh` turns the development build into
+`build/dist/GnumericCocoa.app`, which runs without `build/prefix`:
+
+- Engine patch 0010 lets the app name the engine's directories in the
+  environment (`GNUMERIC_LIBDIR`, `GNUMERIC_DATADIR`, `GNUMERIC_LOCALEDIR`,
+  set by `GnmEngineConfiguration` before `gnm_pre_parse_init`).  The app
+  recognizes the bundled layout by `Contents/Resources/gnumeric/lib/plugins`
+  (`EngineLocator.bundledEngineDirectory`) and points the engine at
+  `Resources/gnumeric/lib` and `/share`, the schemas at
+  `Resources/glib-2.0/schemas`, the goffice plugins at
+  `Resources/goffice/plugins` through `GNUMERIC_PLUGIN_PATH`, and the
+  gdk-pixbuf loaders at `Resources/gdk-pixbuf` through
+  `GDK_PIXBUF_MODULEDIR` and `GDK_PIXBUF_MODULE_FILE` (the cache names the
+  loaders relative to the module dir).  `GNM_PREFIX` in the environment
+  still wins, for development runs.
+- The script walks the Mach-O load commands from the app binary and every
+  plugin (`otool -L`), resolving absolute, `@rpath`, and `@loader_path`
+  names beside the referring library, in its `../lib`, or in Homebrew's
+  `lib`, copies each library once by its real name into
+  `Contents/Frameworks`, and rewrites ids and references to `@rpath/name`
+  with `install_name_tool`, adding `@executable_path/../Frameworks` to the
+  binary, `@loader_path` to the libraries, and the relative Frameworks
+  path to each plugin.  It fails if any load command still points outside
+  the bundle.  Homebrew's plugin and loader directories are copied with
+  `cp -RL`, since they link into the Cellar.
+- Everything is ad-hoc signed, inner files first.  The result is about 61
+  MB: 48 dylibs (38 MB) and 59 plugins.
+
+`scripts/verify-bundle.sh` runs it with `build/prefix` renamed away and
+`GNM_SNAPSHOT_BUNDLE=1`, which logs the engine's directories, the plugin
+counts, a chart (a goffice plugin), the autoformat categories (the data
+directory), and a PNG and a GIF (gdk-pixbuf's built-in and loaded codecs).
+Not yet done: running on a machine without Homebrew (fontconfig,
+GIO modules, and goffice's own compiled-in plugin directory are untested
+without it), locale data (the engine build makes none), and the sources
+and licenses of the bundled libraries (HANDOFF.md Phase 6).
 
 ## Xcode build
 

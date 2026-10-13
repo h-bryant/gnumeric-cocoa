@@ -166,6 +166,17 @@ enum EngineLocator {
         return Bundle.main.infoDictionary?["GnmEnginePrefix"] as? String
     }
 
+    /// The engine carried inside the bundle (scripts/bundle.sh): nil for
+    /// a development build, which runs against the prefix.
+    static var bundledEngineDirectory: URL? {
+        guard ProcessInfo.processInfo.environment["GNM_PREFIX"] == nil,
+              let resources = Bundle.main.resourceURL else { return nil }
+        let engine = resources.appendingPathComponent("gnumeric", isDirectory: true)
+        return FileManager.default.fileExists(atPath: engine.appendingPathComponent("lib/plugins").path) ? engine : nil
+    }
+
+    static var isBundled: Bool { bundledEngineDirectory != nil }
+
     static func configuration() -> EngineConfiguration {
         let configuration = EngineConfiguration()
         configuration.programName = "gnumeric-cocoa"
@@ -173,7 +184,22 @@ enum EngineLocator {
         // identifier (docs/decisions.md ADR-010); GNM_PERSIST_PREFS=0 keeps a
         // run from touching ~/Library/Preferences.
         configuration.persistsPreferences = ProcessInfo.processInfo.environment["GNM_PERSIST_PREFS"] != "0"
-        if let prefix {
+        if let engine = bundledEngineDirectory, let resources = Bundle.main.resourceURL {
+            // Contents/Resources: gnumeric/lib (plugins), gnumeric/share
+            // (templates), goffice/plugins, glib-2.0/schemas, gdk-pixbuf
+            // (loaders and their cache with names relative to the module dir).
+            configuration.libraryDirectory = engine.appendingPathComponent("lib").path
+            configuration.dataDirectory = engine.appendingPathComponent("share").path
+            let locale = engine.appendingPathComponent("locale")
+            if FileManager.default.fileExists(atPath: locale.path) { configuration.localeDirectory = locale.path }
+            configuration.settingsSchemaDirectory = resources.appendingPathComponent("glib-2.0/schemas").path
+            configuration.extraPluginDirectories = [resources.appendingPathComponent("goffice/plugins").path]
+            let loaders = resources.appendingPathComponent("gdk-pixbuf/loaders")
+            if FileManager.default.fileExists(atPath: loaders.path) {
+                setenv("GDK_PIXBUF_MODULEDIR", loaders.path, 1)
+                setenv("GDK_PIXBUF_MODULE_FILE", resources.appendingPathComponent("gdk-pixbuf/loaders.cache").path, 1)
+            }
+        } else if let prefix {
             configuration.settingsSchemaDirectory = prefix + "/share/glib-2.0/schemas"
         }
         // The compression level of `.gnumeric` files is a preference
@@ -2528,6 +2554,42 @@ enum Snapshot {
                 well.noneBox = none
                 well.color = .systemRed
                 NSLog("xmlopen: tab color well none=%d", none.state == .on ? 1 : 0)
+            }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_BUNDLE"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet, let engine = Engine.shared {
+                // The bundled app (scripts/verify-bundle.sh runs this with
+                // build/prefix hidden): where the engine looks, the plugins
+                // it found, a chart (a goffice plugin), the autoformat
+                // templates (the data directory), a PNG and a GIF (gdk-pixbuf).
+                let dirs: String = "bundled=\(EngineLocator.isBundled) lib=\(engine.libraryDirectory) data=\(engine.dataDirectory)"
+                NSLog("bundle: %@", dirs)
+                let counts: String = "plugins available=\(engine.availablePluginCount) active=\(engine.activePluginCount) autoformat categories=\(engine.autoFormatCategories.count)"
+                NSLog("bundle: %@", counts)
+                for row in 0..<4 { try? sheet.setText("\(row + 1)", atColumn: 0, row: row, autocorrect: false) }
+                sheet.selectRange(CellRange(start: CellCoordinate(column: 0, row: 0), end: CellCoordinate(column: 0, row: 3)), editPosition: CellCoordinate(column: 0, row: 0))
+                let types = PlotType.allTypes
+                let column = types.first { $0.family == "Column" && $0.engine == "GogBarColPlot" }
+                var chart = "none"
+                if let column, let object = try? sheet.insertChart(column, seriesLayout: .auto, sharedAbscissa: false, frame: CGRect(x: 200, y: 20, width: 240, height: 160)) {
+                    chart = object.typeName
+                }
+                NSLog("bundle: plot types=%ld chart=%@", types.count, chart)
+                let image = NSImage(size: NSSize(width: 8, height: 8), flipped: false) { rect in
+                    NSColor.systemGreen.setFill(); rect.fill(); return true
+                }
+                var pngResult = "none", gifResult = "none"
+                if let tiff = image.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff) {
+                    if let png = rep.representation(using: .png, properties: [:]) {
+                        do { pngResult = try sheet.insertImage(png, frame: CGRect(x: 200, y: 200, width: 40, height: 40)).typeName } catch { pngResult = error.localizedDescription }
+                    }
+                    if let gif = rep.representation(using: .gif, properties: [:]) {
+                        do { gifResult = try sheet.insertImage(gif, frame: CGRect(x: 260, y: 200, width: 40, height: 40)).typeName } catch { gifResult = error.localizedDescription }
+                    }
+                }
+                NSLog("bundle: png=%@ gif=%@ app=%@", pngResult, gifResult, Bundle.main.bundlePath)
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
             }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FREEZE"] != nil,
                let controller = window.windowController as? WorkbookWindowController,

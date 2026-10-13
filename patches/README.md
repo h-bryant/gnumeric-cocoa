@@ -17,5 +17,6 @@ deferred, not ruled out (`docs/decisions.md` ADR-011).
 | `0007-shuffle-self-swap.patch` | The data shuffling tool swapped a randomly paired cell, column, or row with itself through `sheet_move_range`, whose zero-offset move is a CRITICAL assertion (the cells still end up right). Return before the moves when the pair is one and the same. |
 | `0008-autoformat-edge-filter-list.patch` | `gnm_auto_fmt_filter_edges` removed members from the list it was walking and read the freed node's `next`, a crash the first time an AutoFormat edge is turned off. Take the next node before the body. |
 | `0009-merge-fields-queue-recalc.patch` | `cmd_merge_data_redo` filled the field cells of the merged sheets with the low-level `gnm_cell_set_value`, which queues no dependents, so a formula in the merge zone reading a field kept the value from before the fields were set (the GTK's idle redraw happens to evaluate later). Use `sheet_cell_set_value`. |
+| `0010-relocatable-directories.patch` | `gutils_init` took the lib, data, locale, and external plugin directories from compile-time constants, so an engine moved into an application bundle kept looking where it was built. Honor `GNUMERIC_LIBDIR`, `GNUMERIC_DATADIR`, `GNUMERIC_LOCALEDIR`, and `GNUMERIC_EXTERNPLUGINDIR` when set, as `GNUMERIC_PLUGIN_PATH` already is. |
 
 Re-check each patch at every submodule re-pin (ADR-003).

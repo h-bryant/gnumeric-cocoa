@@ -28,6 +28,13 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(EngineConfiguration)
 
 /// Extra plugin directories, exported as GNUMERIC_PLUGIN_PATH.
 @property (nonatomic, copy) NSArray<NSString *> *extraPluginDirectories;
+/// A relocated engine (an application bundle): its library directory
+/// (plugins under `plugins/`), data directory (autoformat templates),
+/// and locale directory, set in the environment before the engine
+/// starts (engine patch 0010); nil keeps the engine's configured ones.
+@property (nonatomic, copy, nullable) NSString *libraryDirectory;
+@property (nonatomic, copy, nullable) NSString *dataDirectory;
+@property (nonatomic, copy, nullable) NSString *localeDirectory;
 
 /// Attach `GnmRunLoopBridge` to the main run loop at start.  Default YES.
 @property (nonatomic) BOOL integratesMainRunLoop;
