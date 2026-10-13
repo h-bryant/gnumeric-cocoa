@@ -99,6 +99,14 @@ int main (void)
             NSString *written = [NSString stringWithContentsOfURL:out encoding:NSUTF8StringEncoding error:NULL];
             GNM_ASSERT ([written containsString:@"beta,2.5"] && [written containsString:@"gamma"], @"csv written: %@", written);
             GNM_ASSERT_EQ_STR ([engine saverIdentifierForFileName:@"x.csv"] ?: @"", @"Gnumeric_stf:stf_csv");
+            /* Repeat Export: the CSV save was an export; a later edit reaches the file again */
+            GNM_ASSERT ([text.lastExportURL.path isEqualToString:out.path], @"last export %@", text.lastExportURL);
+            GNM_ASSERT (text.lastExporterDescription.length > 0 && text.lastExporterWritesSingleSheet, @"exporter %@", text.lastExporterDescription);
+            GNM_ASSERT ([ts setText:@"delta" atColumn:0 row:4 autocorrect:NO error:&error], @"edit for repeat: %@", error);
+            GNM_ASSERT ([text repeatExportWithError:&error], @"repeat: %@", error);
+            written = [NSString stringWithContentsOfURL:out encoding:NSUTF8StringEncoding error:NULL];
+            GNM_ASSERT ([written containsString:@"delta"], @"repeated export holds the edit: %@", written);
+            GNM_ASSERT ([text.lastExportURL.path isEqualToString:out.path], @"still remembered");
             text = nil; ts = nil;
         }
 
@@ -128,6 +136,8 @@ int main (void)
         g = nil;
 
         wb = [engine openWorkbookAtURL:gnm error:&error];
+        error = nil;
+        GNM_ASSERT (wb.lastExportURL == nil && ![wb repeatExportWithError:&error] && error, @"nothing to repeat yet: %@", error);
         error = nil;
         NSURL *bad = [NSURL fileURLWithPath:[outdir stringByAppendingPathComponent:@"x.nonsense"]];
         GNM_ASSERT (![wb writeToURL:bad error:&error] && error.code == GnmErrorUnknownFormat, @"unknown format: %@", error);

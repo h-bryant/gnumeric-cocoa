@@ -400,10 +400,10 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    (`PrintPreviewWindow.swift`), the Sort dialog's remembered setups,
    the Settings' Tools, markers, and Screen entries, View → Status Bar,
    tab text colors, and the Properties dialog's Statistics and
-   Calculation pages.  Next, by usage: the remaining "partial" rows of
-   `docs/mvp-known-gaps.md` (custom document properties,
-   DataImportOther/ExportRepeat, the sheet direction) and the "no" rows
-   (ViewNew, data slicers, goffice components).
+   Calculation pages, and File → Repeat Export.  Next, by usage: the
+   remaining "partial" rows of `docs/mvp-known-gaps.md` (custom
+   document properties, the sheet direction) and the "no" rows (ViewNew,
+   data slicers, goffice components).
 6. Headless checks for all of it: `GNM_SNAPSHOT=out.png scripts/run-app.sh
    file` plus `GNM_SNAPSHOT_TYPE`, `_FORMAT`, `_PHASE3`, `_FREEZE`,
    `_SHEETS`, `_FILTER`, `_OBJECTS`, `_CHART`, `_EDITOR`, `_EVERYDAY`, `_FIND`, `_PREFS`, `_TEXT`, `_IMPORT`, `_COMMENT`, `_NAMES`, `_FILL`, `_GOAL`, `_COND`, `_STATS`, `_VALID`, `_LINK`, `_SOLVE`, `_PRINT`, `_FORMULA`, `_FUNC`, `_ZOOM` (`docs/build.md`); compare `out.png` with

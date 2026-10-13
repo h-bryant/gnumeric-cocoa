@@ -175,6 +175,18 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Workbook)
 /// Make `url` the document's location (`go_doc_set_uri`): after a save
 /// that did not adopt it, or a Save As that moved the file.
 - (void)adoptFileURL:(NSURL *)url NS_SWIFT_NAME(adoptFileURL(_:));
+/// The GTK Data → Repeat Export (gui_file_export_repeat): where the
+/// workbook was last exported (a save with an export-only saver such as
+/// CSV or the text exporter records it, as `workbook_view_save_as`
+/// does) and with what; nil before any export this session.
+@property (nonatomic, readonly, nullable) NSURL *lastExportURL;
+@property (nonatomic, readonly, copy, nullable) NSString *lastExporterDescription;
+/// Whether the last exporter writes one sheet (the GTK's question says
+/// "the current sheet" then).
+@property (nonatomic, readonly) BOOL lastExporterWritesSingleSheet;
+/// Export again to the same place with the same exporter; NO with a
+/// message when nothing was exported yet or the write fails.
+- (BOOL)repeatExportWithError:(NSError **)error NS_SWIFT_NAME(repeatExport());
 /// Write a copy with a saver, the document untouched: its location,
 /// saver, and modified flag stay as they were (the GTK File → Send To
 /// writes such a copy to attach; `workbook_view_save_to_uri`).

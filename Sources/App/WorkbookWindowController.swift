@@ -801,6 +801,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         case #selector(moveSheetRight(_:)):
             guard let sheet = gridView.sheet else { return false }
             return sheet.index < workbook.sheets.count - 1
+        case #selector(repeatExport(_:)):
+            return workbook.lastExportURL != nil
         case #selector(toggleStatusBar(_:)):
             if let menuItem = item as? NSMenuItem { menuItem.state = statusBarIsShown ? .on : .off }
             return true
@@ -1505,6 +1507,41 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             guard merged, let self else { return }
             gridView.needsDisplay = true
             updateToolbarState()
+        }
+    }
+
+    // MARK: Repeat Export
+
+    /// The GTK Data → Repeat Export (gui_file_export_repeat): the
+    /// question naming the place and the exporter, then the export to the
+    /// same place again.  Headlessly the question is skipped.
+    @objc func repeatExport(_ sender: Any?) {
+        guard let window, window.attachedSheet == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        guard let url = workbook.lastExportURL else {
+            presentMessage("Unable to repeat export since no previous export information has been saved in this session.")
+            return
+        }
+        let run = { [weak self] in
+            guard let self else { return }
+            do {
+                try workbook.repeatExport()
+            } catch {
+                present(error)
+            }
+        }
+        if ProcessInfo.processInfo.environment["GNM_SNAPSHOT"] != nil {
+            run()
+            return
+        }
+        let alert = NSAlert()
+        let what = workbook.lastExporterWritesSingleSheet ? "the current sheet of this workbook" : "this workbook"
+        alert.messageText = "Do you want to export \(what) to the location “\(url.path)” using the “\(workbook.lastExporterDescription ?? "")” exporter?"
+        alert.addButton(withTitle: "Yes")
+        alert.addButton(withTitle: "No")
+        alert.beginSheetModal(for: window) { response in
+            guard response == .alertFirstButtonReturn else { return }
+            run()
         }
     }
 

@@ -2455,6 +2455,29 @@ enum Snapshot {
                 let other = SortDialog(sheet: sheet, range: CellRange(start: CellCoordinate(column: 4, row: 0), end: CellCoordinate(column: 5, row: 3)))
                 NSLog("sortsetup: another range loaded=%d", other.loadedSetup ? 1 : 0)
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_REPEAT"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet, let document = controller.document as? WorkbookDocument {
+                // Repeat Export: nothing to repeat at first; the sheet
+                // written as CSV beside the capture through the document's
+                // write, an edit, then File → Repeat Export rewrites it.
+                let before: Bool = controller.workbook.lastExportURL == nil
+                try? sheet.setText("first", atColumn: 0, row: 0, autocorrect: false)
+                let csvURL = URL(fileURLWithPath: (path as NSString).deletingPathExtension + "-repeat.csv")
+                try? FileManager.default.removeItem(at: csvURL)
+                do {
+                    try document.write(to: csvURL, ofType: WorkbookDocument.csvType)
+                } catch {
+                    NSLog("repeat: csv write failed: %@", error.localizedDescription)
+                }
+                let remembered: String = controller.workbook.lastExportURL?.lastPathComponent ?? "nil"
+                try? sheet.setText("second", atColumn: 0, row: 0, autocorrect: false)
+                controller.repeatExport(nil)
+                let contents: String = (try? String(contentsOf: csvURL, encoding: .utf8)) ?? "nil"
+                let single: Bool = controller.workbook.lastExporterWritesSingleSheet
+                NSLog("repeat: none at first=%d remembered=%@ exporter='%@' single=%d after='%@'", before ? 1 : 0, remembered,
+                      controller.workbook.lastExporterDescription ?? "nil", single ? 1 : 0, contents.trimmingCharacters(in: .whitespacesAndNewlines))
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FREEZE"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

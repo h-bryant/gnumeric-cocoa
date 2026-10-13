@@ -33,6 +33,7 @@ enum MainMenu {
         fileMenu.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
         fileMenu.addItem(withTitle: "Save…", action: #selector(NSDocument.save(_:)), keyEquivalent: "s")
         fileMenu.addItem(withTitle: "Save As…", action: #selector(NSDocument.saveAs(_:)), keyEquivalent: "S")
+        fileMenu.addItem(withTitle: "Repeat Export", action: Selector(("repeatExport:")), keyEquivalent: "")
         fileMenu.addItem(withTitle: "Send To…", action: Selector(("sendTo:")), keyEquivalent: "")
         fileMenu.addItem(withTitle: "Properties…", action: Selector(("documentProperties:")), keyEquivalent: "")
         fileMenu.addItem(.separator())

@@ -782,6 +782,9 @@ uri_for_url (NSURL *url)
             go_doc_set_dirty (GO_DOC (_wb), FALSE);
             go_doc_set_pristine (GO_DOC (_wb), FALSE);
             workbook_set_read_only (_wb, FALSE);
+        } else if (!has_error) {
+            /* an export-only saver: remembered for Repeat Export */
+            workbook_set_last_export_uri (_wb, uri);
         }
         if (has_error || has_warning)
             go_io_error_display (io_context);
@@ -824,6 +827,68 @@ uri_for_url (NSURL *url)
     if (has_error && error)
         *error = [_engine _errorWithCode:GnmErrorSaveFailed
                              description:[NSString stringWithFormat:@"Could not write “%@”.", url.lastPathComponent]
+                               collected:messages];
+    return !has_error;
+}
+
+- (NSURL *)lastExportURL
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    const char *uri = workbook_get_last_export_uri (_wb);
+    if (!uri || !workbook_get_file_exporter (_wb))
+        return nil;
+    char *path = go_filename_from_uri (uri);
+    NSURL *url = path ? [NSURL fileURLWithPath:[NSString stringWithUTF8String:path]] : [NSURL URLWithString:[NSString stringWithUTF8String:uri]];
+    g_free (path);
+    return url;
+}
+
+- (NSString *)lastExporterDescription
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    GOFileSaver *fs = workbook_get_file_exporter (_wb);
+    return fs ? GnmString (g_strdup (go_file_saver_get_description (fs))) : nil;
+}
+
+- (BOOL)lastExporterWritesSingleSheet
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    GOFileSaver *fs = workbook_get_file_exporter (_wb);
+    return fs && go_file_saver_get_save_scope (fs) != GO_FILE_SAVE_WORKBOOK;
+}
+
+- (BOOL)repeatExportWithError:(NSError **)error
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    GOFileSaver *fs = workbook_get_file_exporter (_wb);
+    const char *last = workbook_get_last_export_uri (_wb);
+    if (!fs || !last) {
+        if (error)
+            *error = [_engine _errorWithCode:GnmErrorSaveFailed
+                                 description:@"Unable to repeat export since no previous export information has been saved in this session."
+                                   collected:@[]];
+        return NO;
+    }
+    /* gui_file_export_repeat: the uri is copied, as saving resets it */
+    char *uri = g_strdup (last);
+    [_engine _beginCollectingMessages];
+    GOCmdContext *cc = _engine.commandContext;
+    GOIOContext *io_context = go_io_context_new (cc);
+    go_cmd_context_set_sensitive (cc, FALSE);
+    workbook_view_save_to_uri (_wbv, fs, uri, io_context);
+    go_cmd_context_set_sensitive (cc, TRUE);
+    gboolean has_error = go_io_error_occurred (io_context);
+    if (has_error || go_io_warning_occurred (io_context))
+        go_io_error_display (io_context);
+    g_object_unref (io_context);
+    if (!has_error)
+        workbook_set_last_export_uri (_wb, uri);
+    NSArray<NSError *> *messages = [_engine _endCollectingMessages];
+    NSString *name = [NSString stringWithUTF8String:uri].lastPathComponent;
+    g_free (uri);
+    if (has_error && error)
+        *error = [_engine _errorWithCode:GnmErrorSaveFailed
+                             description:[NSString stringWithFormat:@"Could not export to “%@”.", name]
                                collected:messages];
     return !has_error;
 }

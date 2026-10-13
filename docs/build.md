@@ -115,7 +115,8 @@ GNM_SNAPSHOT=/tmp/grid.png scripts/run-app.sh upstream/gnumeric/samples/format-t
 `GNM_SNAPSHOT_PROPS=1`, `GNM_SNAPSHOT_WIDGETACT=1`, `GNM_SNAPSHOT_FONTMENU=1`,
 `GNM_SNAPSHOT_PAGEBREAK=1`, `GNM_SNAPSHOT_SENDTO=1`, `GNM_SNAPSHOT_AUTOSAVE=1`,
 `GNM_SNAPSHOT_MERGE=1`, `GNM_SNAPSHOT_COMPARE=1`, `GNM_SNAPSHOT_PROTECT=1`,
-`GNM_SNAPSHOT_SHAPES=1`, `GNM_SNAPSHOT_PREVIEW=1`, and `GNM_SNAPSHOT_SORTSETUP=1`
+`GNM_SNAPSHOT_SHAPES=1`, `GNM_SNAPSHOT_PREVIEW=1`, `GNM_SNAPSHOT_SORTSETUP=1`,
+and `GNM_SNAPSHOT_REPEAT=1`
 exercise zoom, editing and saving, the Format Cells model, the Phase 3
 commands, frozen panes, sheet management, the autofilter with the Sort
 command, a sheet resize, and a tab color, the sheet objects (select, move,
@@ -228,7 +229,10 @@ opened at Fit Width and captured to `-preview.png`, then the second page at
 100%; the page count, scale, and page logged), and the remembered sort
 setups (a table sorted by its second column descending in the C locale,
 the Sort dialog built on the range again coming back filled and captured
-to `-sortsetup.png`, another range coming back empty) before the capture
+to `-sortsetup.png`, another range coming back empty), and Repeat Export
+(the sheet written as CSV beside the capture through the document, an
+edit, then File → Repeat Export rewriting it; the remembered place, the
+exporter, and the file's content logged) before the capture
 (`AppDelegate.swift`, `Snapshot`). The typing hook saves as a
 Save As next to the snapshot; with `GNM_SNAPSHOT_SAVE_INPLACE=1` it saves
 the opened file in place instead (give it a copy). Should a quit ever go

@@ -2006,6 +2006,24 @@
   `GNM_SNAPSHOT_PROPS` hook logs the statistics and sets manual
   iteration through the dialog.
 
+### 2026-10-13 (later): File → Repeat Export
+
+- The bridge's non-adopting save now records an export-only saver's
+  destination with `workbook_set_last_export_uri`, as
+  `workbook_view_save_as` does when `workbook_set_saveinfo` says the
+  saver is an exporter (CSV, the configurable text exporter; the text
+  export path goes through the same save).  `GnmWorkbook` gained
+  `lastExportURL`, `lastExporterDescription`,
+  `lastExporterWritesSingleSheet`, and `repeatExportWithError:`
+  (gui_file_export_repeat's save with the uri copied first, since the
+  save resets it).  `workbook_io.m` covers the refusal before any
+  export and a repeat after an edit.
+- File → Repeat Export asks the GTK's question (naming the place and
+  the exporter, "the current sheet" for a one-sheet exporter) and
+  exports; enabled once something was exported.  `GNM_SNAPSHOT_REPEAT=1`.
+  The GTK's Data → Import Other File… is its file chooser in an import
+  style; File → Open already takes every format the engine reads.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
