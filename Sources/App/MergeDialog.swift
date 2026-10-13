@@ -28,7 +28,7 @@ final class MergeDialog: NSObject, NSTableViewDataSource, NSTableViewDelegate, N
         self.sheet = sheet
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 520, height: 440),
                           styleMask: [.titled], backing: .buffered, defer: false)
-        window.title = "Merge"
+        window.title = Localization.title("Merge")
         window.isReleasedWhenClosed = false
         super.init()
         zoneField.stringValue = sheet.selectionText
@@ -62,9 +62,9 @@ final class MergeDialog: NSObject, NSTableViewDataSource, NSTableViewDelegate, N
         dataField.placeholderString = "A column of values, such as D1:D20"
         fieldField.placeholderString = "A cell of the zone, such as B1"
         let grid = NSGridView(views: [
-            [NSTextField(labelWithString: "Merge zone:"), zoneField],
-            [NSTextField(labelWithString: "Data range:"), dataField],
-            [NSTextField(labelWithString: "Field:"), fieldField],
+            [NSTextField(labelWithString: Localization.title("Merge zone:")), zoneField],
+            [NSTextField(labelWithString: Localization.title("Data range:")), dataField],
+            [NSTextField(labelWithString: Localization.title("Field:")), fieldField],
         ])
         grid.rowSpacing = 6
         grid.columnSpacing = 8

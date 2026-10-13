@@ -27,11 +27,11 @@ final class SortDialog: NSObject {
     private let sheet: Sheet
     private let range: CellRange
     private let direction = NSPopUpButton(frame: .zero, pullsDown: false)
-    private let header = NSButton(checkboxWithTitle: "Range contains a header", target: nil, action: nil)
-    private let retainFormats = NSButton(checkboxWithTitle: "Keep formats with the data", target: nil, action: nil)
+    private let header = NSButton(checkboxWithTitle: Localization.title("Range contains a header"), target: nil, action: nil)
+    private let retainFormats = NSButton(checkboxWithTitle: Localization.title("Keep formats with the data"), target: nil, action: nil)
     private let keyPopUps = (0..<SortDialog.keyRows).map { _ in NSPopUpButton(frame: .zero, pullsDown: false) }
     private let orderPopUps = (0..<SortDialog.keyRows).map { _ in NSPopUpButton(frame: .zero, pullsDown: false) }
-    private let caseChecks = (0..<SortDialog.keyRows).map { _ in NSButton(checkboxWithTitle: "Case sensitive", target: nil, action: nil) }
+    private let caseChecks = (0..<SortDialog.keyRows).map { _ in NSButton(checkboxWithTitle: Localization.title("Case sensitive"), target: nil, action: nil) }
     let locale = NSComboBox(frame: .zero)
     let alert = NSAlert()
     /// The most entries a key pop-up lists (a whole-sheet selection would
@@ -64,7 +64,7 @@ final class SortDialog: NSObject {
         if let setup = sheet.sortSetup(for: range) {
             load(setup)
         }
-        alert.messageText = "Sort"
+        alert.messageText = Localization.title("Sort")
         alert.informativeText = "Sort \(rangeDescription) by the keys, in order."
         locale.addItems(withObjectValues: Self.locales.map { $0.isEmpty ? "(current)" : $0 })
         locale.stringValue = "(current)"
@@ -72,14 +72,14 @@ final class SortDialog: NSObject {
         alert.addButton(withTitle: Localization.title("Sort"))
         alert.addButton(withTitle: Localization.title("Cancel"))
         var cells: [[NSView]] = [
-            [NSTextField(labelWithString: "Direction:"), direction, NSView()],
+            [NSTextField(labelWithString: Localization.title("Direction:")), direction, NSView()],
             [NSView(), header, NSView()],
         ]
         for i in 0..<Self.keyRows {
             cells.append([NSTextField(labelWithString: i == 0 ? "Sort by:" : "Then by:"), keyPopUps[i], orderPopUps[i]])
             cells.append([NSView(), caseChecks[i], NSView()])
         }
-        cells.append([NSTextField(labelWithString: "Locale:"), locale, NSView()])
+        cells.append([NSTextField(labelWithString: Localization.title("Locale:")), locale, NSView()])
         cells.append([NSView(), retainFormats, NSView()])
         let grid = NSGridView(views: cells)
         grid.column(at: 0).xPlacement = .trailing

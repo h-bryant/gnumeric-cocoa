@@ -20,13 +20,13 @@ final class SolverDialog: NSObject, NSTableViewDataSource, NSTableViewDelegate {
     let model = NSPopUpButton(frame: .zero, pullsDown: false)
     let algorithm = NSPopUpButton(frame: .zero, pullsDown: false)
     let algorithms: [SolverAlgorithm]
-    let nonNegative = NSButton(checkboxWithTitle: "Assume non-negative", target: nil, action: nil)
-    let discrete = NSButton(checkboxWithTitle: "Assume integer (discrete)", target: nil, action: nil)
+    let nonNegative = NSButton(checkboxWithTitle: Localization.title("Assume non-negative"), target: nil, action: nil)
+    let discrete = NSButton(checkboxWithTitle: Localization.title("Assume integer (discrete)"), target: nil, action: nil)
     let maxIterationsField = NSTextField(string: "1000")
     let maxTimeField = NSTextField(string: "60")
-    let autoscale = NSButton(checkboxWithTitle: "Automatic scaling", target: nil, action: nil)
-    let programReport = NSButton(checkboxWithTitle: "Program report", target: nil, action: nil)
-    let sensitivityReport = NSButton(checkboxWithTitle: "Sensitivity report", target: nil, action: nil)
+    let autoscale = NSButton(checkboxWithTitle: Localization.title("Automatic scaling"), target: nil, action: nil)
+    let programReport = NSButton(checkboxWithTitle: Localization.title("Program report"), target: nil, action: nil)
+    let sensitivityReport = NSButton(checkboxWithTitle: Localization.title("Sensitivity report"), target: nil, action: nil)
     let table = NSTableView()
     let lhsField = NSTextField(string: "")
     let kind = NSPopUpButton(frame: .zero, pullsDown: false)
@@ -37,7 +37,7 @@ final class SolverDialog: NSObject, NSTableViewDataSource, NSTableViewDelegate {
         self.sheet = sheet
         algorithms = (Engine.shared?.solverAlgorithms ?? []).filter(\.isFunctional)
         super.init()
-        alert.messageText = "Solver"
+        alert.messageText = Localization.title("Solver")
         alert.informativeText = "Change the input cells so the target cell is as large or as small as the constraints allow."
         alert.addButton(withTitle: Localization.title("Solve"))
         alert.addButton(withTitle: Localization.title("Cancel"))

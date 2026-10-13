@@ -91,22 +91,22 @@ final class PageSetupDialog: NSObject {
     let footerLeft = NSTextField(string: "")
     let footerMiddle = NSTextField(string: "")
     let footerRight = NSTextField(string: "")
-    let gridLines = NSButton(checkboxWithTitle: "Grid lines", target: nil, action: nil)
-    let titles = NSButton(checkboxWithTitle: "Row and column headers", target: nil, action: nil)
-    let blackAndWhite = NSButton(checkboxWithTitle: "Black and white", target: nil, action: nil)
-    let centerH = NSButton(checkboxWithTitle: "Center horizontally", target: nil, action: nil)
-    let centerV = NSButton(checkboxWithTitle: "Center vertically", target: nil, action: nil)
+    let gridLines = NSButton(checkboxWithTitle: Localization.title("Grid lines"), target: nil, action: nil)
+    let titles = NSButton(checkboxWithTitle: Localization.title("Row and column headers"), target: nil, action: nil)
+    let blackAndWhite = NSButton(checkboxWithTitle: Localization.title("Black and white"), target: nil, action: nil)
+    let centerH = NSButton(checkboxWithTitle: Localization.title("Center horizontally"), target: nil, action: nil)
+    let centerV = NSButton(checkboxWithTitle: Localization.title("Center vertically"), target: nil, action: nil)
     let acrossThenDown = NSPopUpButton(frame: .zero, pullsDown: false)
     let repeatTopField = NSTextField(string: "")
     let repeatLeftField = NSTextField(string: "")
-    let allSheets = NSButton(checkboxWithTitle: "Apply to all sheets", target: nil, action: nil)
+    let allSheets = NSButton(checkboxWithTitle: Localization.title("Apply to all sheets"), target: nil, action: nil)
 
     private static let pointsPerInch = 72.0
 
     init(settings: PrintSettings) {
         papers = PrintSettings.paperDisplayNames.map { (name: $0.key, display: $0.value) }.sorted { $0.display < $1.display }
         super.init()
-        alert.messageText = "Page Setup"
+        alert.messageText = Localization.title("Page Setup")
         alert.addButton(withTitle: Localization.title("OK"))
         alert.addButton(withTitle: Localization.title("Cancel"))
         paper.addItems(withTitles: papers.map(\.display))

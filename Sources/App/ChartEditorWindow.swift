@@ -29,7 +29,7 @@ final class ChartEditorWindow: NSObject, NSOutlineViewDataSource, NSOutlineViewD
         preview = PreviewView(editor: editor)
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 940, height: 640),
                           styleMask: [.titled, .resizable], backing: .buffered, defer: false)
-        window.title = "Chart Properties"
+        window.title = Localization.title("Chart Properties")
         window.minSize = NSSize(width: 760, height: 480)
         window.isReleasedWhenClosed = false   // closed below, released with this object
         super.init()
@@ -473,7 +473,7 @@ final class ChartEditorWindow: NSObject, NSOutlineViewDataSource, NSOutlineViewD
         form.addArrangedSubview(sectionLabel("Style"))
         var rows: [[NSView]] = []
         if style.hasLine || style.hasOutline {
-            let visible = NSButton(checkboxWithTitle: "Visible", target: self, action: #selector(controlChanged(_:)))
+            let visible = NSButton(checkboxWithTitle: Localization.title("Visible"), target: self, action: #selector(controlChanged(_:)))
             visible.state = style.lineColor != nil ? .on : .off
             let color = well(style.lineColor ?? NSColor.black.cgColor) { $0.lineColor = $1 }
             handlers[visible] = { [weak self, weak visible, weak color] in
@@ -484,22 +484,22 @@ final class ChartEditorWindow: NSObject, NSOutlineViewDataSource, NSOutlineViewD
             }
             rows.append([NSTextField(labelWithString: (style.hasLine ? "Line" : "Outline") + ":"),
                          row([automatic("Automatic", { $0.lineAutomatic }, { $0.lineAutomatic = $1 }), visible, color,
-                              NSTextField(labelWithString: "Width:"), number(style.lineWidth) { $0.lineAutomatic = false; $0.lineWidth = $1 },
+                              NSTextField(labelWithString: Localization.title("Width:")), number(style.lineWidth) { $0.lineAutomatic = false; $0.lineWidth = $1 },
                               popUp(ChartStyle.lineDashNames, selected: style.lineDash) { $0.lineAutomatic = false; $0.lineDash = $1 }])])
         }
         if style.hasFill {
             let filled = automatic("Filled", { $0.fillSolid }, { $0.fillAutomatic = false; $0.fillSolid = $1 })
-            rows.append([NSTextField(labelWithString: "Fill:"),
+            rows.append([NSTextField(labelWithString: Localization.title("Fill:")),
                          row([automatic("Automatic", { $0.fillAutomatic }, { $0.fillAutomatic = $1 }), filled,
                               well(style.fillColor) { $0.fillAutomatic = false; $0.fillSolid = true; $0.fillColor = $1 }])])
         }
         if style.hasMarker {
-            rows.append([NSTextField(labelWithString: "Marker:"),
+            rows.append([NSTextField(labelWithString: Localization.title("Marker:")),
                          row([automatic("Automatic", { $0.markerAutomatic }, { $0.markerAutomatic = $1 }),
                               popUp(ChartStyle.markerShapeNames, selected: style.markerShape) { $0.markerAutomatic = false; $0.markerShape = $1 },
-                              NSTextField(labelWithString: "Size:"), number(Double(style.markerSize), width: 44) { $0.markerAutomatic = false; $0.markerSize = Int($1) },
-                              NSTextField(labelWithString: "Fill:"), well(style.markerFillColor) { $0.markerAutomatic = false; $0.markerFillColor = $1 },
-                              NSTextField(labelWithString: "Outline:"), well(style.markerOutlineColor) { $0.markerAutomatic = false; $0.markerOutlineColor = $1 }])])
+                              NSTextField(labelWithString: Localization.title("Size:")), number(Double(style.markerSize), width: 44) { $0.markerAutomatic = false; $0.markerSize = Int($1) },
+                              NSTextField(labelWithString: Localization.title("Fill:")), well(style.markerFillColor) { $0.markerAutomatic = false; $0.markerFillColor = $1 },
+                              NSTextField(labelWithString: Localization.title("Outline:")), well(style.markerOutlineColor) { $0.markerAutomatic = false; $0.markerOutlineColor = $1 }])])
         }
         if style.hasFont {
             let families = NSFontManager.shared.availableFontFamilies.sorted()
@@ -508,21 +508,21 @@ final class ChartEditorWindow: NSObject, NSOutlineViewDataSource, NSOutlineViewD
                 familyList.insert(style.fontFamily, at: 0)
             }
             let selected = familyList.firstIndex(of: style.fontFamily) ?? 0
-            rows.append([NSTextField(labelWithString: "Font:"),
+            rows.append([NSTextField(labelWithString: Localization.title("Font:")),
                          row([automatic("Automatic", { $0.fontAutomatic }, { $0.fontAutomatic = $1 }),
                               popUp(familyList, selected: selected) { $0.fontAutomatic = false; $0.fontFamily = familyList[$1] },
                               number(style.fontSize, width: 44) { $0.fontAutomatic = false; $0.fontSize = $1 },
                               automatic("Bold", { $0.fontBold }, { $0.fontAutomatic = false; $0.fontBold = $1 }),
                               automatic("Italic", { $0.fontItalic }, { $0.fontAutomatic = false; $0.fontItalic = $1 })])])
-            rows.append([NSTextField(labelWithString: "Text color:"),
+            rows.append([NSTextField(labelWithString: Localization.title("Text color:")),
                          row([automatic("Automatic", { $0.fontColorAutomatic }, { $0.fontColorAutomatic = $1 }),
                               well(style.fontColor) { $0.fontColorAutomatic = false; $0.fontColor = $1 }])])
         }
         if style.hasTextLayout {
-            rows.append([NSTextField(labelWithString: "Angle:"),
+            rows.append([NSTextField(labelWithString: Localization.title("Angle:")),
                          row([automatic("Automatic", { $0.textAngleAutomatic }, { $0.textAngleAutomatic = $1 }),
                               number(style.textAngle, width: 50) { $0.textAngleAutomatic = false; $0.textAngle = $1 },
-                              NSTextField(labelWithString: "degrees")])])
+                              NSTextField(labelWithString: Localization.title("degrees"))])])
         }
         form.addArrangedSubview(grid(rows))
     }

@@ -34,7 +34,7 @@ final class ManageSheetsDialog: NSObject, NSTableViewDataSource, NSTableViewDele
         self.workbook = workbook
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 460),
                           styleMask: [.titled], backing: .buffered, defer: false)
-        window.title = "Manage Sheets"
+        window.title = Localization.title("Manage Sheets")
         window.isReleasedWhenClosed = false
         super.init()
         build()
@@ -90,8 +90,8 @@ final class ManageSheetsDialog: NSObject, NSTableViewDataSource, NSTableViewDele
             well.widthAnchor.constraint(equalToConstant: 44).isActive = true
             well.heightAnchor.constraint(equalToConstant: 24).isActive = true
         }
-        let colors = NSStackView(views: [NSTextField(labelWithString: "Tab color:"), backgroundWell, clearBackgroundButton,
-                                         NSTextField(labelWithString: "Text color:"), textWell, clearTextButton, NSView()])
+        let colors = NSStackView(views: [NSTextField(labelWithString: Localization.title("Tab color:")), backgroundWell, clearBackgroundButton,
+                                         NSTextField(labelWithString: Localization.title("Text color:")), textWell, clearTextButton, NSView()])
         colors.orientation = .horizontal
         colors.spacing = 8
         status.textColor = .secondaryLabelColor

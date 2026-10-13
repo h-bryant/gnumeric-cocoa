@@ -12,16 +12,16 @@ final class ZoomDialog {
     static let presets = [400, 200, 150, 100, 75, 50, 25]
     let alert = NSAlert()
     let percentField = NSComboBox(frame: .zero)
-    let allSheets = NSButton(checkboxWithTitle: "All sheets", target: nil, action: nil)
+    let allSheets = NSButton(checkboxWithTitle: Localization.title("All sheets"), target: nil, action: nil)
 
     init(sheet: Sheet) {
-        alert.messageText = "Zoom"
+        alert.messageText = Localization.title("Zoom")
         alert.addButton(withTitle: Localization.title("OK"))
         alert.addButton(withTitle: Localization.title("Cancel"))
         percentField.addItems(withObjectValues: Self.presets.map { "\($0)%" })
         percentField.stringValue = "\(Int((sheet.zoomFactor * 100).rounded()))%"
         percentField.widthAnchor.constraint(equalToConstant: 110).isActive = true
-        let label = NSTextField(labelWithString: "Zoom:")
+        let label = NSTextField(labelWithString: Localization.title("Zoom:"))
         label.alignment = .right
         let grid = NSGridView(views: [[label, percentField], [NSGridCell.emptyContentView, allSheets]])
         grid.rowSpacing = 6

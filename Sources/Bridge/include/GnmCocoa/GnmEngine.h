@@ -90,6 +90,9 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Engine)
 /// the app's titles and labels that are the GTK's; the message itself
 /// comes back without a catalog or a translation.
 - (NSString *)localizedString:(NSString *)message NS_SWIFT_NAME(localizedString(_:));
+/// The same under a message context (`g_dpgettext2`): the GTK's stock
+/// labels ("_Open", "_Save", "Save _As") sit under "Stock label".
+- (NSString *)localizedString:(NSString *)message context:(NSString *)context NS_SWIFT_NAME(localizedString(_:context:));
 
 @property (nonatomic, copy, nullable) GnmEngineMessageHandler messageHandler;
 @property (nonatomic, copy, nullable) GnmEngineProgressHandler progressHandler;

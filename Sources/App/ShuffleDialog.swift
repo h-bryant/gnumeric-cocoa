@@ -13,7 +13,7 @@ final class ShuffleDialog {
     let method = NSPopUpButton(frame: .zero, pullsDown: false)
 
     init(sheet: Sheet) {
-        alert.messageText = "Data Shuffling"
+        alert.messageText = Localization.title("Data Shuffling")
         alert.addButton(withTitle: Localization.title("OK"))
         alert.addButton(withTitle: Localization.title("Cancel"))
         rangeField.stringValue = sheet.rangeNames(inList: sheet.selectionText)?.first ?? ""

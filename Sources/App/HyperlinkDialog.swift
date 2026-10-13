@@ -19,7 +19,7 @@ final class HyperlinkDialog: NSObject {
     let addressField = NSTextField(string: "")
     let subjectField = NSTextField(string: "")
     let webField = NSTextField(string: "")
-    let defaultTip = NSButton(checkboxWithTitle: "Use the target as the tip", target: nil, action: nil)
+    let defaultTip = NSButton(checkboxWithTitle: Localization.title("Use the target as the tip"), target: nil, action: nil)
     let tipField = NSTextField(string: "")
     let hasLink: Bool
 
@@ -28,7 +28,7 @@ final class HyperlinkDialog: NSObject {
         let current = sheet.hyperlink(atColumn: cell.column, row: cell.row)
         hasLink = current != nil
         super.init()
-        alert.messageText = "Hyperlink"
+        alert.messageText = Localization.title("Hyperlink")
         alert.informativeText = "A link on the selected cells; a click follows it."
         alert.addButton(withTitle: Localization.title("OK"))
         alert.addButton(withTitle: Localization.title("Cancel"))

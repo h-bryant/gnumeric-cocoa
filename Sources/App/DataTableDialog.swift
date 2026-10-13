@@ -13,7 +13,7 @@ final class DataTableDialog {
     let columnField = NSTextField(string: "")
 
     init() {
-        alert.messageText = "Data Table"
+        alert.messageText = Localization.title("Data Table")
         alert.informativeText = "The selection's first row and column hold the values; its top-left cell holds the formula."
         alert.addButton(withTitle: Localization.title("OK"))
         alert.addButton(withTitle: Localization.title("Cancel"))

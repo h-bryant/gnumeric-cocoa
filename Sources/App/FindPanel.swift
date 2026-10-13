@@ -21,11 +21,11 @@ final class FindPanel: NSObject, NSTableViewDataSource, NSTableViewDelegate, NST
     private let kindButtons: [NSButton]   // strings, other values, expressions, results, comments
     private let textKind = NSPopUpButton(frame: .zero, pullsDown: false)
     private let order = NSPopUpButton(frame: .zero, pullsDown: false)
-    private let ignoreCase = NSButton(checkboxWithTitle: "Ignore case", target: nil, action: nil)
-    private let wholeWords = NSButton(checkboxWithTitle: "Whole words only", target: nil, action: nil)
-    private let preserveCase = NSButton(checkboxWithTitle: "Preserve case", target: nil, action: nil)
-    private let keepStrings = NSButton(checkboxWithTitle: "Keep strings as strings", target: nil, action: nil)
-    private let askEach = NSButton(checkboxWithTitle: "Ask before each change", target: nil, action: nil)
+    private let ignoreCase = NSButton(checkboxWithTitle: Localization.title("Ignore case"), target: nil, action: nil)
+    private let wholeWords = NSButton(checkboxWithTitle: Localization.title("Whole words only"), target: nil, action: nil)
+    private let preserveCase = NSButton(checkboxWithTitle: Localization.title("Preserve case"), target: nil, action: nil)
+    private let keepStrings = NSButton(checkboxWithTitle: Localization.title("Keep strings as strings"), target: nil, action: nil)
+    private let askEach = NSButton(checkboxWithTitle: Localization.title("Ask before each change"), target: nil, action: nil)
     private let errorBehavior = NSPopUpButton(frame: .zero, pullsDown: false)
     private let table = NSTableView()
     private let status = NSTextField(labelWithString: "")
@@ -55,7 +55,7 @@ final class FindPanel: NSObject, NSTableViewDataSource, NSTableViewDelegate, NST
         }
         super.init()
         (panel as? FindPanelWindow)?.owner = self
-        panel.title = "Find and Replace"
+        panel.title = Localization.title("Find and Replace")
         panel.isFloatingPanel = true
         panel.hidesOnDeactivate = true
         panel.isReleasedWhenClosed = false

@@ -14,13 +14,13 @@ final class ConditionalFormatDialog: NSObject, NSTableViewDataSource, NSTableVie
     private let operatorPopUp = NSPopUpButton(frame: .zero, pullsDown: false)
     private let xField = NSTextField()
     private let yField = NSTextField()
-    private let fillCheck = NSButton(checkboxWithTitle: "Fill:", target: nil, action: nil)
+    private let fillCheck = NSButton(checkboxWithTitle: Localization.title("Fill:"), target: nil, action: nil)
     private let fillWell = NSColorWell()
-    private let textCheck = NSButton(checkboxWithTitle: "Text color:", target: nil, action: nil)
+    private let textCheck = NSButton(checkboxWithTitle: Localization.title("Text color:"), target: nil, action: nil)
     private let textWell = NSColorWell()
-    private let boldCheck = NSButton(checkboxWithTitle: "Bold", target: nil, action: nil)
-    private let italicCheck = NSButton(checkboxWithTitle: "Italic", target: nil, action: nil)
-    private let formatCheck = NSButton(checkboxWithTitle: "Number format:", target: nil, action: nil)
+    private let boldCheck = NSButton(checkboxWithTitle: Localization.title("Bold"), target: nil, action: nil)
+    private let italicCheck = NSButton(checkboxWithTitle: Localization.title("Italic"), target: nil, action: nil)
+    private let formatCheck = NSButton(checkboxWithTitle: Localization.title("Number format:"), target: nil, action: nil)
     private let formatField = NSTextField()
     private let replaceButton = NSButton(title: Localization.title("Replace"), target: nil, action: nil)
     private let removeButton = NSButton(title: Localization.title("Remove"), target: nil, action: nil)
@@ -34,7 +34,7 @@ final class ConditionalFormatDialog: NSObject, NSTableViewDataSource, NSTableVie
         conditions = sheet.conditionalFormats(atColumn: edit.column, row: edit.row)
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 580, height: 520),
                           styleMask: [.titled], backing: .buffered, defer: false)
-        window.title = "Conditional Formatting"
+        window.title = Localization.title("Conditional Formatting")
         window.isReleasedWhenClosed = false
         super.init()
         build()

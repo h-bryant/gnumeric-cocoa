@@ -26,7 +26,7 @@ final class PrintPreviewController: NSObject, NSWindowDelegate {
                           styleMask: [.titled, .closable, .resizable, .miniaturizable],
                           backing: .buffered, defer: false)
         super.init()
-        window.title = "Print Preview"
+        window.title = Localization.title("Print Preview")
         window.isReleasedWhenClosed = false
         window.minSize = NSSize(width: 420, height: 360)
         window.setFrameAutosaveName("PrintPreview")

@@ -33,7 +33,7 @@ final class SimulationDialog {
     }
 
     init(sheet: Sheet) {
-        alert.messageText = "Risk Simulation"
+        alert.messageText = Localization.title("Risk Simulation")
         alert.informativeText = "The inputs are recomputed each iteration; the outputs' statistics make the report."
         alert.addButton(withTitle: Localization.title("Run"))
         alert.addButton(withTitle: Localization.title("Cancel"))
@@ -113,7 +113,7 @@ final class SimulationDialog {
         lastResultsText = text
         guard headlessDriver == nil else { return }
         let alert = NSAlert()
-        alert.messageText = "Simulation Results"
+        alert.messageText = Localization.title("Simulation Results")
         alert.informativeText = "The report is on its sheet; this is the summary of each round."
         alert.addButton(withTitle: Localization.title("OK"))
         let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: 520, height: 260))

@@ -628,7 +628,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         })
         let sheetWindow = NSWindow(contentViewController: hosting)
         sheetWindow.styleMask = [.titled]
-        sheetWindow.title = "Format Cells"
+        sheetWindow.title = Localization.title("Format Cells")
         formatSheetWindow = sheetWindow
         window.beginSheet(sheetWindow) { [weak self] _ in self?.formatSheetWindow = nil }
     }
@@ -891,7 +891,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     @objc func pasteSpecial(_ sender: Any?) {
         guard let window, gridView.sheet != nil else { return }
         let alert = NSAlert()
-        alert.messageText = "Paste Special"
+        alert.messageText = Localization.title("Paste Special")
         alert.addButton(withTitle: Localization.title("Paste"))
         alert.addButton(withTitle: Localization.title("Paste Link"))
         alert.addButton(withTitle: Localization.title("Cancel"))
@@ -907,14 +907,14 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         let regionChoices: [(String, PasteOptions)] = [
             ("None", []), ("Transpose", .transpose), ("Flip Horizontally", .flipHorizontally), ("Flip Vertically", .flipVertically)]
         regionChoices.forEach { region.addItem(withTitle: $0.0) }
-        let skipBlanks = NSButton(checkboxWithTitle: "Skip blanks", target: nil, action: nil)
-        let keepReferences = NSButton(checkboxWithTitle: "Don't change formulae", target: nil, action: nil)
-        let widths = NSButton(checkboxWithTitle: "Column widths", target: nil, action: nil)
-        let heights = NSButton(checkboxWithTitle: "Row heights", target: nil, action: nil)
+        let skipBlanks = NSButton(checkboxWithTitle: Localization.title("Skip blanks"), target: nil, action: nil)
+        let keepReferences = NSButton(checkboxWithTitle: Localization.title("Don't change formulae"), target: nil, action: nil)
+        let widths = NSButton(checkboxWithTitle: Localization.title("Column widths"), target: nil, action: nil)
+        let heights = NSButton(checkboxWithTitle: Localization.title("Row heights"), target: nil, action: nil)
         let grid = NSGridView(views: [
-            [NSTextField(labelWithString: "Paste:"), what],
-            [NSTextField(labelWithString: "Operation:"), operation],
-            [NSTextField(labelWithString: "Region:"), region],
+            [NSTextField(labelWithString: Localization.title("Paste:")), what],
+            [NSTextField(labelWithString: Localization.title("Operation:")), operation],
+            [NSTextField(labelWithString: Localization.title("Region:")), region],
             [NSView(), skipBlanks],
             [NSView(), keepReferences],
             [NSView(), widths],
@@ -994,7 +994,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     @objc func renameSheet(_ sender: Any?) {
         guard let window, let current = gridView.sheet else { return }
         let alert = NSAlert()
-        alert.messageText = "Rename Sheet"
+        alert.messageText = Localization.title("Rename Sheet")
         alert.informativeText = "A name for the sheet \"\(current.name)\"."
         alert.addButton(withTitle: Localization.title("Rename"))
         alert.addButton(withTitle: Localization.title("Cancel"))
@@ -1015,7 +1015,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     @objc func resizeSheet(_ sender: Any?) {
         guard let window, let sheet = gridView.sheet else { return }
         let alert = NSAlert()
-        alert.messageText = "Resize Sheet"
+        alert.messageText = Localization.title("Resize Sheet")
         alert.informativeText = "Sizes are powers of two. A sheet cannot shrink below its data."
         alert.addButton(withTitle: Localization.title("Resize"))
         alert.addButton(withTitle: Localization.title("Cancel"))
@@ -1032,10 +1032,10 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         }
         let columns = sizes(from: Workbook.minimumSheetColumns, to: Workbook.maximumSheetColumns, current: sheet.columnCount)
         let rows = sizes(from: Workbook.minimumSheetRows, to: Workbook.maximumSheetRows, current: sheet.rowCount)
-        let all = NSButton(checkboxWithTitle: "Apply to all sheets", target: nil, action: nil)
+        let all = NSButton(checkboxWithTitle: Localization.title("Apply to all sheets"), target: nil, action: nil)
         let grid = NSGridView(views: [
-            [NSTextField(labelWithString: "Columns:"), columns],
-            [NSTextField(labelWithString: "Rows:"), rows],
+            [NSTextField(labelWithString: Localization.title("Columns:")), columns],
+            [NSTextField(labelWithString: Localization.title("Rows:")), rows],
             [NSView(), all],
         ])
         grid.column(at: 0).xPlacement = .trailing
@@ -1058,7 +1058,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     @objc func setTabColor(_ sender: Any?) {
         guard let window, let sheet = gridView.sheet else { return }
         let alert = NSAlert()
-        alert.messageText = "Tab Color"
+        alert.messageText = Localization.title("Tab Color")
         alert.informativeText = "Colors of the tab for the sheet \"\(sheet.name)\"."
         alert.addButton(withTitle: Localization.title("Set"))
         alert.addButton(withTitle: Localization.title("Cancel"))
@@ -1076,13 +1076,13 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             well.noneBox = none
             return well
         }
-        let noBackground = NSButton(checkboxWithTitle: "None", target: nil, action: nil)
-        let noText = NSButton(checkboxWithTitle: "None", target: nil, action: nil)
+        let noBackground = NSButton(checkboxWithTitle: Localization.title("None"), target: nil, action: nil)
+        let noText = NSButton(checkboxWithTitle: Localization.title("None"), target: nil, action: nil)
         let background = well(sheet.tabColor(), none: noBackground)
         let text = well(sheet.tabTextColor(), none: noText)
         let grid = NSGridView(views: [
-            [NSTextField(labelWithString: "Background:"), background, noBackground],
-            [NSTextField(labelWithString: "Text:"), text, noText],
+            [NSTextField(labelWithString: Localization.title("Background:")), background, noBackground],
+            [NSTextField(labelWithString: Localization.title("Text:")), text, noText],
         ])
         grid.column(at: 0).xPlacement = .trailing
         grid.rowSpacing = 6
@@ -1159,7 +1159,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     @objc func goTo(_ sender: Any?) {
         guard let window, gridView.sheet != nil else { return }
         let alert = NSAlert()
-        alert.messageText = "Go To"
+        alert.messageText = Localization.title("Go To")
         alert.informativeText = "A cell such as C10, a range such as B2:D4, a sheet-qualified reference such as Sheet2!A1, or a defined name."
         alert.addButton(withTitle: Localization.title("Go"))
         alert.addButton(withTitle: Localization.title("Cancel"))
@@ -1248,7 +1248,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         let range = sheet.selectedRange
         let preferRows = range.end.column - range.start.column >= range.end.row - range.start.row
         let alert = NSAlert()
-        alert.messageText = "Fill Series"
+        alert.messageText = Localization.title("Fill Series")
         alert.informativeText = "Fill the selection with a series from the start value. Leave the step empty to spread the series to the stop value over the selection."
         alert.addButton(withTitle: Localization.title("Fill"))
         alert.addButton(withTitle: Localization.title("Cancel"))
@@ -1341,7 +1341,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         if gridView.isEditing { gridView.cancelEditing() }
         let edit = sheet.editPosition
         let alert = NSAlert()
-        alert.messageText = "Goal Seek"
+        alert.messageText = Localization.title("Goal Seek")
         alert.informativeText = "Change one cell until the formula in another reaches a value."
         alert.addButton(withTitle: Localization.title("Seek"))
         alert.addButton(withTitle: Localization.title("Cancel"))
@@ -1919,7 +1919,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             return
         }
         let alert = NSAlert()
-        alert.messageText = "Unhide Sheet"
+        alert.messageText = Localization.title("Unhide Sheet")
         alert.informativeText = "Choose the sheet to show again."
         alert.addButton(withTitle: Localization.title("Unhide"))
         alert.addButton(withTitle: Localization.title("Cancel"))
@@ -2183,7 +2183,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         guard let window, let sheet = gridView.sheet, window.attachedSheet == nil else { return }
         let names = workbook.definedNames(for: sheet).filter(\.isEditable)
         let alert = NSAlert()
-        alert.messageText = "Insert Name"
+        alert.messageText = Localization.title("Insert Name")
         guard !names.isEmpty else {
             alert.informativeText = "No names are defined. Edit → Define Names… defines one."
             alert.beginSheetModal(for: window)
@@ -2478,7 +2478,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         let resolution = NSTextField(string: "150")
         resolution.translatesAutoresizingMaskIntoConstraints = false
         resolution.widthAnchor.constraint(equalToConstant: 56).isActive = true
-        let dpiLabel = NSTextField(labelWithString: "Resolution (dpi):")
+        let dpiLabel = NSTextField(labelWithString: Localization.title("Resolution (dpi):"))
         func applyFormat() {
             let format = formats[max(0, formatPopUp.indexOfSelectedItem)]
             if let type = UTType(filenameExtension: format.fileExtension) {
@@ -2492,7 +2492,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         let handler = FormatChangeHandler(applyFormat)
         formatPopUp.target = handler
         formatPopUp.action = #selector(FormatChangeHandler.changed(_:))
-        let row = NSStackView(views: [NSTextField(labelWithString: "Format:"), formatPopUp, dpiLabel, resolution])
+        let row = NSStackView(views: [NSTextField(labelWithString: Localization.title("Format:")), formatPopUp, dpiLabel, resolution])
         row.orientation = .horizontal
         row.spacing = 8
         row.edgeInsets = NSEdgeInsets(top: 8, left: 12, bottom: 8, right: 12)
@@ -2580,7 +2580,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         alert.addButton(withTitle: Localization.title("Cancel"))
         let condition: () -> FilterCondition
         if custom {
-            alert.messageText = "Custom Filter"
+            alert.messageText = Localization.title("Custom Filter")
             alert.informativeText = "Show the rows where the column:"
             func operators(_ selected: FilterOperator) -> NSPopUpButton {
                 let popUp = NSPopUpButton(frame: .zero, pullsDown: false)
@@ -2611,7 +2611,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
                 return .custom(first, text0.stringValue, joinedWithAnd: join.selectedSegment == 0, second, text1.stringValue)
             }
         } else {
-            alert.messageText = "Top 10 AutoFilter"
+            alert.messageText = Localization.title("Top 10 AutoFilter")
             alert.informativeText = "Show the rows with the largest or smallest values of the column."
             let isBucket = current.kind == .bucket
             let direction = NSPopUpButton(frame: .zero, pullsDown: false)

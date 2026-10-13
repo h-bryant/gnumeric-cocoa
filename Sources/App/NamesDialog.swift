@@ -25,7 +25,7 @@ final class NamesDialog: NSObject, NSTableViewDataSource, NSTableViewDelegate {
         self.sheet = sheet
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 560, height: 440),
                           styleMask: [.titled], backing: .buffered, defer: false)
-        window.title = "Define Names"
+        window.title = Localization.title("Define Names")
         window.isReleasedWhenClosed = false
         super.init()
         build()

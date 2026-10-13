@@ -8,11 +8,14 @@ import GnmCocoa
 /// engine's locale directory.  Titles worded differently here map through
 /// `aliases`; a title in neither table is tried as a message id itself,
 /// plain and with a mnemonic on its first letter (the command names the
-/// engine translates, "Add Column Page Break"; the buttons, "_Cancel");
-/// the rest (the standard macOS items, titles with no GTK counterpart)
-/// stay as written.  Without a translation a title stays as written too,
-/// so an English run is unchanged.  The toolbar labels, the context
-/// menus, and the dialogs' buttons come through here as well.
+/// engine translates, "Add Column Page Break"; the buttons, "_Cancel"),
+/// then under the "Stock label" context the GTK keeps "_Open", "_Save",
+/// and "Save _As" in; a label's trailing colon is set aside for the
+/// lookup and put back.  The rest (the standard macOS items, titles with
+/// no GTK counterpart) stay as written.  Without a translation a title
+/// stays as written too, so an English run is unchanged.  The toolbar
+/// labels, the context menus, and the dialogs' buttons, labels, check
+/// boxes, window titles, and alert headings come through here as well.
 @MainActor
 enum Localization {
     /// The app's wording → the GTK's message id, where the two differ.
@@ -67,6 +70,7 @@ enum Localization {
         "Zoom": "_Zoom...",
         "Objects": "_Object",
         "Open": "_Open",
+        "Save As": "Save _As",
         // The context menus and the dialogs' buttons
         "Delete Comment": "_Remove Comments",
         "Insert Comment…": "Add _Comment...",
@@ -87,11 +91,26 @@ enum Localization {
 
     private static func translated(_ english: String) -> String? {
         guard let engine = Engine.shared else { return nil }
-        let dotted = english.replacingOccurrences(of: "…", with: "...")
-        let candidates = [GTKLabels.messages[english], aliases[english], dotted, "_" + dotted].compactMap { $0 }
-        guard let translation = candidates.lazy.map({ engine.localizedString($0) }).enumerated()
-                .first(where: { $0.element != candidates[$0.offset] })?.element else { return nil }
+        let colon = english.hasSuffix(":")
+        let bare = colon ? String(english.dropLast()) : english
+        let dotted = bare.replacingOccurrences(of: "…", with: "...")
+        var candidates = [GTKLabels.messages[bare], aliases[bare], dotted, "_" + dotted].compactMap { $0 }
+        if colon { candidates = [dotted + ":", "_" + dotted + ":"] + candidates }
+        if dotted.hasSuffix("...") {
+            // "Open…" is the stock "_Open", "Save As…" the alias "Save _As";
+            // the ellipsis comes back below.
+            let short = String(dotted.dropLast(3))
+            candidates += [GTKLabels.messages[short], aliases[short], short, "_" + short].compactMap { $0 }
+        }
+        func lookup(_ message: String) -> String? {
+            let plain = engine.localizedString(message)
+            if plain != message { return plain }
+            let stock = engine.localizedString(message, context: "Stock label")
+            return stock != message ? stock : nil
+        }
+        guard let translation = candidates.lazy.compactMap(lookup).first else { return nil }
         var result = plain(translation)
+        if colon, !result.hasSuffix(":") { result += ":" }
         // The app's ellipsis where the GTK's label had none, and none where
         // the app's title has none (a toolbar label from a menu item).
         if english.hasSuffix("…"), !result.hasSuffix("…") { result += "…" }

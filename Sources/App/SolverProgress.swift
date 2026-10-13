@@ -22,7 +22,7 @@ final class SolverProgress {
         self.run = run
         self.window = window
         self.completion = completion
-        alert.messageText = "Solver"
+        alert.messageText = Localization.title("Solver")
         alert.informativeText = "Solving…"
         alert.addButton(withTitle: Localization.title("Stop"))
         func label(_ text: String) -> NSTextField {

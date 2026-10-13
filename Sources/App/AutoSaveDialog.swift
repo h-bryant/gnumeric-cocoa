@@ -10,12 +10,12 @@ final class AutoSaveDialog {
     nonisolated(unsafe) static var headlessDriver: ((AutoSaveDialog) -> Bool)?
 
     let alert = NSAlert()
-    let enabled = NSButton(checkboxWithTitle: "Automatically save every", target: nil, action: nil)
+    let enabled = NSButton(checkboxWithTitle: Localization.title("Automatically save every"), target: nil, action: nil)
     let minutesField = NSTextField(string: "")
-    let prompt = NSButton(checkboxWithTitle: "Prompt before saving", target: nil, action: nil)
+    let prompt = NSButton(checkboxWithTitle: Localization.title("Prompt before saving"), target: nil, action: nil)
 
     init(seconds: Int, prompt promptFirst: Bool) {
-        alert.messageText = "Auto Save"
+        alert.messageText = Localization.title("Auto Save")
         alert.addButton(withTitle: Localization.title("OK"))
         alert.addButton(withTitle: Localization.title("Cancel"))
         enabled.state = seconds > 0 ? .on : .off
@@ -25,7 +25,7 @@ final class AutoSaveDialog {
         minutesField.alignment = .right
         minutesField.widthAnchor.constraint(equalToConstant: 50).isActive = true
         prompt.state = promptFirst ? .on : .off
-        let row = NSStackView(views: [enabled, minutesField, NSTextField(labelWithString: "minutes")])
+        let row = NSStackView(views: [enabled, minutesField, NSTextField(labelWithString: Localization.title("minutes"))])
         row.orientation = .horizontal
         row.spacing = 6
         let grid = NSGridView(views: [[row], [prompt]])

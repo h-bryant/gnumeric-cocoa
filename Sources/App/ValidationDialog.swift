@@ -18,12 +18,12 @@ final class ValidationDialog: NSObject {
     let alert = NSAlert()
     let kind = NSPopUpButton(frame: .zero, pullsDown: false)
     let op = NSPopUpButton(frame: .zero, pullsDown: false)
-    let firstLabel = NSTextField(labelWithString: "Min:")
-    let secondLabel = NSTextField(labelWithString: "Max:")
+    let firstLabel = NSTextField(labelWithString: Localization.title("Min:"))
+    let secondLabel = NSTextField(labelWithString: Localization.title("Max:"))
     let firstField = NSTextField(string: "")
     let secondField = NSTextField(string: "")
-    let allowBlank = NSButton(checkboxWithTitle: "Ignore empty cells", target: nil, action: nil)
-    let dropdown = NSButton(checkboxWithTitle: "In-cell dropdown", target: nil, action: nil)
+    let allowBlank = NSButton(checkboxWithTitle: Localization.title("Ignore empty cells"), target: nil, action: nil)
+    let dropdown = NSButton(checkboxWithTitle: Localization.title("In-cell dropdown"), target: nil, action: nil)
     let action = NSPopUpButton(frame: .zero, pullsDown: false)
     let errorTitle = NSTextField(string: "")
     let errorMessage = NSTextField(string: "")
@@ -32,7 +32,7 @@ final class ValidationDialog: NSObject {
 
     init(sheet: Sheet) {
         super.init()
-        alert.messageText = "Data Validation"
+        alert.messageText = Localization.title("Data Validation")
         alert.informativeText = "What the selected cells accept, and the message shown while one is selected."
         alert.addButton(withTitle: Localization.title("OK"))
         alert.addButton(withTitle: Localization.title("Cancel"))

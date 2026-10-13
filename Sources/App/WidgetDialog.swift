@@ -19,7 +19,7 @@ final class WidgetDialog {
     let maximumField = NSTextField(string: "")
     let incrementField = NSTextField(string: "")
     let pageField = NSTextField(string: "")
-    let horizontalBox = NSButton(checkboxWithTitle: "Horizontal", target: nil, action: nil)
+    let horizontalBox = NSButton(checkboxWithTitle: Localization.title("Horizontal"), target: nil, action: nil)
     let contentField = NSTextField(string: "")
     let outputPopUp = NSPopUpButton(frame: .zero, pullsDown: false)
 

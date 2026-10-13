@@ -24,7 +24,7 @@ final class SheetCompareDialog: NSObject, NSOutlineViewDataSource, NSOutlineView
                         styleMask: [.titled, .closable, .resizable, .utilityWindow],
                         backing: .buffered, defer: false)
         super.init()
-        panel.title = "Compare Sheets"
+        panel.title = Localization.title("Compare Sheets")
         panel.isFloatingPanel = true
         panel.hidesOnDeactivate = true
         panel.isReleasedWhenClosed = false
@@ -42,8 +42,8 @@ final class SheetCompareDialog: NSObject, NSOutlineViewDataSource, NSOutlineView
 
     private func build() {
         let grid = NSGridView(views: [
-            [NSTextField(labelWithString: "Sheet A:"), workbookPopUps[0], sheetPopUps[0]],
-            [NSTextField(labelWithString: "Sheet B:"), workbookPopUps[1], sheetPopUps[1]],
+            [NSTextField(labelWithString: Localization.title("Sheet A:")), workbookPopUps[0], sheetPopUps[0]],
+            [NSTextField(labelWithString: Localization.title("Sheet B:")), workbookPopUps[1], sheetPopUps[1]],
         ])
         grid.rowSpacing = 6
         grid.columnSpacing = 8

@@ -23,7 +23,7 @@ final class TabulateDialog {
     let mode = NSPopUpButton(frame: .zero, pullsDown: false)
 
     init(sheet: Sheet) {
-        alert.messageText = "Tabulate Dependency"
+        alert.messageText = Localization.title("Tabulate Dependency")
         alert.addButton(withTitle: Localization.title("Tabulate"))
         alert.addButton(withTitle: Localization.title("Cancel"))
         func label(_ text: String) -> NSTextField {

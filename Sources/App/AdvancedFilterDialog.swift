@@ -12,12 +12,12 @@ final class AdvancedFilterDialog {
     let alert = NSAlert()
     let listField = NSTextField(string: "")
     let criteriaField = NSTextField(string: "")
-    let unique = NSButton(checkboxWithTitle: "Unique records only", target: nil, action: nil)
+    let unique = NSButton(checkboxWithTitle: Localization.title("Unique records only"), target: nil, action: nil)
     let destination = NSPopUpButton(frame: .zero, pullsDown: false)
     let outputField = NSTextField(string: "")
 
     init(sheet: Sheet) {
-        alert.messageText = "Advanced Filter"
+        alert.messageText = Localization.title("Advanced Filter")
         alert.addButton(withTitle: Localization.title("OK"))
         alert.addButton(withTitle: Localization.title("Cancel"))
         listField.stringValue = sheet.rangeNames(inList: sheet.selectionText)?.joined(separator: ", ") ?? ""

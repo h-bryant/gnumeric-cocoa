@@ -411,10 +411,10 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    the same day, and the engine's messages now follow the macOS language
    (the catalogs are built and bundled; `Engine.localizedString`), and
    the menu bar's titles, the toolbar, the context menus, and the
-   dialogs' buttons follow it through the GTK's own labels
-   (`Localization`, `scripts/gen-gtk-labels.py`).  Next: the dialogs'
-   own labels and tabs through the same catalog (the rest of the
-   localization row of `docs/mvp-known-gaps.md`), Phase 6's remaining
+   dialogs' buttons, labels, check boxes, and titles follow it through
+   the GTK's own labels (`Localization`, `scripts/gen-gtk-labels.py`).
+   Next: the dialogs' sentences and the rows their helpers build (the
+   rest of the localization row of `docs/mvp-known-gaps.md`), Phase 6's remaining
    items (a run on a Mac without Homebrew, a real signature; the
    relocatable bundle, the licenses, and the locale data are done since
    2026-10-13), and Henry's

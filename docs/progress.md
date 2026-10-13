@@ -2274,6 +2274,28 @@
   the context (`g_dpgettext2`) would localize them and the standard
   macOS items too: the next step.
 
+### 2026-10-13 (later): the stock labels and the dialogs' chrome follow too
+
+- The GTK keeps its stock labels ("_Open", "_Save", "Save _As", "_OK",
+  "_Cancel"; gui-util.h) under the gettext context "Stock label", which
+  `dgettext` does not see: `Engine.localizedString(_:context:)`
+  (`g_dpgettext2`) looks them up, and `Localization.title` tries every
+  candidate plain and then under that context, also without the app's
+  ellipsis ("Open…" is "_Open", "Öffnen…"), and sets a label's trailing
+  colon aside for the lookup.  `locale.m` checks "_Open" under its
+  context ("Ö_ffnen") and that the plain lookup leaves it alone.
+- Through the lookup now, by one sweep over the dialog files (168
+  sites): `labelWithString:`, `checkboxWithTitle:`,
+  `radioButtonWithTitle:`, the window titles, and `NSAlert.messageText`
+  (literal strings only; interpolated ones and the SwiftUI Settings
+  window left out).  Format Cells' tabs read Zahl and Ausrichtung.
+- `GNM_SNAPSHOT_MENUS=1` under German: 333 of 365 titles changed,
+  the toolbar's Open is Öffnen, File → Open… is Öffnen…; under English 0
+  of 365.
+- Still English: the dialogs' explanatory sentences and placeholders,
+  pop-up entries, the rows that dialog helpers build from strings (the
+  larger part of the dialog text), and the titles with no GTK message.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -2314,8 +2336,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-13: `main` at the toolbar-and-buttons-
-   follow-the-language commit (after the menu titles, the engine's messages, right-to-left sheets, the bundled
+3. The state at the end of 2026-10-13: `main` at the stock-labels-and-
+   dialog-chrome commit (after the toolbar and buttons, the menu titles, the engine's messages, right-to-left sheets, the bundled
    licenses, the relocatable bundle, the workbook properties, multi-line editing, drag and drop, the toolbar, the widget editors, AutoFormat, scenarios and simulation, the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,

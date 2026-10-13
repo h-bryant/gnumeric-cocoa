@@ -14,7 +14,7 @@ final class ScenarioAddDialog {
     let commentField = NSTextField(string: "")
 
     init(sheet: Sheet) {
-        alert.messageText = "Add Scenario"
+        alert.messageText = Localization.title("Add Scenario")
         alert.informativeText = "The changing cells keep their current values under this name."
         alert.addButton(withTitle: Localization.title("Add"))
         alert.addButton(withTitle: Localization.title("Cancel"))
@@ -71,7 +71,7 @@ final class ScenarioManagerDialog: NSObject, NSTableViewDataSource, NSTableViewD
         manager = sheet.scenarioManager()
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 520, height: 420),
                           styleMask: [.titled], backing: .buffered, defer: false)
-        window.title = "Scenarios"
+        window.title = Localization.title("Scenarios")
         window.isReleasedWhenClosed = false
         super.init()
         build()
@@ -104,7 +104,7 @@ final class ScenarioManagerDialog: NSObject, NSTableViewDataSource, NSTableViewD
             button.action = action
         }
         resultsField.placeholderString = "Result cells for the summary, such as B1:B3"
-        let resultsRow = NSStackView(views: [NSTextField(labelWithString: "Result cells:"), resultsField])
+        let resultsRow = NSStackView(views: [NSTextField(labelWithString: Localization.title("Result cells:")), resultsField])
         resultsRow.orientation = .horizontal
         resultsRow.spacing = 8
         let actions = NSStackView(views: [showButton, deleteButton, summaryButton, NSView()])

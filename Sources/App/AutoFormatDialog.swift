@@ -23,7 +23,7 @@ final class AutoFormatDialog: NSObject, NSTableViewDataSource, NSTableViewDelega
         self.engine = engine
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 480),
                           styleMask: [.titled], backing: .buffered, defer: false)
-        window.title = "AutoFormat"
+        window.title = Localization.title("AutoFormat")
         window.isReleasedWhenClosed = false
         super.init()
         build()
@@ -37,7 +37,7 @@ final class AutoFormatDialog: NSObject, NSTableViewDataSource, NSTableViewDelega
     private func build() {
         categoryPopUp.target = self
         categoryPopUp.action = #selector(categoryChanged(_:))
-        let categoryRow = NSStackView(views: [NSTextField(labelWithString: "Category:"), categoryPopUp, NSView()])
+        let categoryRow = NSStackView(views: [NSTextField(labelWithString: Localization.title("Category:")), categoryPopUp, NSView()])
         categoryRow.orientation = .horizontal
         categoryRow.spacing = 8
 

@@ -308,6 +308,11 @@ static BOOL engineWasStarted;   /* gnm_init cannot be repeated in one process */
     return GnmString (dgettext ("gnumeric-" GNM_VERSION_FULL, message.UTF8String));
 }
 
+- (NSString *)localizedString:(NSString *)message context:(NSString *)context
+{
+    return GnmString (g_dpgettext2 ("gnumeric-" GNM_VERSION_FULL, context.UTF8String, message.UTF8String));
+}
+
 #pragma mark - Messages
 
 /* Collections nest: a command run from inside another (the paste of an

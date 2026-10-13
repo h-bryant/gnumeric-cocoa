@@ -182,7 +182,7 @@ final class TextExportSheet {
         let hosting = NSHostingController(rootView: TextExportView(model: model) { _ in })
         window = NSWindow(contentViewController: hosting)
         window.styleMask = [.titled]
-        window.title = "Export as Text"
+        window.title = Localization.title("Export as Text")
         window.isReleasedWhenClosed = false
         hosting.rootView = TextExportView(model: model) { [weak self] accepted in self?.finish(accepted) }
     }

@@ -14,8 +14,8 @@ final class PluginManagerDialog: NSObject, NSTableViewDataSource, NSTableViewDel
     private let table = NSTableView()
     private let directoriesTable = NSTableView()
     private let details = NSTextField(wrappingLabelWithString: "")
-    private let markBox = NSButton(checkboxWithTitle: "Deactivate at the next start", target: nil, action: nil)
-    private let newPluginsBox = NSButton(checkboxWithTitle: "Activate new plugins found at a start", target: nil, action: nil)
+    private let markBox = NSButton(checkboxWithTitle: Localization.title("Deactivate at the next start"), target: nil, action: nil)
+    private let newPluginsBox = NSButton(checkboxWithTitle: Localization.title("Activate new plugins found at a start"), target: nil, action: nil)
     private let activateAllButton = NSButton(title: Localization.title("Activate All"), target: nil, action: nil)
     private let addDirectoryButton = NSButton(title: Localization.title("Add…"), target: nil, action: nil)
     private let removeDirectoryButton = NSButton(title: Localization.title("Remove"), target: nil, action: nil)
@@ -32,7 +32,7 @@ final class PluginManagerDialog: NSObject, NSTableViewDataSource, NSTableViewDel
         self.engine = engine
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 600),
                           styleMask: [.titled], backing: .buffered, defer: false)
-        window.title = "Plugin Manager"
+        window.title = Localization.title("Plugin Manager")
         window.isReleasedWhenClosed = false
         super.init()
         build()
@@ -289,7 +289,7 @@ final class PluginManagerDialog: NSObject, NSTableViewDataSource, NSTableViewDel
             return
         }
         let alert = NSAlert()
-        alert.messageText = "The following extra plugins must be activated in order to activate this one:"
+        alert.messageText = Localization.title("The following extra plugins must be activated in order to activate this one:")
         alert.informativeText = dependencies.joined(separator: "\n") + "\n\nDo you want to activate this plugin together with its dependencies?"
         alert.addButton(withTitle: Localization.title("Activate"))
         alert.addButton(withTitle: Localization.title("Cancel"))

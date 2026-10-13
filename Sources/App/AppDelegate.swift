@@ -12,7 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     /// with the engine's guessed options).
     @objc func importText(_ sender: Any?) {
         let panel = NSOpenPanel()
-        panel.title = "Import Text"
+        panel.title = Localization.title("Import Text")
         panel.allowedContentTypes = [.plainText, .commaSeparatedText, .tabSeparatedText, .delimitedText, .text, .data]
         panel.allowsMultipleSelection = false
         panel.begin { response in
@@ -2598,7 +2598,7 @@ enum Snapshot {
                 grid.cancelEditing()
                 NSLog("xmlopen: typed arrow: %@; F2 arrow: %@", afterTyped, afterF2)
                 // the Tab Color dialog's wells: a chosen color clears None
-                let none = NSButton(checkboxWithTitle: "None", target: nil, action: nil)
+                let none = NSButton(checkboxWithTitle: Localization.title("None"), target: nil, action: nil)
                 none.state = .on
                 let well = TabColorWell(frame: .zero)
                 well.noneBox = none
@@ -2734,6 +2734,8 @@ enum Snapshot {
                 NSLog("menus: toolbar=%@", toolbarLabels.joined(separator: " | "))
                 let buttons: [String] = ["Cancel", "OK", "Yes", "Paste Link", "Delete Comment", "Save as Image…", "Fewer Decimals"].map { Localization.title($0) }
                 NSLog("menus: buttons=%@", buttons.joined(separator: " | "))
+                let chrome: [String] = ["Open…", "Save As…", "Angle:", "Case sensitive", "Goal Seek", "Number", "Alignment"].map { Localization.title($0) }
+                NSLog("menus: chrome=%@", chrome.joined(separator: " | "))
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }

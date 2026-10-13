@@ -8,20 +8,20 @@ final class WorkbookAttributesDialog {
     nonisolated(unsafe) static var headlessDriver: ((WorkbookAttributesDialog) -> Bool)?
 
     let alert = NSAlert()
-    let horizontalScrollbar = NSButton(checkboxWithTitle: "Horizontal scrollbar", target: nil, action: nil)
-    let verticalScrollbar = NSButton(checkboxWithTitle: "Vertical scrollbar", target: nil, action: nil)
-    let sheetTabs = NSButton(checkboxWithTitle: "Sheet tabs", target: nil, action: nil)
-    let autoCompletion = NSButton(checkboxWithTitle: "Autocomplete text in cells", target: nil, action: nil)
-    let functionMarkers = NSButton(checkboxWithTitle: "Cell markers for formulas", target: nil, action: nil)
-    let extensionMarkers = NSButton(checkboxWithTitle: "Cell markers for text that spills over", target: nil, action: nil)
-    let protected = NSButton(checkboxWithTitle: "Protected workbook", target: nil, action: nil)
+    let horizontalScrollbar = NSButton(checkboxWithTitle: Localization.title("Horizontal scrollbar"), target: nil, action: nil)
+    let verticalScrollbar = NSButton(checkboxWithTitle: Localization.title("Vertical scrollbar"), target: nil, action: nil)
+    let sheetTabs = NSButton(checkboxWithTitle: Localization.title("Sheet tabs"), target: nil, action: nil)
+    let autoCompletion = NSButton(checkboxWithTitle: Localization.title("Autocomplete text in cells"), target: nil, action: nil)
+    let functionMarkers = NSButton(checkboxWithTitle: Localization.title("Cell markers for formulas"), target: nil, action: nil)
+    let extensionMarkers = NSButton(checkboxWithTitle: Localization.title("Cell markers for text that spills over"), target: nil, action: nil)
+    let protected = NSButton(checkboxWithTitle: Localization.title("Protected workbook"), target: nil, action: nil)
 
     struct Settings {
         var horizontalScrollbar, verticalScrollbar, sheetTabs, autoCompletion, functionMarkers, extensionMarkers, protected: Bool
     }
 
     init(workbook: Workbook) {
-        alert.messageText = "Workbook Properties"
+        alert.messageText = Localization.title("Workbook Properties")
         alert.informativeText = "What this workbook's windows show; saved with the file."
         alert.addButton(withTitle: Localization.title("OK"))
         alert.addButton(withTitle: Localization.title("Cancel"))
@@ -77,9 +77,9 @@ final class DocumentPropertiesDialog: NSObject {
 
     let alert = NSAlert()
     private(set) var fields: [(name: String, field: NSTextField)] = []
-    let automaticButton = NSButton(radioButtonWithTitle: "Automatic", target: nil, action: nil)
-    let manualButton = NSButton(radioButtonWithTitle: "Manual", target: nil, action: nil)
-    let iterationButton = NSButton(checkboxWithTitle: "Iterative calculation", target: nil, action: nil)
+    let automaticButton = NSButton(radioButtonWithTitle: Localization.title("Automatic"), target: nil, action: nil)
+    let manualButton = NSButton(radioButtonWithTitle: Localization.title("Manual"), target: nil, action: nil)
+    let iterationButton = NSButton(checkboxWithTitle: Localization.title("Iterative calculation"), target: nil, action: nil)
     let maximumField = NSTextField(string: "")
     let toleranceField = NSTextField(string: "")
     /// The Statistics page's lines (the headless checks).
@@ -87,7 +87,7 @@ final class DocumentPropertiesDialog: NSObject {
 
     init(workbook: Workbook, fileURL: URL?) {
         super.init()
-        alert.messageText = "Document Properties"
+        alert.messageText = Localization.title("Document Properties")
         alert.addButton(withTitle: Localization.title("OK"))
         alert.addButton(withTitle: Localization.title("Cancel"))
         let tabs = NSTabView(frame: NSRect(x: 0, y: 0, width: 460, height: 360))
@@ -278,11 +278,11 @@ final class DocumentPropertiesDialog: NSObject {
         toleranceField.alignment = .right
         toleranceField.widthAnchor.constraint(equalToConstant: 80).isActive = true
         let grid = NSGridView(views: [
-            [NSTextField(labelWithString: "Recalculation:"), automaticButton],
+            [NSTextField(labelWithString: Localization.title("Recalculation:")), automaticButton],
             [NSView(), manualButton],
             [NSView(), iterationButton],
-            [NSTextField(labelWithString: "Maximum iterations:"), maximumField],
-            [NSTextField(labelWithString: "Tolerance:"), toleranceField],
+            [NSTextField(labelWithString: Localization.title("Maximum iterations:")), maximumField],
+            [NSTextField(labelWithString: Localization.title("Tolerance:")), toleranceField],
         ])
         grid.rowSpacing = 6
         grid.columnSpacing = 8

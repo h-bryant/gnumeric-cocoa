@@ -21,7 +21,7 @@ final class ChartGuru: NSObject, NSTableViewDataSource, NSTableViewDelegate {
     private let typeTable = NSTableView()
     private let summary = NSTextField(wrappingLabelWithString: "")
     private let layout = NSPopUpButton(frame: .zero, pullsDown: false)
-    private let shared = NSButton(checkboxWithTitle: "Use the first series as the shared abscissa", target: nil, action: nil)
+    private let shared = NSButton(checkboxWithTitle: Localization.title("Use the first series as the shared abscissa"), target: nil, action: nil)
     private let insertButton = NSButton(title: Localization.title("Insert"), target: nil, action: nil)
     private var images: [String: NSImage] = [:]
     private var completion: ((Choice?) -> Void)?
@@ -110,7 +110,7 @@ final class ChartGuru: NSObject, NSTableViewDataSource, NSTableViewDelegate {
         layout.addItem(withTitle: "Auto")
         layout.addItem(withTitle: "Columns")
         layout.addItem(withTitle: "Rows")
-        let options = NSStackView(views: [NSTextField(labelWithString: "Series as:"), layout, shared])
+        let options = NSStackView(views: [NSTextField(labelWithString: Localization.title("Series as:")), layout, shared])
         options.orientation = .horizontal
         options.spacing = 8
         options.isHidden = typeOnly

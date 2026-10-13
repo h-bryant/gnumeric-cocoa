@@ -21,6 +21,9 @@ int main (void)
         NSString *translated = [engine localizedString:@"Sheet%d"];
         GNM_ASSERT ([translated isEqualToString:@"Blatt%d"], @"'Sheet%%d' in German: %@", translated);
         GNM_ASSERT ([[engine localizedString:@"No such message here"] isEqualToString:@"No such message here"], @"unknown messages come back as they are");
+        GNM_ASSERT ([[engine localizedString:@"_Open"] isEqualToString:@"_Open"], @"a stock label is not a plain message");
+        NSString *stock = [engine localizedString:@"_Open" context:@"Stock label"];
+        GNM_ASSERT ([stock isEqualToString:@"Ö_ffnen"], @"'_Open' under its context: %@", stock);
 
         GnmWorkbook *wb = [engine newWorkbookWithSheetCount:1];
         GnmSheet *sheet = wb.sheets.firstObject;
