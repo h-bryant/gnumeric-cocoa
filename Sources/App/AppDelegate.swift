@@ -1942,6 +1942,45 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_PROPS"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // Select → Depends and Inputs on a small chain; Format →
+                // Workbook… hides the sheet tabs (left hidden in the window
+                // capture); File → Properties… sets a title and author.
+                do {
+                    try sheet.setText("10", atColumn: 0, row: 0, autocorrect: false)
+                    try sheet.setText("=A1*2", atColumn: 1, row: 0, autocorrect: false)
+                    try sheet.setText("=B1+1", atColumn: 2, row: 0, autocorrect: false)
+                } catch { NSLog("props: data failed: %@", error.localizedDescription) }
+                sheet.selectCell(atColumn: 0, row: 0)
+                controller.selectDependents(nil)
+                let depends = sheet.selectedRange
+                sheet.selectCell(atColumn: 2, row: 0)
+                controller.selectInputs(nil)
+                let inputs = sheet.selectedRange
+                NSLog("props: depends of A1 -> %ld,%ld; inputs of C1 -> %ld,%ld", depends.start.column, depends.start.row, inputs.start.column, inputs.start.row)
+                WorkbookAttributesDialog.headlessDriver = { dialog in
+                    dialog.sheetTabs.state = .off
+                    dialog.protected.state = .on
+                    return true
+                }
+                controller.formatWorkbook(nil)
+                WorkbookAttributesDialog.headlessDriver = nil
+                NSLog("props: tabs shown %d protected %d modified %d", controller.workbook.showsSheetTabs ? 1 : 0,
+                      controller.workbook.isProtected ? 1 : 0, controller.workbook.isModified ? 1 : 0)
+                DocumentPropertiesDialog.headlessDriver = { dialog in
+                    dialog.setValue("Quarterly figures", for: "dc:title")
+                    dialog.setValue("Henry", for: "dc:creator")
+                    return true
+                }
+                controller.documentProperties(nil)
+                DocumentPropertiesDialog.headlessDriver = nil
+                NSLog("props: title '%@' author '%@' undo=%@", controller.workbook.documentProperties["dc:title"] ?? "nil",
+                      controller.workbook.documentProperties["dc:creator"] ?? "nil", controller.workbook.undoLabel ?? "nil")
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FREEZE"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

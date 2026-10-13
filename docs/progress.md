@@ -1708,6 +1708,28 @@
   hook types through the field editor and checks the editor's frame,
   the entered text, and the bar's height.
 
+## 2026-10-13: Select → Array/Depends/Inputs, Format → Workbook…, File → Properties…
+
+- `GnmWorkbookProperties.h`: `GnmSheet (SelectionTools)` wraps
+  `sv_select_cur_array`, `_depends`, and `_inputs` (cmd-edit.c), which
+  return nothing, so the selection is compared before and after to
+  say whether anything was selected; `GnmWorkbook (ViewAttributes)`
+  reads and sets the view's GObject properties (`show-horizontal-
+  scrollbar`, `show-vertical-scrollbar`, `show-notebook-tabs`,
+  `do-auto-completion`, `show-function-cell-markers`,
+  `show-extension-markers`, `protected`) and marks the document dirty,
+  as the GTK dialog's `g_object_set` leaves them to be saved;
+  `GnmWorkbook (DocumentProperties)` lists the string-valued
+  `GsfDocMetaData` properties and sets or removes the standard nine
+  through `cmd_change_meta_data` ("Changing workbook properties",
+  undoable; the command takes both lists).
+- `WorkbookPropertiesDialog.swift` holds the two alerts; the window
+  applies the view attributes (`applyWorkbookView`: scrollers and the
+  tab bar) when a sheet is focused and after the dialog; Edit → Select
+  gained Array, Depends, Inputs (a beep when there is nothing).
+  `properties.m` is a new test program; the `GNM_SNAPSHOT_PROPS` hook
+  drives all three.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -1726,7 +1748,7 @@
    shortcuts, autocompletion, the function selector, and array formulas;
    and all 27 Statistics tools; next the rest of Phase 5 by usage
    frequency: the toolbar's missing items, widgets that act, the
-   remaining Phase 5 rows) from
+   remaining "no" rows) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -1749,8 +1771,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-13: `main` at the multi-line editing
-   commit (after drag and drop, the toolbar, the widget editors, AutoFormat, scenarios and simulation, the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+3. The state at the end of 2026-10-13: `main` at the workbook properties
+   commit (after multi-line editing, drag and drop, the toolbar, the widget editors, AutoFormat, scenarios and simulation, the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in

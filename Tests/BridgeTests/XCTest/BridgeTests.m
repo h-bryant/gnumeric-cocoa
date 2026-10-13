@@ -101,5 +101,6 @@
 - (void)testScenarios { [self runProgram:@"scenarios"]; }
 - (void)testAutoFormat { [self runProgram:@"autoformat"]; }
 - (void)testWidgets { [self runProgram:@"widgets"]; }
+- (void)testProperties { [self runProgram:@"properties"]; }
 
 @end

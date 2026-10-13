@@ -108,6 +108,8 @@ targets:
     templates: [BridgeTestProgram]
   widgets:
     templates: [BridgeTestProgram]
+  properties:
+    templates: [BridgeTestProgram]
   BridgeTests:
     type: bundle.unit-test
     platform: macOS
@@ -145,6 +147,7 @@ targets:
       - target: scenarios
       - target: autoformat
       - target: widgets
+      - target: properties
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.github.h-bryant.gnumeric-cocoa.BridgeTests

@@ -111,7 +111,8 @@ GNM_SNAPSHOT=/tmp/grid.png scripts/run-app.sh upstream/gnumeric/samples/format-t
 `GNM_SNAPSHOT_SHEET=1`, `GNM_SNAPSHOT_WHATIF=1`, `GNM_SNAPSHOT_OUTLINE=1`,
 `GNM_SNAPSHOT_ADVFILTER=1`, `GNM_SNAPSHOT_MANAGE=1`, `GNM_SNAPSHOT_PLUGINS=1`,
 `GNM_SNAPSHOT_SCENARIO=1`, `GNM_SNAPSHOT_AUTOFORMAT=1`, `GNM_SNAPSHOT_WIDGET=1`,
-`GNM_SNAPSHOT_TOOLBAR=1`, `GNM_SNAPSHOT_DRAG=1`, and `GNM_SNAPSHOT_MULTILINE=1`
+`GNM_SNAPSHOT_TOOLBAR=1`, `GNM_SNAPSHOT_DRAG=1`, `GNM_SNAPSHOT_MULTILINE=1`,
+and `GNM_SNAPSHOT_PROPS=1`
 exercise zoom, editing and saving, the Format Cells model, the Phase 3
 commands, frozen panes, sheet management, the autofilter with the Sort
 command, a sheet resize, and a tab color, the sheet objects (select, move,
@@ -188,8 +189,11 @@ and drop (A1:B1 dropped at A4 as a move and at A7 as a copy, a PNG
 written beside the capture and dropped at D2, the second tab dragged
 before the first), and multi-line editing ("first", Option+Return, and
 "second" typed into A1 through the field editor, the editor's growth, the
-entered text, and the formula bar's height logged) before the capture
-(`AppDelegate.swift`, `Snapshot`). The typing hook saves as a
+entered text, and the formula bar's height logged), and the workbook
+properties (Select → Depends and Inputs on A1, B1, C1; Format → Workbook…
+hiding the sheet tabs and protecting the workbook; File → Properties…
+setting a title and an author) before the capture (`AppDelegate.swift`,
+`Snapshot`). The typing hook saves as a
 Save As next to the snapshot; with `GNM_SNAPSHOT_SAVE_INPLACE=1` it saves
 the opened file in place instead (give it a copy). Should a quit ever go
 nowhere again (an alert sheet on the window did that once,

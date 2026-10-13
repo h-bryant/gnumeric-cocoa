@@ -21,7 +21,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | FilePageSetup, FilePrint, FilePrintArea set and clear | ported | File → Page Setup… (⇧⌘P), Print… (⌘P) through the system print panel, Print Area → Set and Clear (2026-10-12); the engine's pagination and page drawing in the bridge |
 | FilePrintPreview, FilePrintArea show, page break actions | no | the system print panel previews; no page-break editing |
 | FileSend | no | Phase 5 |
-| FileMetaData (Properties) | no | Phase 5 |
+| FileMetaData (Properties) | partial | 2026-10-13: File → Properties… edits the nine standard string properties (title, subject, description, keywords, author, initial author, manager, company, category) as one undoable command (`GnmWorkbook.setDocumentProperties`, `DocumentPropertiesDialog`); no statistics page, no custom properties |
 | FileHistoryFull | ported | `NSDocumentController` recents |
 | FileClose, FileQuit | ported | |
 
@@ -49,7 +49,8 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | SheetResize | ported | Edit → Sheet → Resize… (2026-10-12): powers of two, optionally every sheet |
 | EditSelectAll | ported | ⌘A and the header corner |
 | EditSelectColumn, EditSelectRow | ported | header clicks and Edit → Select |
-| EditSelectArray, EditSelectDepends, EditSelectInputs, EditSelectObject | no | Phase 3/4 |
+| EditSelectArray, EditSelectDepends, EditSelectInputs | ported | 2026-10-13: Edit → Select → Array, Depends, Inputs (`sv_select_cur_*`); a beep when there is nothing to select |
+| EditSelectObject | partial | Tab cycles the objects on the grid; no menu item |
 | EditGotoTop/Bottom/First/Last, EditGoto | partial | ⌘-arrows jump to the edge of the data (the GTK's Ctrl+arrow, Shift extending) and Home goes to the row's first column (2026-10-12); Edit → Go To… (⌃G) and the name box take a reference or a name; no Top/Bottom/First/Last items, no key for A1 |
 
 ## View
@@ -60,7 +61,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | ViewFreezeThawPanes | ported | View → Freeze/Unfreeze Panes with the GTK placement rules; files with frozen panes open frozen |
 | ViewStatusbar | partial | the auto-expression (Sum/Min/Max/Average/Count of the selection) sits at the right of the tab bar; no hide toggle, no other status fields |
 | ViewFullScreen | ported | View → Enter Full Screen (⌃⌘F), the window's full-screen behavior (2026-10-12) |
-| FormatWorkbook (workbook properties) | no | Phase 5 |
+| FormatWorkbook (workbook properties) | ported | 2026-10-13: Format → Workbook… sets the view's attributes (scrollbars, sheet tabs, autocompletion, the two cell markers, protection; `GnmWorkbook (ViewAttributes)`); the window hides its scrollers and tab bar accordingly, the markers are kept for the file |
 | ViewZoom | ported | View → Zoom In/Out/Actual Size, and View → Zoom… (also Format → Sheet → Zoom…) with the presets or a typed percentage and "All sheets", over `cmd_zoom` (undoable, "Zoom Sheet1 to 150%") (2026-10-12) |
 
 ## Insert

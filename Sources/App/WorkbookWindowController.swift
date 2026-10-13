@@ -38,6 +38,62 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         ("Sum", "sum"), ("Min", "min"), ("Max", "max"), ("Average", "average"), ("Count", "count"),
     ]
     private let tabScroller = NSScrollView()
+    private var tabBar: NSStackView?
+
+    /// The workbook view's attributes on the window: scrollers and the
+    /// tab bar shown or not (wbcg's show_* handling).
+    func applyWorkbookView() {
+        scrollView.hasHorizontalScroller = workbook.showsHorizontalScrollbar
+        scrollView.hasVerticalScroller = workbook.showsVerticalScrollbar
+        tabBar?.isHidden = !workbook.showsSheetTabs
+    }
+
+    /// Format → Workbook… (dialog_workbook_attr).
+    @objc func formatWorkbook(_ sender: Any?) {
+        guard let window, window.attachedSheet == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let dialog = WorkbookAttributesDialog(workbook: workbook)
+        dialog.present(in: window) { [weak self] settings in
+            guard let self else { return }
+            workbook.showsHorizontalScrollbar = settings.horizontalScrollbar
+            workbook.showsVerticalScrollbar = settings.verticalScrollbar
+            workbook.showsSheetTabs = settings.sheetTabs
+            workbook.autoCompletes = settings.autoCompletion
+            workbook.showsFunctionCellMarkers = settings.functionMarkers
+            workbook.showsExtensionMarkers = settings.extensionMarkers
+            workbook.isProtected = settings.protected
+            applyWorkbookView()
+        }
+    }
+
+    /// File → Properties… (dialog_doc_metadata).
+    @objc func documentProperties(_ sender: Any?) {
+        guard let window, window.attachedSheet == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let dialog = DocumentPropertiesDialog(workbook: workbook)
+        dialog.present(in: window) { [weak self] values in
+            guard let self else { return true }
+            do {
+                try workbook.setDocumentProperties(values)
+                return true
+            } catch {
+                present(error)
+                return false
+            }
+        }
+    }
+
+    /// Edit → Select → Array, Depends, Inputs (cmd-edit.c).
+    @objc func selectArray(_ sender: Any?) { selectWith { $0.selectCurrentArray() } }
+    @objc func selectDependents(_ sender: Any?) { selectWith { $0.selectDependents() } }
+    @objc func selectInputs(_ sender: Any?) { selectWith { $0.selectInputs() } }
+
+    private func selectWith(_ select: (Sheet) -> Bool) {
+        guard let sheet = gridView.sheet else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        if !select(sheet) { NSSound.beep() }
+        gridView.needsDisplay = true
+    }
     private var tabSheets: [Sheet] = []
     /// Zoom steps for the View menu, as percentages.
     private static let zoomSteps: [Double] = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4]
@@ -176,6 +232,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         autoExpression.setContentHuggingPriority(.required, for: .horizontal)
         autoExpression.setContentCompressionResistancePriority(.required, for: .horizontal)
         let tabBar = NSStackView(views: [tabScroller, autoExpression])
+        self.tabBar = tabBar
         tabBar.orientation = .horizontal
         tabBar.distribution = .fill
         tabBar.spacing = 8
@@ -585,8 +642,10 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             return gridView.sheet != nil && workbook.sheets.filter({ $0.isVisible }).count > 1
         case #selector(unhideSheet(_:)):
             return workbook.sheets.contains { !$0.isVisible } && window?.attachedSheet == nil
-        case #selector(manageSheets(_:)), #selector(pluginManager(_:)):
+        case #selector(manageSheets(_:)), #selector(pluginManager(_:)), #selector(formatWorkbook(_:)), #selector(documentProperties(_:)):
             return window?.attachedSheet == nil
+        case #selector(selectArray(_:)), #selector(selectDependents(_:)), #selector(selectInputs(_:)):
+            return gridView.sheet != nil
         case #selector(scenarioAdd(_:)), #selector(scenarioView(_:)), #selector(simulation(_:)), #selector(autoFormat(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(insertFrame(_:)), #selector(insertButton(_:)), #selector(insertCheckbox(_:)), #selector(insertRadioButton(_:)),
@@ -2147,6 +2206,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
 
     func workbook(_ workbook: Workbook, didFocus sheet: Sheet?) {
         show(sheet: sheet)
+        applyWorkbookView()
     }
 
     func workbook(_ workbook: Workbook, didAdd sheet: Sheet) {
