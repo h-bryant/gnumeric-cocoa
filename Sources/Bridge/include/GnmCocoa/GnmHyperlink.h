@@ -54,6 +54,11 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Hyperlink)
 /// The ranges within a range whose cells carry links, as `GnmCellRange`
 /// values (`sheet_style_collect_hlinks`).
 - (NSArray<NSValue *> *)hyperlinkRangesInRange:(GnmCellRange)range NS_SWIFT_NAME(hyperlinkRanges(in:));
+/// The GTK Edit → Clear → Hyperlinks (cb_edit_delete_links): the links
+/// of every selected range taken away as one command named after the
+/// count of linked regions ("Remove 2 Links"); the underline and color
+/// stay, as there.
+- (BOOL)removeHyperlinksOfSelectionWithError:(NSError **)error NS_SWIFT_NAME(removeHyperlinksOfSelection());
 @end
 
 NS_ASSUME_NONNULL_END

@@ -1044,6 +1044,10 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     }
     @objc func clearFormats(_ sender: Any?) { run { try $0.clearSelection(.formats) } }
     @objc func clearComments(_ sender: Any?) { run { try $0.clearSelection(.comments) } }
+    /// Edit → Clear → Hyperlinks (cb_edit_delete_links).
+    @objc func clearHyperlinks(_ sender: Any?) { run { try $0.removeHyperlinksOfSelection() } }
+    /// Edit → Select → Next Object (⌃Tab; cb_edit_select_object).
+    @objc func selectNextObjectItem(_ sender: Any?) { selectNextObject(reverse: false) }
 
     /// Insert as many columns (rows) as the selection spans, before it, as
     /// the GTK front end does.
@@ -1707,6 +1711,8 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
                 menuItem.title = sheet.editPositionIsInFilter ? "Remove Auto Filter" : "Add Auto Filter"
             }
             return true
+        case #selector(selectNextObjectItem(_:)):
+            return sheet.sheetObjects.contains { $0.isSelectable && $0.isVisible }
         case #selector(showAllFilteredRows(_:)), #selector(clearAllFiltered(_:)), #selector(clearFormatsFiltered(_:)),
              #selector(clearCommentsFiltered(_:)), #selector(clearContentsFiltered(_:)):
             return sheet.hasFilteredRows

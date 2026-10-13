@@ -198,4 +198,28 @@ kind_for_hlink (GnmHLink *lnk)
     return result;
 }
 
+- (BOOL)removeHyperlinksOfSelectionWithError:(NSError **)error
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    Sheet *sheet = self.engineSheet;
+    SheetView *sv = self.sheetView;
+    GnmWorkbook *workbook = self.workbook;
+    if (!sheet || !sv || !workbook)
+        return NO;
+    int n_links = 0;
+    for (GSList *l = sv->selections; l; l = l->next) {
+        GnmStyleList *styles = sheet_style_collect_hlinks (sheet, l->data);
+        n_links += (int) g_slist_length (styles);
+        sheet_style_list_free (styles);
+    }
+    char *name = g_strdup_printf (n_links == 1 ? "Remove %d Link" : "Remove %d Links", n_links);
+    GnmStyle *style = gnm_style_new ();
+    gnm_style_set_hlink (style, NULL);
+    BOOL ok = [workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_selection_format (wbc, style, NULL, name);
+    } description:@"Could not remove the hyperlinks." error:error];
+    g_free (name);
+    return ok;
+}
+
 @end

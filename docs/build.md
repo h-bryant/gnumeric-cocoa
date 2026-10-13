@@ -112,7 +112,7 @@ GNM_SNAPSHOT=/tmp/grid.png scripts/run-app.sh upstream/gnumeric/samples/format-t
 `GNM_SNAPSHOT_ADVFILTER=1`, `GNM_SNAPSHOT_MANAGE=1`, `GNM_SNAPSHOT_PLUGINS=1`,
 `GNM_SNAPSHOT_SCENARIO=1`, `GNM_SNAPSHOT_AUTOFORMAT=1`, `GNM_SNAPSHOT_WIDGET=1`,
 `GNM_SNAPSHOT_TOOLBAR=1`, `GNM_SNAPSHOT_DRAG=1`, `GNM_SNAPSHOT_MULTILINE=1`,
-`GNM_SNAPSHOT_PROPS=1`, and `GNM_SNAPSHOT_WIDGETACT=1`
+`GNM_SNAPSHOT_PROPS=1`, `GNM_SNAPSHOT_WIDGETACT=1`, and `GNM_SNAPSHOT_FONTMENU=1`
 exercise zoom, editing and saving, the Format Cells model, the Phase 3
 commands, frozen panes, sheet management, the autofilter with the Sort
 command, a sheet resize, and a tab color, the sheet objects (select, move,
@@ -197,8 +197,11 @@ hiding the sheet tabs and protecting the workbook; File → Properties…
 setting a title and an author), and widgets that act (a checkbox linked
 to C1 clicked, a horizontal scrollbar over 0…50 linked to C2 clicked at
 four fifths, a list over A1:A3 with its choice in C3 clicked on its
-second row; the linked cells logged) before the capture (`AppDelegate.swift`,
-`Snapshot`). The typing hook saves as a
+second row; the linked cells logged), and the Font menu (strikethrough on
+A1, double underline on B1, superscript on C1, a link on D1 cleared with
+Edit → Clear → Hyperlinks, Next Object on one checkbox; the formats, the
+undo label, and the check-mark states logged) before the capture
+(`AppDelegate.swift`, `Snapshot`). The typing hook saves as a
 Save As next to the snapshot; with `GNM_SNAPSHOT_SAVE_INPLACE=1` it saves
 the opened file in place instead (give it a copy). Should a quit ever go
 nowhere again (an alert sheet on the window did that once,

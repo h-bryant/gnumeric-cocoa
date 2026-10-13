@@ -2035,6 +2035,43 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FONTMENU"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // Format → Font on A1 (strikethrough), B1 (double
+                // underline), C1 (superscript); Edit → Clear → Hyperlinks on
+                // a linked D1; Edit → Select → Next Object with one widget.
+                let texts = ["struck", "double", "x2", "linked"]
+                for (column, text) in texts.enumerated() { try? sheet.setText(text, atColumn: column, row: 0, autocorrect: false) }
+                sheet.selectCell(atColumn: 0, row: 0)
+                controller.toggleStrikethrough(nil)
+                sheet.selectCell(atColumn: 1, row: 0)
+                controller.toggleDoubleUnderline(nil)
+                sheet.selectCell(atColumn: 2, row: 0)
+                controller.toggleSuperscript(nil)
+                sheet.selectCell(atColumn: 3, row: 0)
+                try? sheet.setHyperlink(Hyperlink(kind: .web, target: "https://www.gnumeric.org/", tip: nil))
+                let before = sheet.hyperlink(atColumn: 3, row: 0) != nil
+                controller.gridView.clearHyperlinks(nil)
+                let strike = sheet.formatOfCell(atColumn: 0, row: 0).strikethrough?.boolValue ?? false
+                let underline = sheet.formatOfCell(atColumn: 1, row: 0).underline?.intValue ?? -1
+                sheet.selectCell(atColumn: 2, row: 0)
+                let script = sheet.fontScriptOfSelection.rawValue
+                NSLog("fontmenu: strike=%d underline=%ld script=%ld linked=%d->%d undo=%@", strike ? 1 : 0, underline, script,
+                      before ? 1 : 0, sheet.hyperlink(atColumn: 3, row: 0) != nil ? 1 : 0, sheet.workbook?.undoLabel ?? "nil")
+                let d3 = sheet.frameOfCell(atColumn: 3, row: 2)
+                _ = try? sheet.insertWidget(ofKind: .checkbox, frame: CGRect(x: d3.minX, y: d3.minY, width: 90, height: 20))
+                controller.gridView.select(objects: [])
+                controller.gridView.selectNextObjectItem(nil)
+                NSLog("fontmenu: next object selected=%ld bold-on=%d strike-on=%d", controller.gridView.selectedObjects.count,
+                      controller.fontMenuItemIsOn(#selector(WorkbookWindowController.toggleBold(_:))) ? 1 : 0,
+                      controller.fontMenuItemIsOn(#selector(WorkbookWindowController.toggleStrikethrough(_:))) ? 1 : 0)
+                controller.gridView.select(objects: [])
+                sheet.selectCell(atColumn: 0, row: 0)
+                NSLog("fontmenu: A1 strike-on=%d", controller.fontMenuItemIsOn(#selector(WorkbookWindowController.toggleStrikethrough(_:))) ? 1 : 0)
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FREEZE"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

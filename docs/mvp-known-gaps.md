@@ -41,7 +41,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | EditDeleteColumns, EditDeleteRows | ported | Edit menu; the selection's columns or rows |
 | EditDeleteCells | ported | Edit → Delete Cells… (2026-10-12): shift left or up, entire rows or columns |
 | EditHyperlink | ported | Insert → Hyperlink… edits or removes the edit position's link (2026-10-12) |
-| EditClearHyperlinks | no | Phase 5; the dialog's Remove covers one selection |
+| EditClearHyperlinks | ported | 2026-10-13: Edit → Clear → Hyperlinks takes the links off every selected range as one command named after the count ("Remove 2 Links"), the underline and color staying as in the GTK (`removeHyperlinksOfSelection`) |
 | EditNames | ported | Edit → Define Names… (2026-10-12): list, add or update, remove, workbook or sheet scope |
 | EditComment | ported | Insert → Comment… (Edit Comment… over one) and the cell's context menu (2026-10-12) |
 | InsertSheet, InsertSheetAtEnd, EditDuplicateSheet, SheetRemove, SheetChangeName | ported | Edit → Sheet and the tab context menu; rename through a prompt |
@@ -50,7 +50,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | EditSelectAll | ported | ⌘A and the header corner |
 | EditSelectColumn, EditSelectRow | ported | header clicks and Edit → Select |
 | EditSelectArray, EditSelectDepends, EditSelectInputs | ported | 2026-10-13: Edit → Select → Array, Depends, Inputs (`sv_select_cur_*`); a beep when there is nothing to select |
-| EditSelectObject | partial | Tab cycles the objects on the grid; no menu item |
+| EditSelectObject | ported | Tab cycles the objects on the grid; Edit → Select → Next Object (⌃Tab) since 2026-10-13 |
 | EditGotoTop/Bottom/First/Last, EditGoto | partial | ⌘-arrows jump to the edge of the data (the GTK's Ctrl+arrow, Shift extending) and Home goes to the row's first column (2026-10-12); Edit → Go To… (⌃G) and the name box take a reference or a name; no Top/Bottom/First/Last items, no key for A1 |
 
 ## View
@@ -91,7 +91,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | FormatCellsFitHeight, FormatCellsFitWidth | bridge | `autofitSelectedCells(width:)`; the menu has the whole-column/row Autofit |
 | FormatAuto | ported | 2026-10-13, see Format → AutoFormat… below |
 | FontBold, FontItalic, FontUnderline | ported | Format → Bold ⌘B, Italic ⌘I, Underline ⌘U (2026-10-12) |
-| FontStrikeThrough, FontDoubleUnderline, FontSuperscript, FontSubscript | partial | through the dialog only; no shortcuts or toolbar |
+| FontStrikeThrough, FontDoubleUnderline, FontSuperscript, FontSubscript | ported | 2026-10-13: Format → Font ▸ Bold ⌘B, Italic ⌘I, Underline ⌘U, Double Underline ⇧⌘D, Single Low Underline ⇧⌘L, Double Low Underline, Strikethrough ⌘5, Superscript ⌃⌘+, Subscript ⌃⌘- (the GTK toggles: the opposite of the edit position's attribute, check marks following it); Superscript and Subscript are on the toolbar too |
 | ColumnSize, RowSize, ColumnAutoSize, RowAutoSize, ColumnDefaultSize, RowDefaultSize | ported | Format → Column / Row (points); headers drag-resize and autofit on a boundary double-click |
 | ColumnHide, RowHide, ColumnUnhide, RowUnhide | ported | Format → Column / Row |
 | SheetDisplayFormulas, SheetUseR1C1, SheetHideZeros, SheetHideGridlines, SheetHideColHeader, SheetHideRowHeader, SheetDirection | partial | Format → Sheet (2026-10-12): Display Formulæ, Use R1C1 Notation, Hide Zeros, Hide Gridlines, Hide Column Headers, Hide Row Headers as checked items over `cmd_toggle_sheet_property` (undoable; the header views collapse); no Direction item, the sheet is drawn left-to-right |

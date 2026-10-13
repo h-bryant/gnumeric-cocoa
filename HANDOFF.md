@@ -389,8 +389,11 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    Edit → Select → Array/Depends/Inputs, Format → Workbook…, File →
    Properties… (`GnmWorkbookProperties.h`, `properties.m`), and the
    toolbar's indent, script, border, and color items, and widgets that
-   act (`GnmSheet (WidgetActions)`, `GridView.actOnWidget`).  Next, by
-   usage: what `docs/mvp-known-gaps.md` still lists as "no".
+   act (`GnmSheet (WidgetActions)`, `GridView.actOnWidget`), and Edit →
+   Clear → Hyperlinks, Select → Next Object, and the Format → Font
+   submenu.  Next, by usage: what `docs/mvp-known-gaps.md` still lists
+   as "no" (page breaks, FileSend, ViewNew, AutoCorrect/AutoSave/Compare,
+   Merge, the Help items).
 6. Headless checks for all of it: `GNM_SNAPSHOT=out.png scripts/run-app.sh
    file` plus `GNM_SNAPSHOT_TYPE`, `_FORMAT`, `_PHASE3`, `_FREEZE`,
    `_SHEETS`, `_FILTER`, `_OBJECTS`, `_CHART`, `_EDITOR`, `_EVERYDAY`, `_FIND`, `_PREFS`, `_TEXT`, `_IMPORT`, `_COMMENT`, `_NAMES`, `_FILL`, `_GOAL`, `_COND`, `_STATS`, `_VALID`, `_LINK`, `_SOLVE`, `_PRINT`, `_FORMULA`, `_FUNC`, `_ZOOM` (`docs/build.md`); compare `out.png` with

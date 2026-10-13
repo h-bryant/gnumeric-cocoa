@@ -92,6 +92,22 @@ int main (void)
         GNM_ASSERT ([s hyperlinkAtColumn:0 row:0] != nil, @"back after undo");
         GNM_ASSERT ([s hyperlinkRangesInRange:GnmCellRangeMake (0, 0, 5, 20)].count == 4, @"four again");
 
+        /* Edit → Clear → Hyperlinks over the selection */
+        [s selectRange:GnmCellRangeMake (0, 0, 0, 1) editPosition:GnmCellCoordinateMake (0, 0)];
+        GNM_ASSERT ([s removeHyperlinksOfSelectionWithError:&error], @"remove one: %@", error);
+        GNM_ASSERT_EQ_STR (wb.undoLabel ?: @"", @"Remove 1 Link");
+        GNM_ASSERT ([s hyperlinkAtColumn:0 row:0] == nil, @"A1's link gone");
+        GNM_ASSERT ([s hyperlinkAtColumn:0 row:2] != nil, @"A3's link stays");
+        NSUInteger left = [s hyperlinkRangesInRange:GnmCellRangeMake (0, 0, 5, 20)].count;
+        GNM_ASSERT (left == 3, @"three left: %lu", (unsigned long) left);
+        [s selectRange:GnmCellRangeMake (0, 0, 2, 8) editPosition:GnmCellCoordinateMake (0, 0)];
+        GNM_ASSERT ([s removeHyperlinksOfSelectionWithError:&error], @"remove the rest: %@", error);
+        GNM_ASSERT_EQ_STR (wb.undoLabel ?: @"", @"Remove 3 Links");
+        GNM_ASSERT ([s hyperlinkRangesInRange:GnmCellRangeMake (0, 0, 5, 20)].count == 0, @"none left");
+        [wb undo];
+        [wb undo];
+        GNM_ASSERT ([s hyperlinkRangesInRange:GnmCellRangeMake (0, 0, 5, 20)].count == 4, @"four after two undos");
+
         GNM_ASSERT (stray.count == 0, @"stray messages: %@", stray);
         wb = nil;
       }

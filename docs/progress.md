@@ -1776,6 +1776,24 @@
   `GNM_SNAPSHOT_WIDGETACT=1` inserts a checkbox, a scrollbar, and a list,
   acts on each, and logs the linked cells (TRUE, 40, green).
 
+### 2026-10-13 (later): Clear → Hyperlinks, Select → Next Object, Format → Font
+
+- `GnmSheet (Hyperlinks)` gained `removeHyperlinksOfSelection`
+  (cb_edit_delete_links: the linked regions of every selected range
+  counted with `sheet_style_collect_hlinks`, a style with no link
+  applied through `cmd_selection_format` as "Remove N Links"; the
+  underline and color stay, as in the GTK).  `hyperlink.m` covers one
+  and three regions and the undo.
+- Edit → Clear → Hyperlinks, Edit → Select → Next Object (⌃Tab; the
+  grid's Tab cycle as a menu item, enabled when a selectable object is
+  on the sheet), and Format → Font ▸ with Bold, Italic, Underline,
+  Double Underline (⇧⌘D), Single Low Underline (⇧⌘L), Double Low
+  Underline, Strikethrough (⌘5), Superscript (⌃⌘+), and Subscript
+  (⌃⌘-): each the GTK toggle (the opposite of the edit position's
+  attribute as one "Format cells" command), the menu items checked from
+  `formatOfSelection` and `fontScriptOfSelection` when the menu opens.
+  `GNM_SNAPSHOT_FONTMENU=1` exercises them.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and

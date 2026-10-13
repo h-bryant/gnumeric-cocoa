@@ -665,6 +665,12 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         case #selector(moveSheetRight(_:)):
             guard let sheet = gridView.sheet else { return false }
             return sheet.index < workbook.sheets.count - 1
+        case #selector(toggleBold(_:)), #selector(toggleItalic(_:)), #selector(toggleUnderline(_:)),
+             #selector(toggleDoubleUnderline(_:)), #selector(toggleSingleLowUnderline(_:)), #selector(toggleDoubleLowUnderline(_:)),
+             #selector(toggleStrikethrough(_:)), #selector(toggleSuperscript(_:)), #selector(toggleSubscript(_:)):
+            guard gridView.sheet != nil else { return false }
+            if let menuItem = item as? NSMenuItem { menuItem.state = fontMenuItemIsOn(item.action) ? .on : .off }
+            return true
         default:
             return true
         }
@@ -1225,10 +1231,40 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         toggleFont { format, current in format.italic = NSNumber(value: !(current.italic?.boolValue ?? false)) }
     }
 
-    @objc func toggleUnderline(_ sender: Any?) {
+    @objc func toggleUnderline(_ sender: Any?) { toggleUnderlineStyle(.single) }
+    @objc func toggleDoubleUnderline(_ sender: Any?) { toggleUnderlineStyle(.double) }
+    @objc func toggleSingleLowUnderline(_ sender: Any?) { toggleUnderlineStyle(.singleLow) }
+    @objc func toggleDoubleLowUnderline(_ sender: Any?) { toggleUnderlineStyle(.doubleLow) }
+
+    /// The GTK underline toggles: the style when it is not there, none
+    /// when it is (toggle_font_attr with UNDERLINE_* and UNDERLINE_NONE).
+    private func toggleUnderlineStyle(_ style: UnderlineStyle) {
         toggleFont { format, current in
-            let on = (current.underline?.intValue ?? 0) != UnderlineStyle.none.rawValue
-            format.underline = NSNumber(value: on ? UnderlineStyle.none.rawValue : UnderlineStyle.single.rawValue)
+            let on = (current.underline?.intValue ?? 0) == style.rawValue
+            format.underline = NSNumber(value: on ? UnderlineStyle.none.rawValue : style.rawValue)
+        }
+    }
+
+    @objc func toggleStrikethrough(_ sender: Any?) {
+        toggleFont { format, current in format.strikethrough = NSNumber(value: !(current.strikethrough?.boolValue ?? false)) }
+    }
+
+    /// The check marks of the Format → Font items: the edit position's
+    /// attributes, as the GTK toggle actions show them.
+    func fontMenuItemIsOn(_ action: Selector?) -> Bool {
+        guard let sheet = gridView.sheet, let action else { return false }
+        let current = sheet.formatOfSelection
+        switch action {
+        case #selector(toggleBold(_:)): return current.bold?.boolValue ?? false
+        case #selector(toggleItalic(_:)): return current.italic?.boolValue ?? false
+        case #selector(toggleUnderline(_:)): return current.underline?.intValue == UnderlineStyle.single.rawValue
+        case #selector(toggleDoubleUnderline(_:)): return current.underline?.intValue == UnderlineStyle.double.rawValue
+        case #selector(toggleSingleLowUnderline(_:)): return current.underline?.intValue == UnderlineStyle.singleLow.rawValue
+        case #selector(toggleDoubleLowUnderline(_:)): return current.underline?.intValue == UnderlineStyle.doubleLow.rawValue
+        case #selector(toggleStrikethrough(_:)): return current.strikethrough?.boolValue ?? false
+        case #selector(toggleSuperscript(_:)): return sheet.fontScriptOfSelection == .superscript
+        case #selector(toggleSubscript(_:)): return sheet.fontScriptOfSelection == .subscript
+        default: return false
         }
     }
 
