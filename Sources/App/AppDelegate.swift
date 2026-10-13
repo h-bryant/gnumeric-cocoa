@@ -1999,6 +1999,42 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_WIDGETACT"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // Widgets that act: a checkbox linked to C1 clicked, a
+                // horizontal scrollbar over 0…50 linked to C2 clicked at
+                // four fifths, a list over A1:A3 with its choice in C3
+                // clicked on its second row; all left in the window capture.
+                for (row, color) in ["red", "green", "blue"].enumerated() { try? sheet.setText(color, atColumn: 0, row: row, autocorrect: false) }
+                @MainActor func make(_ kind: WidgetSettings.Kind, _ frame: CGRect, _ configure: (WidgetSettings) -> Void) -> SheetObject? {
+                    guard let object = try? sheet.insertWidget(ofKind: kind, frame: frame), let settings = sheet.widgetSettings(of: object) else { return nil }
+                    configure(settings)
+                    try? sheet.applyWidgetSettings(settings, to: object)
+                    return object
+                }
+                let d2 = sheet.frameOfCell(atColumn: 3, row: 1)
+                if let box = make(.checkbox, CGRect(x: d2.minX, y: d2.minY, width: 90, height: 20), { $0.linkText = "C1"; $0.label = "Agree" }) {
+                    controller.gridView.actOnWidget(box, at: CGPoint(x: box.frame.midX, y: box.frame.midY))
+                    NSLog("widgetact: checkbox -> C1='%@' active=%d undo=%@", sheet.displayTextOfCell(atColumn: 2, row: 0) ?? "nil",
+                          sheet.widgetIsActive(box) ? 1 : 0, sheet.workbook?.undoLabel ?? "nil")
+                }
+                let d4 = sheet.frameOfCell(atColumn: 3, row: 3)
+                if let bar = make(.scrollbar, CGRect(x: d4.minX, y: d4.minY, width: 160, height: 18), { $0.linkText = "C2"; $0.minimum = 0; $0.maximum = 50; $0.horizontal = true }) {
+                    let frame = bar.frame
+                    controller.gridView.actOnWidget(bar, at: CGPoint(x: frame.minX + 15 + (frame.width - 30) * 0.8, y: frame.midY))
+                    NSLog("widgetact: scrollbar -> C2='%@' value=%g", sheet.displayTextOfCell(atColumn: 2, row: 1) ?? "nil", sheet.widgetValue(bar))
+                }
+                let d6 = sheet.frameOfCell(atColumn: 3, row: 5)
+                if let list = make(.list, CGRect(x: d6.minX, y: d6.minY, width: 100, height: 60), { $0.contentText = "A1:A3"; $0.linkText = "C3"; $0.outputsIndex = false }) {
+                    controller.gridView.actOnWidget(list, at: CGPoint(x: list.frame.minX + 10, y: list.frame.minY + 15 * sheet.zoomFactor + 3))
+                    NSLog("widgetact: list %@ -> C3='%@' selection=%ld", sheet.widgetEntries(list).joined(separator: ","),
+                          sheet.displayTextOfCell(atColumn: 2, row: 2) ?? "nil", sheet.widgetSelection(list))
+                }
+                controller.gridView.select(objects: [])
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FREEZE"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

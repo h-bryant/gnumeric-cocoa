@@ -46,6 +46,85 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         var moved = false
     }
     private var moveDrag: MoveDrag?
+    /// A scrollbar or slider being dragged: its value follows the pointer.
+    private var widgetDrag: SheetObject?
+
+    // MARK: Widgets that act
+
+    /// What a click (or drag) at `point` does to a widget: a checkbox,
+    /// radio button, or button is clicked; a scrollbar or slider takes
+    /// the value under the pointer along its length; a spin button steps
+    /// up in its upper half and down in its lower; a list takes the row
+    /// under the pointer; a combo pops up its entries.
+    func actOnWidget(_ object: SheetObject, at point: NSPoint) {
+        guard let sheet else { return }
+        let frame = object.frame
+        do {
+            switch object.widgetKind {
+            case .checkbox, .radioButton, .button:
+                try sheet.clickWidget(object)
+            case .scrollbar, .slider:
+                guard let settings = sheet.widgetSettings(of: object) else { return }
+                let arrows: CGFloat = object.widgetKind == .scrollbar ? 15 * sheet.zoomFactor : 0
+                let fraction: CGFloat
+                if settings.horizontal {
+                    fraction = (point.x - frame.minX - arrows) / max(frame.width - 2 * arrows, 1)
+                } else {
+                    fraction = (point.y - frame.minY - arrows) / max(frame.height - 2 * arrows, 1)
+                }
+                let clamped = min(max(fraction, 0), 1)
+                let value = Double(settings.minimum) + Double(settings.maximum - settings.minimum) * Double(clamped)
+                try sheet.setWidgetValue(value, for: object)
+            case .spinButton:
+                guard let settings = sheet.widgetSettings(of: object) else { return }
+                let step = point.y < frame.midY ? settings.increment : -settings.increment
+                try sheet.setWidgetValue(sheet.widgetValue(object) + Double(step), for: object)
+            case .list:
+                let rowHeight = 15 * sheet.zoomFactor
+                let row = Int((point.y - frame.minY) / rowHeight) + 1
+                let entries = sheet.widgetEntries(object)
+                if row >= 1, row <= entries.count { try sheet.chooseWidgetEntry(row, for: object) }
+            case .combo:
+                presentComboEntries(for: object, at: point)
+            default:
+                return
+            }
+        } catch {
+            presentError?(error)
+        }
+        needsDisplay = true
+    }
+
+    private func presentComboEntries(for object: SheetObject, at point: NSPoint) {
+        guard let sheet else { return }
+        let entries = sheet.widgetEntries(object)
+        guard !entries.isEmpty else { return }
+        let menu = NSMenu(title: "Entries")
+        let chosen = sheet.widgetSelection(object)
+        for (index, entry) in entries.enumerated() {
+            let item = NSMenuItem(title: entry.isEmpty ? " " : entry, action: #selector(comboEntryChosen(_:)), keyEquivalent: "")
+            item.target = self
+            item.tag = index + 1
+            item.representedObject = object
+            item.state = chosen == index + 1 ? .on : .off
+            menu.addItem(item)
+        }
+        if let event = window?.currentEvent, event.type == .leftMouseDown {
+            NSMenu.popUpContextMenu(menu, with: event, for: self)
+        } else {
+            menu.popUp(positioning: nil, at: viewRect(forSheetRect: NSRect(origin: point, size: .zero)).origin, in: self)
+        }
+    }
+
+    @objc private func comboEntryChosen(_ sender: NSMenuItem) {
+        guard let sheet, let object = sender.representedObject as? SheetObject else { return }
+        do {
+            try sheet.chooseWidgetEntry(sender.tag, for: object)
+        } catch {
+            presentError?(error)
+        }
+        needsDisplay = true
+    }
     /// A column or row boundary being dragged in a header, as a guide line
     /// across the grid (sheet pixels).
     var resizeGuide: (isColumn: Bool, position: CGFloat)? {
@@ -1681,6 +1760,14 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         if let object = sheet.sheetObject(at: point) {
             if isEditing { commitEditing(text: editor.stringValue, movement: .none) }
             window?.makeFirstResponder(self)
+            // A plain click on a widget works it; Command, Shift, or Option
+            // selects it instead (the GTK's object mode).
+            if object.widgetKind != .none, selectedObjects.isEmpty,
+               event.modifierFlags.isDisjoint(with: [.shift, .command, .option]) {
+                actOnWidget(object, at: point)
+                if [.scrollbar, .slider].contains(object.widgetKind) { widgetDrag = object }
+                return
+            }
             let additive = event.modifierFlags.contains(.shift) || event.modifierFlags.contains(.command)
             if selectedObjects.contains(object) {
                 if additive {
@@ -1752,6 +1839,11 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
             needsDisplay = true
             return
         }
+        if let widget = widgetDrag {
+            let point = sheetPoint(forViewPoint: convert(event.locationInWindow, from: nil))
+            actOnWidget(widget, at: point)
+            return
+        }
         if var drag = moveDrag {
             autoscroll(with: event)
             let point = sheetPoint(forViewPoint: convert(event.locationInWindow, from: nil))
@@ -1807,6 +1899,10 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
             commitObjectDrag(drag)
             needsDisplay = true
             window?.invalidateCursorRects(for: self)
+            return
+        }
+        if widgetDrag != nil {
+            widgetDrag = nil
             return
         }
         if let drag = moveDrag {

@@ -1748,6 +1748,34 @@
   presets, text and fill color wells (following the cell's colors),
   and No Fill; the `GNM_SNAPSHOT_TOOLBAR` hook presses them.
 
+### 2026-10-13 (later): widgets that act
+
+- `GnmSheet (WidgetActions)` in `GnmWidgets.h` ports the GTK widgets'
+  signal handlers (sheet-object-widget.c): `clickWidget:` toggles a
+  checkbox (`cmd_so_set_value` of TRUE/FALSE, "Clicking checkbox"; an
+  unlinked one just flips its "active"), picks a radio button (its
+  value, "Clicking radiobutton"), or presses a button ("Pressed Button"
+  then "Released Button"); `setWidgetValue:forObject:` clamps to the
+  adjustment, rounds with `gnm_fake_round`, skips a value the cell
+  already holds, and runs "Change widget" (an unlinked adjustment is
+  set directly); `chooseWidgetEntry:forObject:` writes the index or the
+  content ("Clicking in list"), refusing without an output cell.
+  Readers for the Swift side: `widgetIsActive:`, `widgetValue:`,
+  `widgetEntries:` (the content link evaluated and formatted),
+  `widgetSelection:` (from the output cell: the index, or the content
+  matched).  `link_cell` resolves a link to a `GnmCellRef`, dropping the
+  getter's reference.  `widgets.m` covers each kind, the clamp, the
+  unlinked cases, and the refusal.
+- `GridView.actOnWidget(_:at:)`: a plain click on a widget acts; a
+  Command, Shift, or Option click selects it as before.  A scrollbar or
+  slider takes the value under the pointer along its length (15 px of
+  arrows at each end of a scrollbar), and `mouseDragged` keeps following
+  it; a spin button steps up in its upper half and down in its lower; a
+  list takes the row under the pointer (15 px rows at zoom 1); a combo
+  pops up an NSMenu of its entries with the current one checked.
+  `GNM_SNAPSHOT_WIDGETACT=1` inserts a checkbox, a scrollbar, and a list,
+  acts on each, and logs the linked cells (TRUE, 40, green).
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and

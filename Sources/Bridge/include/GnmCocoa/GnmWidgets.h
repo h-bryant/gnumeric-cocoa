@@ -71,4 +71,31 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(WidgetSettings)
 - (nullable GnmSheetObject *)insertWidgetOfKind:(GnmWidgetKind)kind frame:(CGRect)frame error:(NSError **)error NS_SWIFT_NAME(insertWidget(ofKind:frame:));
 @end
 
+/// What the widgets do when used (sheet-object-widget.c's signal
+/// handlers): each change goes to the linked cell as the undoable
+/// `cmd_so_set_value`, and the widget follows the cell; a widget without
+/// a link changes on its own, without undo.
+@interface GnmSheet (WidgetActions)
+/// A checkbox's or radio button's state, a button while pressed.
+- (BOOL)widgetIsActive:(GnmSheetObject *)object NS_SWIFT_NAME(widgetIsActive(_:));
+/// A scrollbar's, spin button's, or slider's value.
+- (double)widgetValue:(GnmSheetObject *)object NS_SWIFT_NAME(widgetValue(_:));
+/// A list's or combo's entries, as its content range shows them.
+- (NSArray<NSString *> *)widgetEntries:(GnmSheetObject *)object NS_SWIFT_NAME(widgetEntries(_:));
+/// A list's or combo's chosen entry, 1-based, 0 for none (from the
+/// output cell).
+- (NSInteger)widgetSelection:(GnmSheetObject *)object NS_SWIFT_NAME(widgetSelection(_:));
+/// A click: a checkbox toggles ("Clicking checkbox"), a radio button
+/// puts its value in the cell ("Clicking radiobutton"), a button sets
+/// the cell TRUE and back ("Pressed Button", "Released Button").
+- (BOOL)clickWidget:(GnmSheetObject *)object error:(NSError **)error NS_SWIFT_NAME(clickWidget(_:));
+/// A new value for a scrollbar, spin button, or slider, kept within its
+/// range and rounded ("Change widget").
+- (BOOL)setWidgetValue:(double)value forObject:(GnmSheetObject *)object error:(NSError **)error NS_SWIFT_NAME(setWidgetValue(_:for:));
+/// Choose an entry (1-based, 0 for none) in a list or combo with an
+/// output cell ("Clicking in list"); the index or the content goes to
+/// the cell as the widget's output setting says.
+- (BOOL)chooseWidgetEntry:(NSInteger)index forObject:(GnmSheetObject *)object error:(NSError **)error NS_SWIFT_NAME(chooseWidgetEntry(_:for:));
+@end
+
 NS_ASSUME_NONNULL_END

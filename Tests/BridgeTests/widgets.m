@@ -131,6 +131,75 @@ int main (void)
         barSettings.linkText = @"C2";
         GNM_ASSERT ([s applyWidgetSettings:barSettings toSheetObject:freshBar error:&error], @"fresh bar link: %@", error);
 
+        /* widgets that act: each change lands in the linked cell */
+        GnmSheetObject *box = [s insertWidgetOfKind:GnmWidgetKindCheckbox frame:CGRectMake (10, 100, 80, 20) error:&error];
+        GnmWidgetSettings *boxSettings = [s widgetSettingsOfSheetObject:box];
+        boxSettings.linkText = @"C1";
+        boxSettings.label = @"Agree";
+        GNM_ASSERT ([s applyWidgetSettings:boxSettings toSheetObject:box error:&error], @"box link: %@", error);
+        GNM_ASSERT (![s widgetIsActive:box], @"off to start");
+        GNM_ASSERT ([s clickWidget:box error:&error], @"click: %@", error);
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:2 row:0] ?: @"", @"TRUE");
+        GNM_ASSERT ([s widgetIsActive:box], @"the widget follows the cell");
+        GNM_ASSERT_EQ_STR (wb.undoLabel ?: @"", @"Clicking checkbox");
+        GNM_ASSERT ([s clickWidget:box error:&error] && ![s widgetIsActive:box], @"toggled off: %@", error);
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:2 row:0] ?: @"", @"FALSE");
+        GnmSheetObject *loose = [s insertWidgetOfKind:GnmWidgetKindCheckbox frame:CGRectMake (10, 130, 80, 20) error:&error];
+        GNM_ASSERT ([s clickWidget:loose error:&error] && [s widgetIsActive:loose], @"an unlinked checkbox toggles on its own: %@", error);
+        GnmSheetObject *freshRadio = [s insertWidgetOfKind:GnmWidgetKindRadioButton frame:CGRectMake (10, 160, 80, 20) error:&error];
+        GnmWidgetSettings *freshRadioSettings = [s widgetSettingsOfSheetObject:freshRadio];
+        freshRadioSettings.linkText = @"C2";
+        freshRadioSettings.valueText = @"7";
+        GNM_ASSERT ([s applyWidgetSettings:freshRadioSettings toSheetObject:freshRadio error:&error], @"freshRadio link: %@", error);
+        GNM_ASSERT ([s clickWidget:freshRadio error:&error], @"freshRadio click: %@", error);
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:2 row:1] ?: @"", @"7");
+        GNM_ASSERT ([s widgetIsActive:freshRadio], @"the freshRadio is on");
+        GnmSheetObject *pushButton = [s insertWidgetOfKind:GnmWidgetKindButton frame:CGRectMake (10, 190, 80, 24) error:&error];
+        GnmWidgetSettings *pushSettings = [s widgetSettingsOfSheetObject:pushButton];
+        pushSettings.linkText = @"C3";
+        GNM_ASSERT ([s applyWidgetSettings:pushSettings toSheetObject:pushButton error:&error], @"button link: %@", error);
+        GNM_ASSERT ([s clickWidget:pushButton error:&error], @"press: %@", error);
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:2 row:2] ?: @"", @"FALSE");
+        GNM_ASSERT_EQ_STR (wb.undoLabel ?: @"", @"Released Button");
+        [wb undo];
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:2 row:2] ?: @"", @"TRUE");
+        GnmSheetObject *slider = [s insertWidgetOfKind:GnmWidgetKindSlider frame:CGRectMake (10, 220, 120, 20) error:&error];
+        GnmWidgetSettings *sliderSettings = [s widgetSettingsOfSheetObject:slider];
+        sliderSettings.linkText = @"C4";
+        sliderSettings.minimum = 0;
+        sliderSettings.maximum = 50;
+        GNM_ASSERT ([s applyWidgetSettings:sliderSettings toSheetObject:slider error:&error], @"slider link: %@", error);
+        GNM_ASSERT ([s setWidgetValue:33.4 forObject:slider error:&error], @"slide: %@", error);
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:2 row:3] ?: @"", @"33");
+        GNM_ASSERT ([s widgetValue:slider] == 33, @"the widget follows: %g", [s widgetValue:slider]);
+        GNM_ASSERT ([s setWidgetValue:99 forObject:slider error:&error] && [s widgetValue:slider] == 50, @"clamped: %g", [s widgetValue:slider]);
+        GnmSheetObject *looseSpin = [s insertWidgetOfKind:GnmWidgetKindSpinButton frame:CGRectMake (10, 250, 80, 24) error:&error];
+        GNM_ASSERT ([s setWidgetValue:4 forObject:looseSpin error:&error] && [s widgetValue:looseSpin] == 4, @"an unlinked spin button keeps its value: %g", [s widgetValue:looseSpin]);
+        /* a list over A1:A3 with its choice in C5 */
+        GNM_ASSERT ([s setText:@"red" atColumn:0 row:0 autocorrect:NO error:&error] && [s setText:@"green" atColumn:0 row:1 autocorrect:NO error:&error]
+                    && [s setText:@"blue" atColumn:0 row:2 autocorrect:NO error:&error], @"colors: %@", error);
+        GnmSheetObject *listWidget = [s insertWidgetOfKind:GnmWidgetKindList frame:CGRectMake (150, 100, 100, 60) error:&error];
+        GnmWidgetSettings *listSettings = [s widgetSettingsOfSheetObject:listWidget];
+        listSettings.contentText = @"A1:A3";
+        listSettings.linkText = @"C5";
+        NSLog (@"widgets: a fresh list outputs the index: %d", listSettings.outputsIndex);
+        listSettings.outputsIndex = NO;
+        GNM_ASSERT ([s applyWidgetSettings:listSettings toSheetObject:listWidget error:&error], @"list links: %@", error);
+        NSArray *entries = [s widgetEntries:listWidget];
+        NSArray *expectedEntries = @[@"red", @"green", @"blue"];
+        GNM_ASSERT ([entries isEqualToArray:expectedEntries], @"entries: %@", entries);
+        GNM_ASSERT ([s widgetSelection:listWidget] == 0, @"nothing chosen yet");
+        GNM_ASSERT ([s chooseWidgetEntry:2 forObject:listWidget error:&error], @"choose: %@", error);
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:2 row:4] ?: @"", @"green");
+        GNM_ASSERT ([s widgetSelection:listWidget] == 2, @"the second: %ld", (long) [s widgetSelection:listWidget]);
+        listSettings.outputsIndex = YES;
+        GNM_ASSERT ([s applyWidgetSettings:listSettings toSheetObject:listWidget error:&error], @"as index: %@", error);
+        GNM_ASSERT ([s chooseWidgetEntry:3 forObject:listWidget error:&error], @"choose 3: %@", error);
+        GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:2 row:4] ?: @"", @"3");
+        GNM_ASSERT ([s widgetSelection:listWidget] == 3, @"the third by index");
+        GnmSheetObject *looseList = [s insertWidgetOfKind:GnmWidgetKindCombo frame:CGRectMake (150, 170, 100, 24) error:&error];
+        GNM_ASSERT (![s chooseWidgetEntry:1 forObject:looseList error:&error] && [error.localizedDescription containsString:@"output cell"], @"no output: %@", error);
+
         GNM_ASSERT (stray.count == 0, @"stray messages: %@", stray);
         wb = nil;
       }

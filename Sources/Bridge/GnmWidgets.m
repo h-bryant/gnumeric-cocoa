@@ -8,6 +8,9 @@
 #include <parse-util.h>
 #include <workbook.h>
 #include <gnm-format.h>
+#include <cell.h>
+#include <sheet.h>
+#include <position.h>
 
 @interface GnmWidgetSettings ()
 - (instancetype)initWithKind:(GnmWidgetKind)kind NS_DESIGNATED_INITIALIZER;
@@ -317,6 +320,227 @@ parse_link (NSString *text, Sheet *sheet, GnmExprTop const **out, GnmEngine *eng
                                              description:@"Could not insert the widget." error:error];
     g_object_unref (so);   /* the sheet and the command hold theirs */
     return wrapper;
+}
+
+@end
+
+#pragma mark - Widgets that act
+
+/* so_get_ref for one link: the cell the expression names, on this sheet
+ * when it names none */
+static BOOL
+link_cell (GnmExprTop const *texpr, Sheet *sheet, GnmCellRef *ref)
+{
+    if (!texpr)
+        return NO;
+    GnmValue *target = gnm_expr_top_get_range (texpr);
+    gnm_expr_top_unref (texpr);   /* the getters' reference */
+    if (!target)
+        return NO;
+    *ref = target->v_range.cell.a;
+    value_release (target);
+    if (ref->sheet == NULL)
+        ref->sheet = sheet;
+    return YES;
+}
+
+static GnmValue *
+cell_value_at (GnmCellRef const *ref)
+{
+    GnmCell *cell = sheet_cell_get (ref->sheet, ref->col, ref->row);
+    return cell ? cell->value : NULL;
+}
+
+@implementation GnmSheet (WidgetActions)
+
+- (BOOL)widgetIsActive:(GnmSheetObject *)object
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    SheetObject *so = object.engineObject;
+    switch (widget_kind (so)) {
+    case GnmWidgetKindCheckbox:
+    case GnmWidgetKindRadioButton: {
+        gboolean active = FALSE;
+        g_object_get (G_OBJECT (so), "active", &active, NULL);
+        return active != FALSE;
+    }
+    default:
+        return NO;
+    }
+}
+
+- (double)widgetValue:(GnmSheetObject *)object
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    SheetObject *so = object.engineObject;
+    switch (widget_kind (so)) {
+    case GnmWidgetKindScrollbar:
+    case GnmWidgetKindSpinButton:
+    case GnmWidgetKindSlider: {
+        GtkAdjustment *adjustment = sheet_widget_adjustment_get_adjustment (so);
+        return adjustment ? gtk_adjustment_get_value (adjustment) : 0;
+    }
+    default:
+        return 0;
+    }
+}
+
+static GnmValue *
+cb_collect_entry (GnmValueIter const *iter, gpointer user)
+{
+    NSMutableArray *entries = (__bridge NSMutableArray *) user;
+    if (iter->v) {
+        GOFormat const *fmt = iter->cell_iter ? gnm_cell_get_format (iter->cell_iter->cell) : NULL;
+        char *label = format_value (fmt, iter->v, -1, NULL);
+        [entries addObject:GnmString (label)];
+        g_free (label);
+    } else
+        [entries addObject:@""];
+    return NULL;
+}
+
+- (NSArray<NSString *> *)widgetEntries:(GnmSheetObject *)object
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    SheetObject *so = object.engineObject;
+    Sheet *sheet = self.engineSheet;
+    NSMutableArray *entries = [NSMutableArray array];
+    GnmWidgetKind kind = widget_kind (so);
+    if ((kind != GnmWidgetKindList && kind != GnmWidgetKindCombo) || !sheet)
+        return entries;
+    /* list_content_eval */
+    GnmExprTop const *texpr = sheet_widget_list_base_get_content_link (so);
+    if (!texpr)
+        return entries;
+    GnmEvalPos ep;
+    eval_pos_init_sheet (&ep, sheet);
+    GnmValue *v = gnm_expr_top_eval (texpr, &ep, GNM_EXPR_EVAL_PERMIT_NON_SCALAR | GNM_EXPR_EVAL_PERMIT_EMPTY);
+    gnm_expr_top_unref (texpr);
+    if (v) {
+        value_area_foreach (v, &ep, CELL_ITER_ALL, cb_collect_entry, (__bridge void *) entries);
+        value_release (v);
+    }
+    return entries;
+}
+
+- (NSInteger)widgetSelection:(GnmSheetObject *)object
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    SheetObject *so = object.engineObject;
+    Sheet *sheet = self.engineSheet;
+    GnmWidgetKind kind = widget_kind (so);
+    if ((kind != GnmWidgetKindList && kind != GnmWidgetKindCombo) || !sheet)
+        return 0;
+    GnmCellRef ref;
+    if (!link_cell (sheet_widget_list_base_get_result_link (so), sheet, &ref))
+        return 0;
+    GnmValue *v = cell_value_at (&ref);
+    if (!v)
+        return 0;
+    if (sheet_widget_list_base_result_type_is_index (so))
+        return VALUE_IS_NUMBER (v) ? (NSInteger) value_get_as_int (v) : 0;
+    char *text = value_get_as_string (v);
+    NSString *chosen = GnmString (text);
+    g_free (text);
+    NSUInteger index = [[self widgetEntries:object] indexOfObject:chosen];
+    return index == NSNotFound ? 0 : (NSInteger) index + 1;
+}
+
+- (BOOL)setLinkedCell:(GnmCellRef const *)ref to:(GnmValue *)value label:(const char *)label error:(NSError **)error
+{
+    GnmWorkbook *workbook = self.workbook;
+    Sheet *sheet = self.engineSheet;
+    GnmCellRef copy = *ref;
+    return [workbook _runCommand:^gboolean (WorkbookControl *wbc) {
+        return cmd_so_set_value (wbc, label, &copy, value, sheet);   /* takes the value */
+    } description:@"Could not change the linked cell." error:error];
+}
+
+- (BOOL)clickWidget:(GnmSheetObject *)object error:(NSError **)error
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    SheetObject *so = object.engineObject;
+    Sheet *sheet = self.engineSheet;
+    if (!so || !sheet || !self.workbook)
+        return NO;
+    [self.workbook selectSheet:self];
+    GnmCellRef ref;
+    switch (widget_kind (so)) {
+    case GnmWidgetKindCheckbox: {
+        gboolean active = FALSE;
+        g_object_get (G_OBJECT (so), "active", &active, NULL);
+        if (link_cell (sheet_widget_checkbox_get_link (so), sheet, &ref))
+            return [self setLinkedCell:&ref to:value_new_bool (!active) label:"Clicking checkbox" error:error];
+        g_object_set (G_OBJECT (so), "active", active ? FALSE : TRUE, NULL);
+        return YES;
+    }
+    case GnmWidgetKindRadioButton: {
+        if (link_cell (sheet_widget_radio_button_get_link (so), sheet, &ref)) {
+            GnmValue const *value = sheet_widget_radio_button_get_value (so);
+            return [self setLinkedCell:&ref to:value ? value_dup (value) : value_new_empty () label:"Clicking radiobutton" error:error];
+        }
+        g_object_set (G_OBJECT (so), "active", TRUE, NULL);
+        return YES;
+    }
+    case GnmWidgetKindButton:
+        if (link_cell (sheet_widget_button_get_link (so), sheet, &ref)) {
+            if (![self setLinkedCell:&ref to:value_new_bool (TRUE) label:"Pressed Button" error:error])
+                return NO;
+            return [self setLinkedCell:&ref to:value_new_bool (FALSE) label:"Released Button" error:error];
+        }
+        return YES;
+    default:
+        return NO;
+    }
+}
+
+- (BOOL)setWidgetValue:(double)value forObject:(GnmSheetObject *)object error:(NSError **)error
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    SheetObject *so = object.engineObject;
+    Sheet *sheet = self.engineSheet;
+    GnmWidgetKind kind = widget_kind (so);
+    if ((kind != GnmWidgetKindScrollbar && kind != GnmWidgetKindSpinButton && kind != GnmWidgetKindSlider) || !sheet || !self.workbook)
+        return NO;
+    GtkAdjustment *adjustment = sheet_widget_adjustment_get_adjustment (so);
+    if (!adjustment)
+        return NO;
+    [self.workbook selectSheet:self];
+    double clamped = MIN (MAX (value, gtk_adjustment_get_lower (adjustment)), gtk_adjustment_get_upper (adjustment));
+    int rounded = (int) gnm_fake_round (clamped);
+    GnmCellRef ref;
+    if (link_cell (sheet_widget_adjustment_get_link (so), sheet, &ref)) {
+        /* cb_adjustment_widget_value_changed: nothing when the cell already says so */
+        GnmValue *current = cell_value_at (&ref);
+        if (current && VALUE_IS_FLOAT (current) && value_get_as_float (current) == rounded)
+            return YES;
+        return [self setLinkedCell:&ref to:value_new_int (rounded) label:"Change widget" error:error];
+    }
+    gtk_adjustment_set_value (adjustment, rounded);
+    return YES;
+}
+
+- (BOOL)chooseWidgetEntry:(NSInteger)index forObject:(GnmSheetObject *)object error:(NSError **)error
+{
+    NSAssert (NSThread.isMainThread, @"engine access off the main thread");
+    SheetObject *so = object.engineObject;
+    Sheet *sheet = self.engineSheet;
+    GnmWidgetKind kind = widget_kind (so);
+    if ((kind != GnmWidgetKindList && kind != GnmWidgetKindCombo) || !sheet || !self.workbook)
+        return NO;
+    NSArray<NSString *> *entries = [self widgetEntries:object];
+    NSInteger chosen = MIN (MAX (index, 0), (NSInteger) entries.count);
+    GnmCellRef ref;
+    if (!link_cell (sheet_widget_list_base_get_result_link (so), sheet, &ref)) {
+        if (error)
+            *error = [self.workbook.engine _errorWithCode:GnmErrorCommandFailed description:@"The list has no output cell to put the choice in." collected:@[]];
+        return NO;
+    }
+    [self.workbook selectSheet:self];
+    /* sheet_widget_list_base_set_selection */
+    GnmValue *value = sheet_widget_list_base_result_type_is_index (so) ? value_new_int ((int) chosen)
+        : chosen > 0 ? value_new_string (entries[(NSUInteger) chosen - 1].UTF8String) : value_new_string ("");
+    return [self setLinkedCell:&ref to:value label:"Clicking in list" error:error];
 }
 
 @end
