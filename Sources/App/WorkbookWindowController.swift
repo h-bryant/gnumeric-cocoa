@@ -1400,6 +1400,19 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         }
     }
 
+    // MARK: Merge
+
+    /// Data → Merge… (dialog_merge).
+    @objc func mergeData(_ sender: Any?) {
+        guard let sheet = gridView.sheet, let window, window.attachedSheet == nil else { return }
+        let dialog = MergeDialog(sheet: sheet)
+        dialog.run(in: window) { [weak self] merged in
+            guard merged, let self else { return }
+            gridView.needsDisplay = true
+            updateToolbarState()
+        }
+    }
+
     // MARK: Send To
 
     /// The copy the last Send To… wrote (for the headless check).

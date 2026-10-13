@@ -1,0 +1,34 @@
+Let the merge's field values reach the formulas that depend on them.
+
+cmd_merge_data_redo fills each new sheet's field cells with the low-level
+gnm_cell_set_value, which neither queues the cell's dependents for
+recalculation nor renders the cell: a formula in the merge zone that
+reads a field (a greeting built from the name) keeps the value it got when
+the zone was pasted with the fields still empty, and nothing marks it
+dirty afterwards.  The GTK shows the right result only because its idle
+redraw evaluates the pasted formulas after the fields are set.  Seen
+through the Cocoa front end on 2026-10-13, where the sheet-added
+notification renders earlier.  Use sheet_cell_set_value, the API that
+queues the recalculation and the span, for both the value and the empty
+case.
+
+--- a/src/commands.c	2026-10-13 09:00:00
++++ b/src/commands.c	2026-10-13 09:00:00
+@@ -5657,13 +5657,13 @@
+ 				GnmCell *target_cell = sheet_cell_get ((Sheet *)target_sheet->data,
+ 								      col_target, row_target);
+ 				if (target_cell != NULL)
+-					gnm_cell_set_value (target_cell,
+-							   value_new_empty ());
++					sheet_cell_set_value (target_cell,
++							      value_new_empty ());
+ 			} else {
+ 				GnmCell *target_cell = sheet_cell_fetch ((Sheet *)target_sheet->data,
+ 								      col_target, row_target);
+-				gnm_cell_set_value (target_cell,
+-						   value_dup (source_cell->value));
++				sheet_cell_set_value (target_cell,
++						      value_dup (source_cell->value));
+ 			}
+ 			target_sheet = target_sheet->next;
+ 			row_source++;

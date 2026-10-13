@@ -102,5 +102,6 @@
 - (void)testAutoFormat { [self runProgram:@"autoformat"]; }
 - (void)testWidgets { [self runProgram:@"widgets"]; }
 - (void)testProperties { [self runProgram:@"properties"]; }
+- (void)testMerge { [self runProgram:@"merge"]; }
 
 @end

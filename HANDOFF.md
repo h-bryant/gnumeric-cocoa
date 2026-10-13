@@ -392,9 +392,9 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    act (`GnmSheet (WidgetActions)`, `GridView.actOnWidget`), and Edit →
    Clear → Hyperlinks, Select → Next Object, the Format → Font submenu,
    page breaks with Show Print Area, the Help menu, File → Send To…, and
-   Tools → Auto Correct… and Auto Save….  Next, by usage: what
-   `docs/mvp-known-gaps.md` still lists as "no" (ViewNew, Compare
-   Sheets, Merge, data slicers).
+   Tools → Auto Correct… and Auto Save…, and Data → Merge… (engine
+   patch 0009).  Next, by usage: what `docs/mvp-known-gaps.md` still
+   lists as "no" (ViewNew, Compare Sheets, data slicers).
 6. Headless checks for all of it: `GNM_SNAPSHOT=out.png scripts/run-app.sh
    file` plus `GNM_SNAPSHOT_TYPE`, `_FORMAT`, `_PHASE3`, `_FREEZE`,
    `_SHEETS`, `_FILTER`, `_OBJECTS`, `_CHART`, `_EDITOR`, `_EVERYDAY`, `_FIND`, `_PREFS`, `_TEXT`, `_IMPORT`, `_COMMENT`, `_NAMES`, `_FILL`, `_GOAL`, `_COND`, `_STATS`, `_VALID`, `_LINK`, `_SOLVE`, `_PRINT`, `_FORMULA`, `_FUNC`, `_ZOOM` (`docs/build.md`); compare `out.png` with

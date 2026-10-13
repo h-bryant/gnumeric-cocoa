@@ -122,7 +122,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | CopyDown, CopyRight | ported | Edit → Fill → Down ⌘D, Right ⌘R |
 | EditFillAutofill | ported | the fill handle on the selection; Option makes a single number count up (the GTK Ctrl) |
 | ToolsTabulate, RandomGenerator* | ported | Edit → Fill (2026-10-12): Tabulate Dependency… (three dependencies, visual or coordinate layout, `cmd_tabulate` onto new sheets), Random Generator → Uncorrelated… (the 30 distributions with the dialog's parameter labels) and Correlated… (a covariance matrix or its Cholesky factor; engine patch 0006 for matrices other than 3×3), both analysis tools with the Output page |
-| ToolsMerge | no | Phase 5 |
+| ToolsMerge | ported | 2026-10-13: Data → Merge… (`MergeDialog.swift`, `GnmMerge.h`, `merge.m`): the zone, data ranges with their field cells, the GTK's refusals and the trimming question, one sheet per data row through `cmd_merge_data`; engine patch 0009 lets formulas in the zone see the field values |
 | EditFillSeries | ported | Edit → Fill → Series… (2026-10-12): linear, growth, date series in rows or columns |
 | DataAutoFilter, DataFilterShowAll | ported | Data → Filter (2026-10-12): buttons in the heading cells with the GTK list, Custom… and Top 10… sheets; Show All also drops every autofilter condition (GTK's only serves the advanced filter) |
 | DataFilterAdvancedfilter | ported | Data → Filter → Advanced Filter… (2026-10-12): list and criteria ranges, unique records, in place (`advanced_filter`, Show All brings the rows back) or copied to a range or a new sheet (the engine's tool with its three-line heading) |

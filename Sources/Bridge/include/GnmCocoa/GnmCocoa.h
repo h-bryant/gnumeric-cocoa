@@ -36,6 +36,7 @@
 #import <GnmCocoa/GnmNumberFormats.h>
 #import <GnmCocoa/GnmDragging.h>
 #import <GnmCocoa/GnmWorkbookProperties.h>
+#import <GnmCocoa/GnmMerge.h>
 #import <GnmCocoa/GnmSearch.h>
 #import <GnmCocoa/GnmTextExport.h>
 #import <GnmCocoa/GnmTextImport.h>

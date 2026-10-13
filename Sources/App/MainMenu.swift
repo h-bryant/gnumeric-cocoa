@@ -223,6 +223,7 @@ enum MainMenu {
         dataMenu.addItem(withTitle: "Text to Columns…", action: Selector(("textToColumns:")), keyEquivalent: "")
         dataMenu.addItem(withTitle: "Validation…", action: Selector(("dataValidation:")), keyEquivalent: "")
         dataMenu.addItem(withTitle: "Consolidate…", action: Selector(("consolidate:")), keyEquivalent: "")
+        dataMenu.addItem(withTitle: "Merge…", action: Selector(("mergeData:")), keyEquivalent: "")
         dataMenu.addItem(withTitle: "Table…", action: Selector(("dataTable:")), keyEquivalent: "")
         let outlineMenu = NSMenu(title: "Outline")
         outlineMenu.addItem(withTitle: "Hide Detail", action: Selector(("hideDetail:")), keyEquivalent: "")

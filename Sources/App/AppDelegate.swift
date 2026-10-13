@@ -2204,6 +2204,33 @@ enum Snapshot {
                       (NSApp.delegate as? AppDelegate)?.settings?.window.isVisible ?? false ? 1 : 0)
                 (NSApp.delegate as? AppDelegate)?.settings?.window.orderOut(nil)
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_MERGE"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet, let workbook = sheet.workbook {
+                // Data → Merge…: a letter in A1:B3 with the name in B1 and
+                // the city in B2, names in D1:D3 and cities in E1:E3; three
+                // sheets result, the first of them shown in the capture.
+                let texts: [(Int, Int, String)] = [(0, 0, "Dear"), (0, 1, "City"), (0, 2, "=B1&\" of \"&B2"),
+                                                   (3, 0, "Ann"), (3, 1, "Bob"), (3, 2, "Cy"), (4, 0, "Austin"), (4, 1, "Bryan"), (4, 2, "Conroe")]
+                for (column, row, text) in texts { try? sheet.setText(text, atColumn: column, row: row, autocorrect: false) }
+                MergeDialog.headlessDriver = { dialog in
+                    dialog.zoneField.stringValue = "A1:B3"
+                    dialog.addRow(data: "D1:D3", field: "B1")
+                    dialog.addRow(data: "E1:E3", field: "B2")
+                    return true
+                }
+                controller.mergeData(nil)
+                MergeDialog.headlessDriver = nil
+                let sheets = workbook.sheets
+                let second: Sheet? = sheets.count > 1 ? sheets[1] : nil
+                let a3: String = second?.displayTextOfCell(atColumn: 0, row: 2) ?? "nil"
+                let b1: String = second?.displayTextOfCell(atColumn: 1, row: 0) ?? "nil"
+                let undo: String = workbook.undoLabel ?? "nil"
+                NSLog("merge: sheets=%ld second A3='%@' B1='%@' undo=%@", sheets.count, a3, b1, undo)
+                second?.revealCell(atColumn: 0, row: 0)
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FREEZE"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

@@ -1851,6 +1851,26 @@
   writes the workbook beside the capture, edits, runs the save, and
   checks the file holds the edit.
 
+### 2026-10-13 (later): Data → Merge…
+
+- `GnmSheet (Merge)` (`GnmMerge.h`): `isRangeText:singleCell:`
+  (`gnm_expr_entry_is_cell_ref` for the dialog's buttons),
+  `mergeDataLengths:shortest:longest:`, and
+  `mergeDataIntoZone:fields:data:trimmingToShortest:` running
+  cb_merge_merge_clicked's checks (a field outside the zone, columns of
+  unequal length unless trimmed) and `cmd_merge_data`.  `merge.m`
+  covers the refusals, three merged sheets with a formula in the zone,
+  undo and redo, and the trimming.
+- Engine patch 0009: `cmd_merge_data_redo` set the field cells with the
+  low-level `gnm_cell_set_value`, so a formula in the zone that reads a
+  field kept the value it got when the zone was pasted with the fields
+  empty (the GTK's idle redraw happens to evaluate later); the patch
+  uses `sheet_cell_set_value`, which queues the dependents.
+- Data → Merge… (`MergeDialog.swift`): the zone from the selection, a
+  table of data ranges with their fields, Add/Change/Delete as the GTK
+  enables them, the trimming question as an alert, errors in a status
+  line.  `GNM_SNAPSHOT_MERGE=1` merges a letter from two columns.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -1896,4 +1916,4 @@
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in
-   `build/prefix` has patches 0001–0008 applied.
+   `build/prefix` has patches 0001–0009 applied.

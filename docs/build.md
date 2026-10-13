@@ -113,7 +113,8 @@ GNM_SNAPSHOT=/tmp/grid.png scripts/run-app.sh upstream/gnumeric/samples/format-t
 `GNM_SNAPSHOT_SCENARIO=1`, `GNM_SNAPSHOT_AUTOFORMAT=1`, `GNM_SNAPSHOT_WIDGET=1`,
 `GNM_SNAPSHOT_TOOLBAR=1`, `GNM_SNAPSHOT_DRAG=1`, `GNM_SNAPSHOT_MULTILINE=1`,
 `GNM_SNAPSHOT_PROPS=1`, `GNM_SNAPSHOT_WIDGETACT=1`, `GNM_SNAPSHOT_FONTMENU=1`,
-`GNM_SNAPSHOT_PAGEBREAK=1`, `GNM_SNAPSHOT_SENDTO=1`, and `GNM_SNAPSHOT_AUTOSAVE=1`
+`GNM_SNAPSHOT_PAGEBREAK=1`, `GNM_SNAPSHOT_SENDTO=1`, `GNM_SNAPSHOT_AUTOSAVE=1`,
+and `GNM_SNAPSHOT_MERGE=1`
 exercise zoom, editing and saving, the Format Cells model, the Phase 3
 commands, frozen panes, sheet management, the autofilter with the Sort
 command, a sheet resize, and a tab color, the sheet objects (select, move,
@@ -210,7 +211,10 @@ unchanged state logged; no mail window opens headlessly), and Auto Save
 (two minutes without a prompt through the dialog, the workbook written
 beside the capture, an edit, the timer's work run at once and the file
 checked, the prompt path logged, Auto Correct… opening Settings on the
-Editing tab) before the capture (`AppDelegate.swift`, `Snapshot`). The typing hook saves as a
+Editing tab), and Merge (a letter in A1:B3 with names and cities in D and
+E merged through the dialog, the sheet count and the first result logged,
+the first merged sheet shown) before the capture (`AppDelegate.swift`,
+`Snapshot`). The typing hook saves as a
 Save As next to the snapshot; with `GNM_SNAPSHOT_SAVE_INPLACE=1` it saves
 the opened file in place instead (give it a copy). Should a quit ever go
 nowhere again (an alert sheet on the window did that once,
