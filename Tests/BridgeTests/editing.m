@@ -573,6 +573,11 @@ int main (void)
         GNM_ASSERT ([s sortRange:region byRows:YES hasHeader:YES keys:(@[byN, byV]) retainFormats:NO error:&error], @"sort by N desc: %@", error);
         GNM_ASSERT_EQ_STR ([s displayTextOfCellAtColumn:90 row:111] ?: @"", @"c");
         GNM_ASSERT (![s sortRange:region byRows:YES hasHeader:YES keys:@[] retainFormats:YES error:&error], @"no keys refused");
+        /* the locale's collation, and more than three keys */
+        GNM_ASSERT ([s sortRange:region byRows:YES hasHeader:YES keys:@[byV] retainFormats:YES locale:@"C" error:&error], @"sort in C: %@", error);
+        NSArray *four = @[byN, byV, byN, byV];
+        GNM_ASSERT ([s sortRange:region byRows:YES hasHeader:YES keys:four retainFormats:YES locale:@"en_US.UTF-8" error:&error], @"four keys: %@", error);
+        NSLog (@"sort with a locale and four keys: undo '%@'", wb.undoLabel);
         /* by columns: a row of keys */
         [s setText:@"x" atColumn:95 row:120 autocorrect:NO error:NULL];
         [s setText:@"z" atColumn:96 row:120 autocorrect:NO error:NULL];

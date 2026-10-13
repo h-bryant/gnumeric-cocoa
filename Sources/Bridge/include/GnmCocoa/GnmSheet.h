@@ -318,6 +318,11 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 /// heading row (or column) stays.
 - (BOOL)sortRange:(GnmCellRange)range byRows:(BOOL)byRows hasHeader:(BOOL)hasHeader keys:(NSArray<GnmSortKey *> *)keys
     retainFormats:(BOOL)retainFormats error:(NSError **)error NS_SWIFT_NAME(sort(_:byRows:hasHeader:keys:retainFormats:));
+/// The same with the dialog's locale ("de_DE.UTF-8"; nil or empty for
+/// the current one): strings compare by that locale's collation.
+- (BOOL)sortRange:(GnmCellRange)range byRows:(BOOL)byRows hasHeader:(BOOL)hasHeader keys:(NSArray<GnmSortKey *> *)keys
+    retainFormats:(BOOL)retainFormats locale:(nullable NSString *)locale error:(NSError **)error
+    NS_SWIFT_NAME(sort(_:byRows:hasHeader:keys:retainFormats:locale:));
 /// The engine's sort preferences (`core/sort/default/*`).
 @property (class, nonatomic, readonly) BOOL sortDefaultsToCaseSensitive;
 @property (class, nonatomic, readonly) BOOL sortDefaultsToRetainingFormats;

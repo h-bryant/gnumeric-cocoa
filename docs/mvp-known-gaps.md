@@ -109,7 +109,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 
 | Action | Status | Notes / Phase |
 |---|---|---|
-| DataSort | partial | Data → Sort… (2026-10-12): rows or columns, header, three keys with order and case, keep formats; no locale, no more than three keys, no saved setups |
+| DataSort | partial | Data → Sort… (2026-10-12): rows or columns, header, six key rows with order and case, the collation's locale (a pop-up of common ones or typed), keep formats; no saved setups, the GTK's open-ended key list is six rows |
 | DataValidate | ported | Data → Validation… (2026-10-12): the criteria, the action's alerts on entry, the in-cell list, the input message |
 | DataTable | ported | Data → Table… (2026-10-12): the GTK dialog's row and column input cells over the selection, `cmd_create_data_table` |
 | DataShuffle, DataConsolidate | no | Phase 5 |

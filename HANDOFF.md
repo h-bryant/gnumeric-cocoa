@@ -369,9 +369,10 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    Outlines followed (`GnmOutline.h`, the header strips in
    `SheetHeaderView.swift`, `outline.m`), then the advanced filter,
    sheet Hide / Unhide, and full screen (`GnmAdvancedFilter`,
-   `setSheet:visible:`, `filter_visibility.m`).  Next, by usage: more
-   sort keys, a Manage Sheets dialog, Data → Consolidate and Shuffle, a
-   plugin manager, the scenarios and simulation tools;
+   `setSheet:visible:`, `filter_visibility.m`), and the Sort dialog's
+   six key rows and locale.  Next, by usage: a Manage Sheets dialog,
+   Data → Consolidate and Shuffle, a plugin manager, the scenarios and
+   simulation tools;
    image and widget editors (`cmd_so_set_*`) later; the smaller Phase 3
    gaps (Insert/Delete Cells,
    Goto and the name box, the formula bar, autocomplete, drag and drop,

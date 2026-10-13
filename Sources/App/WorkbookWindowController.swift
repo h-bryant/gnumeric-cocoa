@@ -789,7 +789,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             guard let request else { return }
             runSizeCommand { sheet in
                 try sheet.sort(request.range, byRows: request.byRows, hasHeader: request.hasHeader, keys: request.keys,
-                               retainFormats: request.retainFormats)
+                               retainFormats: request.retainFormats, locale: request.locale)
             }
         }
     }

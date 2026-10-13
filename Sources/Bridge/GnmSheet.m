@@ -1341,6 +1341,12 @@ range_from (GnmCellRange r)
 - (BOOL)sortRange:(GnmCellRange)range byRows:(BOOL)byRows hasHeader:(BOOL)hasHeader keys:(NSArray<GnmSortKey *> *)keys
     retainFormats:(BOOL)retainFormats error:(NSError **)error
 {
+    return [self sortRange:range byRows:byRows hasHeader:hasHeader keys:keys retainFormats:retainFormats locale:nil error:error];
+}
+
+- (BOOL)sortRange:(GnmCellRange)range byRows:(BOOL)byRows hasHeader:(BOOL)hasHeader keys:(NSArray<GnmSortKey *> *)keys
+    retainFormats:(BOOL)retainFormats locale:(NSString *)locale error:(NSError **)error
+{
     if (keys.count == 0) {
         if (error)
             *error = [self.workbook.engine _errorWithCode:GnmErrorCommandFailed
@@ -1369,7 +1375,7 @@ range_from (GnmCellRange r)
     data->clauses = clauses;
     data->top = byRows;
     data->retain_formats = retainFormats;
-    data->locale = NULL;
+    data->locale = locale.length ? g_strdup (locale.UTF8String) : NULL;
     return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
         return cmd_sort (wbc, data);   /* takes ownership of data */
     } description:@"Could not sort." error:error];

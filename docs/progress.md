@@ -1456,6 +1456,14 @@
 - `filter_visibility.m` (27 XCTest programs) and
   `GNM_SNAPSHOT_ADVFILTER=1`.
 
+## 2026-10-12: Sort keys and locale
+
+- `sortRange:…retainFormats:locale:` sets `GnmSortData.locale`, so text
+  compares in that locale's collation (the GTK dialog's locale
+  selector); the Sort dialog offers six key rows in place of three and
+  a locale combo box of common locales, typed ones allowed.
+  `editing.m` sorts in "C" and with four keys.
+
 ## How to resume (updated 2026-10-12)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -1473,8 +1481,8 @@
    printing, formula range selection by mouse and keyboard, the font
    shortcuts, autocompletion, the function selector, and array formulas;
    and all 27 Statistics tools; next the rest of Phase 5 by usage
-   frequency: more sort keys, a Manage Sheets dialog, Consolidate and
-   Shuffle, a plugin manager, the scenarios and simulation tools) from
+   frequency: a Manage Sheets dialog, Consolidate and Shuffle, a plugin
+   manager, the scenarios and simulation tools) from
    `docs/mvp-known-gaps.md`, which also
    lists the smaller Phase 3 items still open (Insert/Delete Cells, Goto,
    the name box, the formula bar, autocomplete, drag and drop, outlines).
@@ -1498,7 +1506,7 @@
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
 3. The state at the end of 2026-10-12: `main` at the autocompletion and
-   advanced-filter commit (after outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
+   sort-keys commit (after the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
    `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in
