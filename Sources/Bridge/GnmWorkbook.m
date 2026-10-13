@@ -748,7 +748,8 @@ uri_for_url (NSURL *url)
         g_signal_connect (G_OBJECT (sheet), "notify::tab-foreground", G_CALLBACK (cb_sheet_changed), (__bridge void *) self);
         static const char *const display_signals[] = { "notify::display-formulas", "notify::display-zeros", "notify::display-grid",
                                                        "notify::display-column-header", "notify::display-row-header",
-                                                       "notify::use-r1c1", "notify::text-is-rtl" };
+                                                       "notify::use-r1c1", "notify::text-is-rtl", "notify::display-outlines",
+                                                       "notify::display-outlines-below", "notify::display-outlines-right" };
         for (size_t i = 0; i < G_N_ELEMENTS (display_signals); i++)
             g_signal_connect (G_OBJECT (sheet), display_signals[i], G_CALLBACK (cb_sheet_display_changed), (__bridge void *) self);
     }

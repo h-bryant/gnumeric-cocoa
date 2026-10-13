@@ -129,6 +129,9 @@ typedef NS_ENUM(NSInteger, GnmSheetDisplayOption) {
     GnmSheetDisplayOptionHideRowHeader,
     GnmSheetDisplayOptionR1C1 NS_SWIFT_NAME(r1c1),
     GnmSheetDisplayOptionRightToLeft,
+    GnmSheetDisplayOptionOutlines,
+    GnmSheetDisplayOptionOutlineSymbolsBelow,
+    GnmSheetDisplayOptionOutlineSymbolsRight,
 } NS_SWIFT_NAME(Sheet.DisplayOption);
 
 NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)

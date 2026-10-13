@@ -1897,6 +1897,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
 
     func sheetGeometryDidChange(_ sheet: Sheet) {
         updateFrameSize()
+        headerViews.forEach { $0.invalidateIntrinsicContentSize() }
         updateCommentToolTips()
         needsDisplay = true
         headerViews.forEach { $0.needsDisplay = true }

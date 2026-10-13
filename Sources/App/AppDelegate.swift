@@ -696,6 +696,46 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_OUTLINE"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // Outlines: rows 2–4 grouped (whole rows: no question), rows
+                // 2–3 grouped inside, columns B–C grouped, then the inner
+                // rows' detail hidden; the window capture shows the header
+                // strips with their bars and the + box; the row header's
+                // toggle then shows them again.
+                do {
+                    for r in 0..<6 { for c in 0..<3 { try sheet.setText("\(r * 3 + c + 1)", atColumn: c, row: r, autocorrect: false) } }
+                } catch {
+                    NSLog("outline: data failed: %@", error.localizedDescription)
+                }
+                controller.gridView.selectRows(from: 1, to: 3, anchor: 1)
+                controller.groupOutline(nil)
+                controller.gridView.selectRows(from: 1, to: 2, anchor: 1)
+                controller.groupOutline(nil)
+                controller.gridView.selectColumns(from: 1, to: 2, anchor: 1)
+                controller.groupOutline(nil)
+                controller.gridView.selectRows(from: 1, to: 2, anchor: 1)
+                controller.hideDetail(nil)
+                let headers = controller.gridView.headerViews
+                NSLog("outline: row levels %ld %ld %ld %ld column levels %ld %ld max %ld/%ld hidden rows %d %d collapsed row 4 %d undo=%@ headers %@ / %@",
+                      sheet.outlineLevel(ofRow: 0), sheet.outlineLevel(ofRow: 1), sheet.outlineLevel(ofRow: 3), sheet.outlineLevel(ofRow: 4),
+                      sheet.outlineLevel(ofColumn: 1), sheet.outlineLevel(ofColumn: 3), sheet.maximumRowOutlineLevel, sheet.maximumColumnOutlineLevel,
+                      sheet.isRowVisible(1) ? 0 : 1, sheet.isRowVisible(2) ? 0 : 1, sheet.isRowCollapsed(3) ? 1 : 0, sheet.workbook?.undoLabel ?? "nil",
+                      headers.count == 2 ? NSStringFromSize(headers[0].intrinsicContentSize) : "-",
+                      headers.count == 2 ? NSStringFromSize(headers[1].intrinsicContentSize) : "-")
+                // The row header's toggle at row 4 (which ends the hidden
+                // group), level 2: the rows show again; hidden once more for
+                // the capture.
+                if headers.count == 2 { headers[1].toggleOutline(at: 3, step: 2) }
+                NSLog("outline: after the toggle: rows visible %d %d undo=%@", sheet.isRowVisible(1) ? 1 : 0, sheet.isRowVisible(2) ? 1 : 0,
+                      sheet.workbook?.undoLabel ?? "nil")
+                controller.gridView.selectRows(from: 1, to: 2, anchor: 1)
+                controller.hideDetail(nil)
+                sheet.selectCell(atColumn: 0, row: 0)
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_WHATIF"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

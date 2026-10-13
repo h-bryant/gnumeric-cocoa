@@ -506,7 +506,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         case #selector(zoomDialog(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(toggleDisplayFormulas(_:)), #selector(toggleR1C1(_:)), #selector(toggleHideZeros(_:)),
-             #selector(toggleHideGridLines(_:)), #selector(toggleHideColumnHeaders(_:)), #selector(toggleHideRowHeaders(_:)):
+             #selector(toggleHideGridLines(_:)), #selector(toggleHideColumnHeaders(_:)), #selector(toggleHideRowHeaders(_:)),
+             #selector(toggleDisplayOutlines(_:)), #selector(toggleOutlineSymbolsBelow(_:)), #selector(toggleOutlineSymbolsRight(_:)):
             guard let sheet = gridView.sheet else { return false }
             let option: Sheet.DisplayOption
             switch item.action {
@@ -515,6 +516,9 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             case #selector(toggleHideZeros(_:)): option = .hideZeros
             case #selector(toggleHideGridLines(_:)): option = .hideGridLines
             case #selector(toggleHideColumnHeaders(_:)): option = .hideColumnHeader
+            case #selector(toggleDisplayOutlines(_:)): option = .outlines
+            case #selector(toggleOutlineSymbolsBelow(_:)): option = .outlineSymbolsBelow
+            case #selector(toggleOutlineSymbolsRight(_:)): option = .outlineSymbolsRight
             default: option = .hideRowHeader
             }
             (item as? NSMenuItem)?.state = sheet.displayOption(option) ? .on : .off
@@ -535,7 +539,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
              #selector(sampling(_:)), #selector(movingAverage(_:)), #selector(exponentialSmoothing(_:)), #selector(insertHyperlink(_:)),
              #selector(solver(_:)), #selector(pageSetup(_:)), #selector(printSheet(_:)), #selector(setPrintArea(_:)), #selector(clearPrintArea(_:)),
              #selector(toggleBold(_:)), #selector(toggleItalic(_:)), #selector(toggleUnderline(_:)), #selector(insertFunction(_:)),
-             #selector(dataTable(_:)), #selector(tabulate(_:)), #selector(randomNumbers(_:)), #selector(correlatedRandomNumbers(_:)):
+             #selector(dataTable(_:)), #selector(tabulate(_:)), #selector(randomNumbers(_:)), #selector(correlatedRandomNumbers(_:)),
+             #selector(groupOutline(_:)), #selector(ungroupOutline(_:)), #selector(hideDetail(_:)), #selector(showDetail(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(removeSheet(_:)):
             return gridView.sheet != nil && workbook.canRemoveSheets
@@ -1345,6 +1350,65 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             }
         }
     }
+
+    // MARK: Outline (Data → Outline)
+
+    /// For the headless checks: the answer to "rows or columns?".
+    nonisolated(unsafe) static var outlineAxisForTesting: Bool?
+
+    /// group_ungroup_colrow and hide_show_detail: whole rows or whole
+    /// columns selected settle the axis; otherwise the GTK asks
+    /// (dialog_col_row).  `run` gets true for columns.
+    private func outlineAxis(_ operation: String, then run: @escaping (Bool) -> Void) {
+        guard let window, let sheet = gridView.sheet, window.attachedSheet == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        let wholeRows = sheet.selectionSpansAllColumns, wholeColumns = sheet.selectionSpansAllRows
+        if wholeRows != wholeColumns {
+            run(wholeColumns)
+            return
+        }
+        if let answer = Self.outlineAxisForTesting {
+            run(answer)
+            return
+        }
+        let alert = NSAlert()
+        alert.messageText = "\(operation) rows or columns?"
+        alert.addButton(withTitle: "Columns")
+        alert.addButton(withTitle: "Rows")
+        alert.addButton(withTitle: "Cancel")
+        alert.beginSheetModal(for: window) { response in
+            switch response {
+            case .alertFirstButtonReturn: run(true)
+            case .alertSecondButtonReturn: run(false)
+            default: break
+            }
+        }
+    }
+
+    private func runOutline(_ body: (Sheet) throws -> Void) {
+        guard let sheet = gridView.sheet else { return }
+        do {
+            try body(sheet)
+        } catch {
+            present(error)
+        }
+    }
+
+    @objc func groupOutline(_ sender: Any?) {
+        outlineAxis("Group") { [weak self] columns in self?.runOutline { try $0.groupSelection(true, columns: columns) } }
+    }
+    @objc func ungroupOutline(_ sender: Any?) {
+        outlineAxis("Ungroup") { [weak self] columns in self?.runOutline { try $0.groupSelection(false, columns: columns) } }
+    }
+    @objc func hideDetail(_ sender: Any?) {
+        outlineAxis("Hide Detail") { [weak self] columns in self?.runOutline { try $0.setDetailShown(false, columns: columns) } }
+    }
+    @objc func showDetail(_ sender: Any?) {
+        outlineAxis("Show Detail") { [weak self] columns in self?.runOutline { try $0.setDetailShown(true, columns: columns) } }
+    }
+    @objc func toggleDisplayOutlines(_ sender: Any?) { toggleDisplayOption(.outlines) }
+    @objc func toggleOutlineSymbolsBelow(_ sender: Any?) { toggleDisplayOption(.outlineSymbolsBelow) }
+    @objc func toggleOutlineSymbolsRight(_ sender: Any?) { toggleDisplayOption(.outlineSymbolsRight) }
 
     // MARK: What-if (Data → Table, Edit → Fill → Tabulate Dependency)
 

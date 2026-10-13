@@ -366,9 +366,10 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    the Zoom dialog followed (`toggleDisplayOption:`, `cmd_zoom`), then
    Data → Table…, Fill → Tabulate Dependency…, and the random
    generators (`GnmWhatIf.h`, `GnmRandomNumbersAnalysis`, `whatif.m`).
-   Next, by usage: outlines (group and ungroup), a Manage Sheets
-   dialog, more sort keys, a plugin manager, the scenarios and
-   simulation tools;
+   Outlines followed (`GnmOutline.h`, the header strips in
+   `SheetHeaderView.swift`, `outline.m`).  Next, by usage: a Manage
+   Sheets dialog, more sort keys, the advanced filter, a plugin manager,
+   the scenarios and simulation tools;
    image and widget editors (`cmd_so_set_*`) later; the smaller Phase 3
    gaps (Insert/Delete Cells,
    Goto and the name box, the formula bar, autocomplete, drag and drop,

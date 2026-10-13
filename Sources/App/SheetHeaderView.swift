@@ -44,6 +44,86 @@ class SheetHeaderView: NSView {
     override var isFlipped: Bool { true }
     override var isOpaque: Bool { true }
 
+    /// item-bar.c ib_compute_pixels_from_indent: the strip for the outline
+    /// bars, (levels + 1) × 14 px at the zoom; none without groups or with
+    /// Display Outlines off.
+    static func outlineIndent(for sheet: Sheet?, columns: Bool) -> CGFloat {
+        guard let sheet, sheet.displaysOutlines else { return 0 }
+        let levels = columns ? sheet.maximumColumnOutlineLevel : sheet.maximumRowOutlineLevel
+        return levels > 0 ? (CGFloat(levels + 1) * 14 * sheet.zoomFactor).rounded() : 0
+    }
+
+    var outlineIndent: CGFloat { Self.outlineIndent(for: sheet, columns: isColumnHeader) }
+
+    /// gnm_item_bar_group_size: one level's share of the strip.
+    var outlineStep: CGFloat {
+        guard let sheet else { return 0 }
+        let levels = isColumnHeader ? sheet.maximumColumnOutlineLevel : sheet.maximumRowOutlineLevel
+        return levels > 0 ? (outlineIndent - 2) / CGFloat(levels + 1) : 0
+    }
+
+    /// A click in the outline strip: the column (row) and the level step
+    /// there (outline_button_press), or nil elsewhere.
+    func outlineHit(at point: NSPoint) -> (index: Int, step: Int)? { nil }
+
+    /// The strip's bars and toggles for one column or row at its span
+    /// along the header: a line per level, a corner where a group begins,
+    /// and a box with − (or + when its group is hidden) on the column or
+    /// row that ends one (item-bar.c, symbols on the right or below).
+    func drawOutline(index: Int, start: CGFloat, size: CGFloat, level: Int, previousLevel: Int, collapsed: Bool, dirtyRect: NSRect) {
+        let indent = outlineIndent, inc = outlineStep
+        guard indent > 0, inc > 0 else { return }
+        let base = 0.2 * inc, len = min(4, inc)
+        let strip = isColumnHeader ? NSRect(x: start, y: 0, width: size, height: indent) : NSRect(x: 0, y: start, width: indent, height: size)
+        guard strip.intersects(dirtyRect) else { return }
+        NSColor.secondaryLabelColor.setStroke()
+        NSColor.secondaryLabelColor.setFill()
+        let mid = start + size / 2
+        func point(_ along: CGFloat, _ across: CGFloat) -> NSPoint { isColumnHeader ? NSPoint(x: along, y: across) : NSPoint(x: across, y: along) }
+        let path = NSBezierPath()
+        path.lineWidth = 2
+        var depth = 1
+        while depth <= level {
+            let pos = base + CGFloat(depth - 1) * inc
+            if depth > previousLevel {
+                // the group begins here: from the middle to the far edge, with a tick
+                path.move(to: point(mid, pos + len))
+                path.line(to: point(mid, pos))
+                path.line(to: point(start + size, pos))
+            } else {
+                path.move(to: point(start, pos))
+                path.line(to: point(start + size, pos))
+            }
+            depth += 1
+        }
+        path.stroke()
+        // the box that ends a group: for each level the previous column (row) had beyond this one
+        var ended = previousLevel
+        if collapsed { ended = max(ended, level + 1) }
+        if ended > level {
+            for boxLevel in (level + 1)...ended {
+                let pos = base + CGFloat(boxLevel - 1) * inc
+                let boxSize = max(6, min(inc - 2, 9))
+                let box = isColumnHeader ? NSRect(x: start + 2, y: pos - boxSize / 2, width: boxSize, height: boxSize)
+                                         : NSRect(x: pos - boxSize / 2, y: start + 2, width: boxSize, height: boxSize)
+                let outline = NSBezierPath(rect: box.insetBy(dx: 0.5, dy: 0.5))
+                outline.lineWidth = 1
+                NSColor.windowBackgroundColor.setFill()
+                box.fill()
+                outline.stroke()
+                let sign = NSBezierPath()
+                sign.lineWidth = 1
+                sign.move(to: NSPoint(x: box.minX + 2, y: box.midY))
+                sign.line(to: NSPoint(x: box.maxX - 2, y: box.midY))
+                if collapsed {
+                    sign.move(to: NSPoint(x: box.midX, y: box.minY + 2))
+                    sign.line(to: NSPoint(x: box.midX, y: box.maxY - 2))
+                }
+                sign.stroke()
+            }
+        }
+    }
+
     /// Header text follows the sheet zoom like the GTK item bar does.
     var font: NSFont {
         let zoom = sheet?.zoomFactor ?? 1
@@ -93,6 +173,10 @@ class SheetHeaderView: NSView {
         guard let gridView else { return }
         window?.makeFirstResponder(gridView)
         let point = convert(event.locationInWindow, from: nil)
+        if let hit = outlineHit(at: point) {
+            toggleOutline(at: hit.index, step: hit.step)
+            return
+        }
         if let index = boundary(at: point) {
             if event.clickCount == 2 {
                 // Double-click on a boundary fits the column (row) to its content.
@@ -111,6 +195,17 @@ class SheetHeaderView: NSView {
         } else {
             dragAnchor = index
             select(from: index, to: index)
+        }
+    }
+
+    /// outline_button_press: collapse or expand the group at a column (row)
+    /// and level.
+    func toggleOutline(at index: Int, step: Int) {
+        guard let gridView, let sheet else { return }
+        do {
+            try sheet.changeOutline(atIndex: index, columns: isColumnHeader, depth: step)
+        } catch {
+            gridView.presentError?(error)
         }
     }
 
@@ -227,8 +322,14 @@ class SheetHeaderView: NSView {
 
 @MainActor
 final class ColumnHeaderView: SheetHeaderView {
-    override var intrinsicContentSize: NSSize { NSSize(width: NSView.noIntrinsicMetric, height: Self.thickness) }
+    override var intrinsicContentSize: NSSize { NSSize(width: NSView.noIntrinsicMetric, height: Self.thickness + outlineIndent) }
     override var isColumnHeader: Bool { true }
+
+    override func outlineHit(at point: NSPoint) -> (index: Int, step: Int)? {
+        let indent = outlineIndent, inc = outlineStep
+        guard indent > 0, inc > 0, point.y < indent, let index = index(at: point) else { return nil }
+        return (index, Int(point.y / inc))
+    }
 
     override func index(at point: NSPoint) -> Int? {
         guard let gridView, let sheet else { return nil }
@@ -260,27 +361,35 @@ final class ColumnHeaderView: SheetHeaderView {
         guard let gridView, let sheet else { return }
         let selection = sheet.selectedRange
         let visible = gridView.visibleRect
-        let height = bounds.height
+        let indent = outlineIndent
+        let height = bounds.height - indent
         func drawColumns(from first: Int, to end: Int, maxX: CGFloat) {
             var column = first
+            var previousLevel = column > 0 ? sheet.outlineLevel(ofColumn: column - 1) : 0
             while column < end {
                 let left = sheet.leftEdge(ofColumn: column)
                 if left > maxX { break }
                 let width = sheet.width(ofColumn: column)
                 if width > 0 {
                     let x0 = convert(NSPoint(x: gridView.viewX(forSheetX: left), y: 0), from: gridView).x
-                    let cell = NSRect(x: x0, y: 0, width: width, height: height)
+                    let cell = NSRect(x: x0, y: indent, width: width, height: height)
                     if cell.intersects(dirtyRect) {
                         let selected = column >= selection.start.column && column <= selection.end.column
                         fillBackground(cell, selected: selected)
                         let name = sheet.name(ofColumn: column) as NSString
                         let attrs = attributes(selected: selected)
                         let size = name.size(withAttributes: attrs)
-                        name.draw(in: NSRect(x: cell.minX, y: (height - size.height) / 2, width: cell.width, height: size.height),
+                        name.draw(in: NSRect(x: cell.minX, y: indent + (height - size.height) / 2, width: cell.width, height: size.height),
                                   withAttributes: attrs)
                         NSColor.separatorColor.setFill()
-                        NSRect(x: cell.maxX - 1, y: 0, width: 1, height: height).fill()
+                        NSRect(x: cell.maxX - 1, y: indent, width: 1, height: height).fill()
                     }
+                    let level = sheet.outlineLevel(ofColumn: column)
+                    if indent > 0 {
+                        drawOutline(index: column, start: x0, size: width, level: level, previousLevel: previousLevel,
+                                    collapsed: sheet.isColumnCollapsed(column), dirtyRect: dirtyRect)
+                    }
+                    previousLevel = level
                 }
                 column += 1
             }
@@ -295,7 +404,7 @@ final class ColumnHeaderView: SheetHeaderView {
             NSRect(x: edge - 1, y: 0, width: 1, height: height).fill()
         }
         NSColor.separatorColor.setFill()
-        NSRect(x: 0, y: height - 1, width: bounds.width, height: 1).fill()
+        NSRect(x: 0, y: bounds.height - 1, width: bounds.width, height: 1).fill()
         drawResizeGuide()
         window?.invalidateCursorRects(for: self)
     }
@@ -305,10 +414,17 @@ final class ColumnHeaderView: SheetHeaderView {
 /// beside the column header, is the select-all corner.
 @MainActor
 final class RowHeaderView: SheetHeaderView {
-    private var cornerHeight: CGFloat { Self.thickness }
+    /// The strip beside the column header, as tall as it.
+    private var cornerHeight: CGFloat { Self.thickness + Self.outlineIndent(for: sheet, columns: true) }
 
-    override var intrinsicContentSize: NSSize { NSSize(width: Self.rowHeaderWidth, height: NSView.noIntrinsicMetric) }
+    override var intrinsicContentSize: NSSize { NSSize(width: Self.rowHeaderWidth + outlineIndent, height: NSView.noIntrinsicMetric) }
     override var isColumnHeader: Bool { false }
+
+    override func outlineHit(at point: NSPoint) -> (index: Int, step: Int)? {
+        let indent = outlineIndent, inc = outlineStep
+        guard indent > 0, inc > 0, point.x < indent, point.y >= cornerHeight, let index = index(at: point) else { return nil }
+        return (index, Int(point.x / inc))
+    }
 
     override func index(at point: NSPoint) -> Int? {
         guard let gridView, let sheet, point.y >= cornerHeight else { return nil }
@@ -343,27 +459,35 @@ final class RowHeaderView: SheetHeaderView {
         guard let gridView, let sheet else { return }
         let selection = sheet.selectedRange
         let visible = gridView.visibleRect
-        let width = bounds.width
+        let indent = outlineIndent
+        let width = bounds.width - indent
         func drawRows(from first: Int, to end: Int, maxY: CGFloat) {
             var row = first
+            var previousLevel = row > 0 ? sheet.outlineLevel(ofRow: row - 1) : 0
             while row < end {
                 let top = sheet.topEdge(ofRow: row)
                 if top > maxY { break }
                 let height = sheet.height(ofRow: row)
                 if height > 0 {
                     let y0 = convert(NSPoint(x: 0, y: gridView.viewY(forSheetY: top)), from: gridView).y
-                    let cell = NSRect(x: 0, y: y0, width: width, height: height)
+                    let cell = NSRect(x: indent, y: y0, width: width, height: height)
                     if cell.intersects(dirtyRect) {
                         let selected = row >= selection.start.row && row <= selection.end.row
                         fillBackground(cell, selected: selected)
                         let name = sheet.name(ofRow: row) as NSString
                         let attrs = attributes(selected: selected)
                         let size = name.size(withAttributes: attrs)
-                        name.draw(in: NSRect(x: 0, y: cell.minY + (height - size.height) / 2, width: width - 4, height: size.height),
+                        name.draw(in: NSRect(x: indent, y: cell.minY + (height - size.height) / 2, width: width - 4, height: size.height),
                                   withAttributes: attrs)
                         NSColor.separatorColor.setFill()
-                        NSRect(x: 0, y: cell.maxY - 1, width: width, height: 1).fill()
+                        NSRect(x: indent, y: cell.maxY - 1, width: width, height: 1).fill()
                     }
+                    let level = sheet.outlineLevel(ofRow: row)
+                    if indent > 0 {
+                        drawOutline(index: row, start: y0, size: height, level: level, previousLevel: previousLevel,
+                                    collapsed: sheet.isRowCollapsed(row), dirtyRect: dirtyRect)
+                    }
+                    previousLevel = level
                 }
                 row += 1
             }
@@ -377,7 +501,7 @@ final class RowHeaderView: SheetHeaderView {
             NSRect(x: 0, y: edge - 1, width: width, height: 1).fill()
         }
         // The select-all corner: a small triangle pointing at A1.
-        let corner = NSRect(x: 0, y: 0, width: width, height: cornerHeight)
+        let corner = NSRect(x: 0, y: 0, width: bounds.width, height: cornerHeight)
         if corner.intersects(dirtyRect) {
             NSColor.windowBackgroundColor.setFill()
             corner.fill()

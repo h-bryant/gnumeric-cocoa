@@ -95,5 +95,6 @@
 - (void)testFormulaRange { [self runProgram:@"formula_range"]; }
 - (void)testFunctions { [self runProgram:@"functions"]; }
 - (void)testWhatIf { [self runProgram:@"whatif"]; }
+- (void)testOutline { [self runProgram:@"outline"]; }
 
 @end

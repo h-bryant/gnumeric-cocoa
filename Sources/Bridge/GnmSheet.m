@@ -877,6 +877,9 @@ gnm_cocoa_cairo_for_context (CGContextRef context, CGRect rect, cairo_surface_t 
     case GnmSheetDisplayOptionHideRowHeader: return _sheet->hide_row_header;
     case GnmSheetDisplayOptionR1C1: return sheet_get_conventions (_sheet)->r1c1_addresses;
     case GnmSheetDisplayOptionRightToLeft: return _sheet->text_is_rtl;
+    case GnmSheetDisplayOptionOutlines: return _sheet->display_outlines;
+    case GnmSheetDisplayOptionOutlineSymbolsBelow: return _sheet->outline_symbols_below;
+    case GnmSheetDisplayOptionOutlineSymbolsRight: return _sheet->outline_symbols_right;
     }
     return NO;
 }
@@ -894,6 +897,9 @@ gnm_cocoa_cairo_for_context (CGContextRef context, CGRect rect, cairo_surface_t 
     case GnmSheetDisplayOptionHideRowHeader: property = "display-row-header"; desc = "Toggle showing row headers"; break;
     case GnmSheetDisplayOptionR1C1: property = "use-r1c1"; desc = "Toggle whether to show r1c1-style references"; break;
     case GnmSheetDisplayOptionRightToLeft: property = "text-is-rtl"; desc = "Toggle sheet text direction"; break;
+    case GnmSheetDisplayOptionOutlines: property = "display-outlines"; desc = "Toggle showing outlines"; break;
+    case GnmSheetDisplayOptionOutlineSymbolsBelow: property = "display-outlines-below"; desc = "Toggle where to show outlines vertically"; break;
+    case GnmSheetDisplayOptionOutlineSymbolsRight: property = "display-outlines-right"; desc = "Toggle where to show outlines horizontally"; break;
     default: return NO;
     }
     return [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {

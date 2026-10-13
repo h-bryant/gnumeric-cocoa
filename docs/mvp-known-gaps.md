@@ -121,7 +121,7 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 | EditFillSeries | ported | Edit → Fill → Series… (2026-10-12): linear, growth, date series in rows or columns |
 | DataAutoFilter, DataFilterShowAll | ported | Data → Filter (2026-10-12): buttons in the heading cells with the GTK list, Custom… and Top 10… sheets; Show All also drops every autofilter condition (GTK's only serves the advanced filter) |
 | DataFilterAdvancedfilter | no | Phase 5 |
-| DataOutline* (7) | no | Phase 3 |
+| DataOutline* (7) | ported | Data → Outline (2026-10-12): Hide Detail, Show Detail, Group…, Ungroup… (whole rows or columns settle the axis, otherwise a Rows/Columns question), Display Outlines, Outlines Below, Outlines Right; the headers grow an outline strip ((levels + 1) × 14 px as item-bar.c) with a bar per level, a corner where a group starts, and a − or + box on the column or row that ends it, clicked to collapse or expand (`cmd_selection_outline_change`); no global level buttons |
 | DataSlicer* (3) | no | Phase 5 |
 | DataImportText, DataImportOther, DataExportText, DataExportCSV, DataExport, DataExportRepeat | partial | Save As to CSV writes the current sheet with the exporter's defaults; Save As to "Text (configurable)" asks the GTK export dialog's options first; plain text opens through the import assistant and File → Import Text… (⇧⌘O) sends any file through it, `.csv` and `.tsv` take the guessed options (2026-10-12); no DataImportOther, DataExportRepeat |
 
