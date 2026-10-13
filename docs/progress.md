@@ -1871,6 +1871,30 @@
   enables them, the trimming question as an alert, errors in a status
   line.  `GNM_SNAPSHOT_MERGE=1` merges a letter from two columns.
 
+### 2026-10-13 (later): Tools → Compare Sheets…
+
+- `GnmCompare.h`: `GnmSheetDifference` (section, direction, the
+  dialog's Description/Location/Old/New texts, the places on each
+  sheet, children) and `GnmSheet differencesFromSheet:` running
+  `gnm_diff_sheets` with dialog-sheet-compare.c's actions: a Cells
+  section (added, removed, changed with `gnm_cell_get_entered_text`),
+  Formatting (a range's single differing element, or "Various" with
+  the elements under it, each rendered as oldnew_renderer_func does:
+  colors with their palette names, alignments, underlines, formats),
+  and Columns/Rows (sizes in points).  `compare.m` covers each, the
+  places, and the reversed comparison.  Properties could not be named
+  `newText`/`oldSheet` (ARC's owned-object prefixes): `afterText`,
+  `beforeSheet`, and so on.
+- Lesson for tests: selection commands (`clearSelection:`,
+  `applyFormat:`, `setSelectedColumns:`) act on the workbook view's
+  focused sheet; `selectCellAtColumn:row:` on another sheet does not
+  focus it, `revealCellAtColumn:row:` does.
+- `SheetCompareDialog.swift`: a floating panel per window with two
+  workbook/sheet selector pairs (defaults as select_default_sheets),
+  Compare, and an NSOutlineView of the tree; choosing a row reveals the
+  old place and, when the new one is in another workbook, that too
+  (find_and_focus avoids the same view).  `GNM_SNAPSHOT_COMPARE=1`.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and

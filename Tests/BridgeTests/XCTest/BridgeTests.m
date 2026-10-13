@@ -103,5 +103,6 @@
 - (void)testWidgets { [self runProgram:@"widgets"]; }
 - (void)testProperties { [self runProgram:@"properties"]; }
 - (void)testMerge { [self runProgram:@"merge"]; }
+- (void)testCompare { [self runProgram:@"compare"]; }
 
 @end

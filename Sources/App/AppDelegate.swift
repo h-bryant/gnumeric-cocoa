@@ -2231,6 +2231,73 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_COMPARE"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet, let workbook = sheet.workbook {
+                // Compare Sheets: a second sheet with a changed B1, an added
+                // B2, a removed C3, a bold D1, and a wider column E; the panel
+                // compares the first against it, is captured to -compare.png,
+                // and its "Changed" row brings B1 of the second sheet into view.
+                do {
+                    _ = try workbook.insertSheet(before: nil)
+                } catch {
+                    NSLog("compare: add sheet failed: %@", error.localizedDescription)
+                }
+                let sheets = workbook.sheets
+                if sheets.count >= 2 {
+                    let later = sheets[1]
+                    for s in [sheet, later] {
+                        try? s.setText("same", atColumn: 0, row: 0, autocorrect: false)
+                        try? s.setText("10", atColumn: 1, row: 0, autocorrect: false)
+                        try? s.setText("gone", atColumn: 2, row: 2, autocorrect: false)
+                    }
+                    try? later.setText("=B1*2", atColumn: 1, row: 0, autocorrect: false)
+                    try? later.setText("extra", atColumn: 1, row: 1, autocorrect: false)
+                    later.revealCell(atColumn: 2, row: 2)
+                    try? later.clearSelection(.values)
+                    later.revealCell(atColumn: 3, row: 0)
+                    let bold = CellFormat()
+                    bold.bold = true
+                    try? later.apply(bold)
+                    later.revealCell(atColumn: 4, row: 0)
+                    try? later.setSelected(columns: true, sizeInPoints: 120)
+                    sheet.revealCell(atColumn: 0, row: 0)
+                    controller.compareSheets(nil)
+                    if let dialog = controller.sheetCompareDialog {
+                        dialog.selectSheets(a: 0, b: 1)
+                        dialog.compare(nil)
+                        let heads = dialog.results.map { "\($0.text)(\($0.children.count))" }.joined(separator: " ")
+                        NSLog("compare: %@", heads)
+                        for head in dialog.results {
+                            for d in head.children {
+                                let line: String = "\(d.text) \(d.location) '\(d.beforeText)' -> '\(d.afterText)' children=\(d.children.count)"
+                                NSLog("compare:   %@", line)
+                            }
+                        }
+                        if let content = dialog.panel.contentView {
+                            content.layoutSubtreeIfNeeded()
+                            if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                                content.cacheDisplay(in: content.bounds, to: rep)
+                                let comparePath = (path as NSString).deletingPathExtension + "-compare.png"
+                                try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: comparePath))
+                                NSLog("compare: captured %@ (%@)", comparePath, NSStringFromRect(content.bounds))
+                            }
+                        }
+                        // the Cells section's "Changed" row: B1 on both sheets
+                        if let cells = dialog.results.first(where: { $0.section == .cells }),
+                           let changed = cells.children.first(where: { $0.direction == .changed }) {
+                            dialog.reveal(changed)
+                            let current: Sheet = controller.gridView.sheet ?? sheet
+                            let edit = current.editPosition
+                            let where_: String = "sheet=\(current.name) edit=\(edit.column),\(edit.row)"
+                            NSLog("compare: after reveal %@", where_)
+                        }
+                        dialog.panel.orderOut(nil)
+                    }
+                }
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_FREEZE"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

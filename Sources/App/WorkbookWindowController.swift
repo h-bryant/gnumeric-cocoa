@@ -1400,6 +1400,18 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         }
     }
 
+    // MARK: Compare Sheets
+
+    private(set) var sheetCompareDialog: SheetCompareDialog?
+
+    /// Tools → Compare Sheets… (dialog_sheet_compare): the floating
+    /// panel, one per window, kept between uses.
+    @objc func compareSheets(_ sender: Any?) {
+        guard gridView.sheet != nil else { return }
+        if sheetCompareDialog == nil { sheetCompareDialog = SheetCompareDialog(controller: self) }
+        sheetCompareDialog?.show()
+    }
+
     // MARK: Merge
 
     /// Data → Merge… (dialog_merge).
