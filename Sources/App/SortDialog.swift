@@ -42,8 +42,8 @@ final class SortDialog: NSObject {
         self.sheet = sheet
         self.range = range
         super.init()
-        direction.addItem(withTitle: "Top to bottom (sort the rows)")
-        direction.addItem(withTitle: "Left to right (sort the columns)")
+        direction.addItem(withTitle: Localization.title("Top to bottom (sort the rows)"))
+        direction.addItem(withTitle: Localization.title("Left to right (sort the columns)"))
         // The GTK dialog sorts the rows of a range taller than wide.
         direction.selectItem(at: range.end.row - range.start.row >= range.end.column - range.start.column ? 0 : 1)
         direction.target = self
@@ -53,8 +53,8 @@ final class SortDialog: NSObject {
         header.action = #selector(layoutChanged(_:))
         retainFormats.state = Sheet.sortDefaultsToRetainingFormats ? .on : .off
         for (i, popUp) in orderPopUps.enumerated() {
-            popUp.addItem(withTitle: "Ascending")
-            popUp.addItem(withTitle: "Descending")
+            popUp.addItem(withTitle: Localization.title("Ascending"))
+            popUp.addItem(withTitle: Localization.title("Descending"))
             popUp.selectItem(at: Sheet.sortDefaultsToAscending ? 0 : 1)
             caseChecks[i].state = Sheet.sortDefaultsToCaseSensitive ? .on : .off
         }
@@ -142,7 +142,7 @@ final class SortDialog: NSObject {
             let previous = popUp.selectedTag()
             popUp.removeAllItems()
             if i > 0 {
-                popUp.addItem(withTitle: "(none)")
+                popUp.addItem(withTitle: Localization.title("(none)"))
                 popUp.lastItem?.tag = -1
             }
             for index in first..<(first + count) {

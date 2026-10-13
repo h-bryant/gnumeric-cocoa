@@ -182,12 +182,12 @@ struct TextImportView: View {
                                      : "\(model.importedColumnCount) of \(model.columnChoices.count) columns to import")
                     .font(.caption).foregroundStyle(.secondary)
                 Spacer()
-                Button("Cancel") { onDone(false) }.keyboardShortcut(.cancelAction)
-                Button("Back") { model.page -= 1 }.disabled(model.page == 0)
+                Button(Localization.title("Cancel")) { onDone(false) }.keyboardShortcut(.cancelAction)
+                Button(Localization.title("Back")) { model.page -= 1 }.disabled(model.page == 0)
                 if model.page < model.lastPage {
-                    Button("Next") { model.page += 1 }.keyboardShortcut(.defaultAction)
+                    Button(Localization.title("Next")) { model.page += 1 }.keyboardShortcut(.defaultAction)
                 } else {
-                    Button("Finish") { onDone(true) }.keyboardShortcut(.defaultAction).disabled(model.importedColumnCount == 0)
+                    Button(Localization.title("Finish")) { onDone(true) }.keyboardShortcut(.defaultAction).disabled(model.importedColumnCount == 0)
                 }
             }
         }
@@ -197,7 +197,7 @@ struct TextImportView: View {
 
     private var mainPage: some View {
         Form {
-            Picker("Encoding:", selection: Binding(get: { model.encoding }, set: { model.reread(encoding: $0) })) {
+            Picker(Localization.title("Encoding:"), selection: Binding(get: { model.encoding }, set: { model.reread(encoding: $0) })) {
                 if !TextImportModel.encodings.contains(where: { $0.value == model.encoding }) {
                     Text(model.encoding).tag(model.encoding)
                 }
@@ -205,22 +205,22 @@ struct TextImportView: View {
             }
             .disabled(model.session.url == nil)
             HStack {
-                Text("Line breaks:")
+                Text(Localization.title("Line breaks:"))
                 toggle("Unix (linefeed)", .unix)
                 toggle("Windows (carriage return + linefeed)", .windows)
                 toggle("Macintosh (carriage return)", .macintosh)
             }
-            Picker("Original data type:", selection: $model.kind) {
-                Text("Separated").tag(TextImportSession.Kind.separated)
-                Text("Fixed width").tag(TextImportSession.Kind.fixedWidth)
+            Picker(Localization.title("Original data type:"), selection: $model.kind) {
+                Text(Localization.title("Separated")).tag(TextImportSession.Kind.separated)
+                Text(Localization.title("Fixed width")).tag(TextImportSession.Kind.fixedWidth)
             }
             .pickerStyle(.radioGroup)
             HStack {
-                Text("Lines:")
-                Text("from")
+                Text(Localization.title("Lines:"))
+                Text(Localization.title("from"))
                 TextField("", value: $model.startLine, format: .number).frame(width: 70)
                 Stepper("", value: $model.startLine, in: 1...max(model.lineCount, 1)).labelsHidden()
-                Text("to")
+                Text(Localization.title("to"))
                 TextField("", value: $model.stopLine, format: .number).frame(width: 70)
                 Stepper("", value: $model.stopLine, in: 1...max(model.lineCount, 1)).labelsHidden()
             }
@@ -229,14 +229,14 @@ struct TextImportView: View {
     }
 
     private func toggle(_ title: String, _ flag: TextImportSession.LineBreaks) -> some View {
-        Toggle(title, isOn: Binding(
+        Toggle(Localization.title(title), isOn: Binding(
             get: { model.lineBreaks.contains(flag) },
             set: { on in if on { model.lineBreaks.insert(flag) } else { model.lineBreaks.remove(flag) } }))
     }
 
     private var separatorsPage: some View {
         Form {
-            Section("Separators") {
+            Section(Localization.title("Separators")) {
                 HStack {
                     ForEach(TextImportModel.separatorChoices, id: \.character) { choice in
                         Toggle(choice.label, isOn: Binding(
@@ -244,21 +244,21 @@ struct TextImportView: View {
                             set: { on in if on { model.separators.insert(choice.character) } else { model.separators.remove(choice.character) } }))
                     }
                 }
-                TextField("Custom:", text: $model.customSeparator)
-                Toggle("See two separators as one", isOn: $model.mergesAdjacentSeparators)
-                Toggle("Ignore separators at the start of a line", isOn: $model.ignoresLeadingSeparators)
+                TextField(Localization.title("Custom:"), text: $model.customSeparator)
+                Toggle(Localization.title("See two separators as one"), isOn: $model.mergesAdjacentSeparators)
+                Toggle(Localization.title("Ignore separators at the start of a line"), isOn: $model.ignoresLeadingSeparators)
             }
-            Section("Text indicator") {
-                Picker("Quote character:", selection: $model.quoteCharacter) {
+            Section(Localization.title("Text indicator")) {
+                Picker(Localization.title("Quote character:"), selection: $model.quoteCharacter) {
                     if !["\"", "'", "`", ""].contains(model.quoteCharacter) {
                         Text(model.quoteCharacter).tag(model.quoteCharacter)
                     }
                     Text("\"").tag("\"")
-                    Text("'").tag("'")
-                    Text("`").tag("`")
-                    Text("None").tag("")
+                    Text(Localization.title("'")).tag("'")
+                    Text(Localization.title("`")).tag("`")
+                    Text(Localization.title("None")).tag("")
                 }
-                Toggle("Two quotes inside a field are one quote", isOn: $model.doubledQuoteIsLiteral)
+                Toggle(Localization.title("Two quotes inside a field are one quote"), isOn: $model.doubledQuoteIsLiteral)
             }
         }
         .formStyle(.grouped)
@@ -266,13 +266,13 @@ struct TextImportView: View {
 
     private var fixedPage: some View {
         Form {
-            Section("Column breaks") {
-                TextField("Split after characters:", text: $model.splitPositionsText)
-                Text("Character positions, comma-separated, counted from the start of the line.")
+            Section(Localization.title("Column breaks")) {
+                TextField(Localization.title("Split after characters:"), text: $model.splitPositionsText)
+                Text(Localization.title("Character positions, comma-separated, counted from the start of the line."))
                     .font(.caption).foregroundStyle(.secondary)
                 HStack {
-                    Button("Auto") { model.discoverSplitPositions() }
-                    Button("Clear") { model.splitPositionsText = "" }
+                    Button(Localization.title("Auto")) { model.discoverSplitPositions() }
+                    Button(Localization.title("Clear")) { model.splitPositionsText = "" }
                 }
             }
         }
@@ -281,20 +281,20 @@ struct TextImportView: View {
 
     private var formatPage: some View {
         Form {
-            Picker("Trim spaces:", selection: $model.trimming) {
-                Text("Neither side").tag(TextImportSession.Trimming.none)
-                Text("Both sides").tag(TextImportSession.Trimming.both)
-                Text("On the left").tag(TextImportSession.Trimming.left)
-                Text("On the right").tag(TextImportSession.Trimming.right)
+            Picker(Localization.title("Trim spaces:"), selection: $model.trimming) {
+                Text(Localization.title("Neither side")).tag(TextImportSession.Trimming.none)
+                Text(Localization.title("Both sides")).tag(TextImportSession.Trimming.both)
+                Text(Localization.title("On the left")).tag(TextImportSession.Trimming.left)
+                Text(Localization.title("On the right")).tag(TextImportSession.Trimming.right)
             }
-            Picker("Locale for numbers and dates:", selection: $model.locale) {
+            Picker(Localization.title("Locale for numbers and dates:"), selection: $model.locale) {
                 if !["", "C"].contains(model.locale) {
                     Text(model.locale).tag(model.locale)
                 }
-                Text("Current").tag("")
-                Text("C (period decimal point)").tag("C")
+                Text(Localization.title("Current")).tag("")
+                Text(Localization.title("C (period decimal point)")).tag("C")
             }
-            Section("Columns") {
+            Section(Localization.title("Columns")) {
                 ForEach(model.columnChoices) { column in
                     HStack {
                         Toggle("Column \(column.id + 1)", isOn: Binding(

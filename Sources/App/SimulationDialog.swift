@@ -43,12 +43,12 @@ final class SimulationDialog {
             field.widthAnchor.constraint(equalToConstant: 80).isActive = true
             field.alignment = .right
         }
-        outputPopUp.addItems(withTitles: ["New sheet", "Range:"])
+        outputPopUp.addItems(withTitles: ["New sheet", "Range:"].map(Localization.title))
         outputPopUp.target = self
         outputPopUp.action = #selector(outputChanged(_:))
         outputRangeField.isEnabled = false
         func label(_ text: String) -> NSTextField {
-            let field = NSTextField(labelWithString: text)
+            let field = NSTextField(labelWithString: Localization.title(text))
             field.alignment = .right
             return field
         }

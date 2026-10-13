@@ -101,7 +101,7 @@ final class DocumentPropertiesDialog: NSObject {
 
     private static func tab(_ label: String, view: NSView) -> NSTabViewItem {
         let item = NSTabViewItem(identifier: label)
-        item.label = label
+        item.label = Localization.title(label)
         let content = NSView()
         content.addSubview(view)
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -361,7 +361,7 @@ extension DocumentPropertiesDialog: NSTableViewDataSource, NSTableViewDelegate {
         }
         let cell = NSTableCellView()
         cell.identifier = identifier
-        let label = NSTextField(labelWithString: text)
+        let label = NSTextField(labelWithString: Localization.title(text))
         label.lineBreakMode = .byTruncatingTail
         label.translatesAutoresizingMaskIntoConstraints = false
         cell.addSubview(label)

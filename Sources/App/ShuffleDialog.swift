@@ -18,9 +18,9 @@ final class ShuffleDialog {
         alert.addButton(withTitle: Localization.title("Cancel"))
         rangeField.stringValue = sheet.rangeNames(inList: sheet.selectionText)?.first ?? ""
         rangeField.widthAnchor.constraint(greaterThanOrEqualToConstant: 220).isActive = true
-        method.addItems(withTitles: ["Columns", "Rows", "Area"])
+        method.addItems(withTitles: ["Columns", "Rows", "Area"].map(Localization.title))
         func label(_ text: String) -> NSTextField {
-            let field = NSTextField(labelWithString: text)
+            let field = NSTextField(labelWithString: Localization.title(text))
             field.alignment = .right
             return field
         }

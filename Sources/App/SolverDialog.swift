@@ -42,8 +42,8 @@ final class SolverDialog: NSObject, NSTableViewDataSource, NSTableViewDelegate {
         alert.addButton(withTitle: Localization.title("Solve"))
         alert.addButton(withTitle: Localization.title("Cancel"))
         alert.addButton(withTitle: Localization.title("Save"))
-        goal.addItems(withTitles: ["Max", "Min"])
-        model.addItems(withTitles: ["Linear (LP/MILP)", "Quadratic (QP/MIQP)", "Non-linear"])
+        goal.addItems(withTitles: ["Max", "Min"].map(Localization.title))
+        model.addItems(withTitles: ["Linear (LP/MILP)", "Quadratic (QP/MIQP)", "Non-linear"].map(Localization.title))
         algorithm.addItems(withTitles: algorithms.map(\.name))
         kind.addItems(withTitles: Self.kinds.map { SolverRule.symbol(for: $0) })
         let settings = sheet.solverSettings
@@ -88,12 +88,12 @@ final class SolverDialog: NSObject, NSTableViewDataSource, NSTableViewDelegate {
 
     private func makeGrid() -> NSGridView {
         func label(_ text: String) -> NSTextField {
-            let field = NSTextField(labelWithString: text)
+            let field = NSTextField(labelWithString: Localization.title(text))
             field.alignment = .right
             return field
         }
         func heading(_ text: String) -> NSTextField {
-            let field = NSTextField(labelWithString: text)
+            let field = NSTextField(labelWithString: Localization.title(text))
             field.font = .boldSystemFont(ofSize: NSFont.systemFontSize)
             return field
         }

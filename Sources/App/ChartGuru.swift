@@ -107,9 +107,9 @@ final class ChartGuru: NSObject, NSTableViewDataSource, NSTableViewDelegate {
 
         summary.preferredMaxLayoutWidth = 620
         summary.heightAnchor.constraint(greaterThanOrEqualToConstant: 34).isActive = true
-        layout.addItem(withTitle: "Auto")
-        layout.addItem(withTitle: "Columns")
-        layout.addItem(withTitle: "Rows")
+        layout.addItem(withTitle: Localization.title("Auto"))
+        layout.addItem(withTitle: Localization.title("Columns"))
+        layout.addItem(withTitle: Localization.title("Rows"))
         let options = NSStackView(views: [NSTextField(labelWithString: Localization.title("Series as:")), layout, shared])
         options.orientation = .horizontal
         options.spacing = 8

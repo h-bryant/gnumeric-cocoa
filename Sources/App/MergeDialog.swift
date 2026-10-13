@@ -227,7 +227,7 @@ final class MergeDialog: NSObject, NSTableViewDataSource, NSTableViewDelegate, N
         }
         let cell = NSTableCellView()
         cell.identifier = identifier
-        let label = NSTextField(labelWithString: text)
+        let label = NSTextField(labelWithString: Localization.title(text))
         label.translatesAutoresizingMaskIntoConstraints = false
         cell.addSubview(label)
         cell.textField = label

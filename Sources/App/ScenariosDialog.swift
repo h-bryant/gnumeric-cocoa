@@ -21,7 +21,7 @@ final class ScenarioAddDialog {
         cellsField.stringValue = sheet.rangeNames(inList: sheet.selectionText)?.first ?? ""
         for field in [nameField, cellsField, commentField] { field.widthAnchor.constraint(greaterThanOrEqualToConstant: 240).isActive = true }
         func label(_ text: String) -> NSTextField {
-            let field = NSTextField(labelWithString: text)
+            let field = NSTextField(labelWithString: Localization.title(text))
             field.alignment = .right
             return field
         }

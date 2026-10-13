@@ -196,37 +196,37 @@ final class AnalysisDialog {
         let selection = sheet.rangeNames(inList: sheet.selectionText)?.joined(separator: ", ") ?? ""
         inputField.stringValue = selection
         xField.stringValue = selection
-        grouping.addItems(withTitles: ["Columns", "Rows", "Areas"])
-        regressionKind.addItems(withTitles: ["Multiple linear regression", "Multiple 2-variable regressions"])
+        grouping.addItems(withTitles: ["Columns", "Rows", "Areas"].map(Localization.title))
+        regressionKind.addItems(withTitles: ["Multiple linear regression", "Multiple 2-variable regressions"].map(Localization.title))
         summary.state = .on
-        destination.addItems(withTitles: ["New sheet", "Output range:"])
+        destination.addItems(withTitles: ["New sheet", "Output range:"].map(Localization.title))
         autofit.state = .on
         clear.state = .on
-        entered.addItems(withTitles: ["Values", "Formulas"])
-        meanTestKind.addItems(withTitles: ["Paired", "Unpaired, known population variances", "Unpaired, equal variances", "Unpaired, unequal variances"])
+        entered.addItems(withTitles: ["Values", "Formulas"].map(Localization.title))
+        meanTestKind.addItems(withTitles: ["Paired", "Unpaired, known population variances", "Unpaired, equal variances", "Unpaired, unequal variances"].map(Localization.title))
         meanTestKind.selectItem(at: 3)
-        samplingMethod.addItems(withTitles: ["Random", "Periodic"])
-        samplingDirection.addItems(withTitles: ["Column major", "Row major"])
-        movingAverageKind.addItems(withTitles: ["Simple moving average", "Cumulative moving average", "Weighted moving average", "Spencer's 15-point moving average"])
-        placement.addItems(withTitles: ["Prior moving average", "Central moving average", "Other offset"])
+        samplingMethod.addItems(withTitles: ["Random", "Periodic"].map(Localization.title))
+        samplingDirection.addItems(withTitles: ["Column major", "Row major"].map(Localization.title))
+        movingAverageKind.addItems(withTitles: ["Simple moving average", "Cumulative moving average", "Weighted moving average", "Spencer's 15-point moving average"].map(Localization.title))
+        placement.addItems(withTitles: ["Prior moving average", "Central moving average", "Other offset"].map(Localization.title))
         smoothingKind.addItems(withTitles: ["Simple exponential smoothing (Hunter, 1986)", "Simple exponential smoothing (Roberts, 1959)",
                                             "Holt's trend corrected exponential smoothing", "Additive Holt-Winters exponential smoothing",
-                                            "Multiplicative Holt-Winters exponential smoothing"])
-        denominator.addItems(withTitles: ["n", "n − 1", "n − 2", "n − 3"])
+                                            "Multiplicative Holt-Winters exponential smoothing"].map(Localization.title))
+        denominator.addItems(withTitles: ["n", "n − 1", "n − 2", "n − 3"].map(Localization.title))
         cutoffSource.addItems(withTitles: tool == .frequency ? ["Counted from the data", "From a range:"] : ["Calculated", "From a range:"])
         chartKind.addItems(withTitles: tool == .frequency ? ["No chart", "Bar chart", "Column chart"]
                                                           : ["No chart", "Histogram chart", "Bar chart", "Column chart"])
-        normalityKind.addItems(withTitles: ["Anderson-Darling test", "Cramér-von Mises test", "Lilliefors (Kolmogorov-Smirnov) test", "Shapiro-Francia test"])
-        medianKind.addItems(withTitles: ["Sign test", "Wilcoxon signed rank test"])
+        normalityKind.addItems(withTitles: ["Anderson-Darling test", "Cramér-von Mises test", "Lilliefors (Kolmogorov-Smirnov) test", "Shapiro-Francia test"].map(Localization.title))
+        medianKind.addItems(withTitles: ["Sign test", "Wilcoxon signed rank test"].map(Localization.title))
         medianKind.selectItem(at: tool == .oneMedianSignedRank || tool == .twoMedianSignedRank ? 1 : 0)
-        chiKind.addItems(withTitles: ["Test of homogeneity", "Test of independence"])
+        chiKind.addItems(withTitles: ["Test of homogeneity", "Test of independence"].map(Localization.title))
         chiKind.selectItem(at: tool == .independence ? 1 : 0)
         timeField.stringValue = selection
         distribution.addItems(withTitles: RandomNumbersAnalysis.allDistributions.map {
             RandomNumbersAnalysis.label(for: RandomNumbersAnalysis.Distribution(rawValue: $0.intValue) ?? .uniform)
         })
-        matrixKind.addItems(withTitles: ["Covariance matrix", "Cholesky decomposition"])
-        consolidateFunction.addItems(withTitles: ["SUM", "MIN", "MAX", "AVERAGE", "COUNT", "PRODUCT", "STDEV", "STDEVP", "VAR", "VARP"])
+        matrixKind.addItems(withTitles: ["Covariance matrix", "Cholesky decomposition"].map(Localization.title))
+        consolidateFunction.addItems(withTitles: ["SUM", "MIN", "MAX", "AVERAGE", "COUNT", "PRODUCT", "STDEV", "STDEVP", "VAR", "VARP"].map(Localization.title))
         sourceFields[0].stringValue = selection
         for field in sourceFields { field.widthAnchor.constraint(greaterThanOrEqualToConstant: 220).isActive = true }
         if tool == .correlatedRandomNumbers { countField.stringValue = "2" }
@@ -276,12 +276,12 @@ final class AnalysisDialog {
 
     private func makeGrid() -> NSGridView {
         func label(_ text: String) -> NSTextField {
-            let field = NSTextField(labelWithString: text)
+            let field = NSTextField(labelWithString: Localization.title(text))
             field.alignment = .right
             return field
         }
         func heading(_ text: String) -> NSTextField {
-            let field = NSTextField(labelWithString: text)
+            let field = NSTextField(labelWithString: Localization.title(text))
             field.font = .boldSystemFont(ofSize: NSFont.systemFontSize)
             return field
         }

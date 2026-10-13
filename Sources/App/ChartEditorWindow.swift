@@ -55,7 +55,7 @@ final class ChartEditorWindow: NSObject, NSOutlineViewDataSource, NSOutlineViewD
         outlineScroll.borderType = .bezelBorder
         outlineScroll.translatesAutoresizingMaskIntoConstraints = false
 
-        addButton.addItem(withTitle: "Add")
+        addButton.addItem(withTitle: Localization.title("Add"))
         addButton.menu?.delegate = self
         removeButton.target = self
         removeButton.action = #selector(removePressed(_:))
@@ -331,7 +331,7 @@ final class ChartEditorWindow: NSObject, NSOutlineViewDataSource, NSOutlineViewD
     }
 
     private func sectionLabel(_ text: String) -> NSTextField {
-        let label = NSTextField(labelWithString: text)
+        let label = NSTextField(labelWithString: Localization.title(text))
         label.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
         return label
     }

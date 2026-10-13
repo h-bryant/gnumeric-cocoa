@@ -69,9 +69,9 @@ final class AutoFormatDialog: NSObject, NSTableViewDataSource, NSTableViewDelega
             ("Left", \.bordersLeftEdge), ("Right", \.bordersRightEdge), ("Top", \.bordersTopEdge), ("Bottom", \.bordersBottomEdge),
         ]
         func row(_ title: String, _ items: [(String, WritableKeyPath<AutoFormatTemplate, Bool>)]) -> NSStackView {
-            var views: [NSView] = [NSTextField(labelWithString: title)]
+            var views: [NSView] = [NSTextField(labelWithString: Localization.title(title))]
             for (name, keyPath) in items {
-                let box = NSButton(checkboxWithTitle: name, target: self, action: #selector(partToggled(_:)))
+                let box = NSButton(checkboxWithTitle: Localization.title(name), target: self, action: #selector(partToggled(_:)))
                 box.state = .on
                 partBoxes.append((box, keyPath))
                 views.append(box)

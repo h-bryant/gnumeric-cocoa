@@ -57,7 +57,7 @@ final class NamesDialog: NSObject, NSTableViewDataSource, NSTableViewDelegate {
         expressionField.placeholderString = "A range, a value, or a formula, such as Sheet1!$A$1:$A$9"
         expressionField.target = self
         expressionField.action = #selector(add(_:))
-        scopePopUp.addItem(withTitle: "Workbook")
+        scopePopUp.addItem(withTitle: Localization.title("Workbook"))
         scopePopUp.addItem(withTitle: "Sheet “\(sheet.name)”")
         addButton.target = self
         addButton.action = #selector(add(_:))
@@ -68,7 +68,7 @@ final class NamesDialog: NSObject, NSTableViewDataSource, NSTableViewDelegate {
         let newButton = NSButton(title: Localization.title("New"), target: self, action: #selector(clearFields(_:)))
 
         func label(_ text: String) -> NSTextField {
-            let field = NSTextField(labelWithString: text)
+            let field = NSTextField(labelWithString: Localization.title(text))
             field.alignment = .right
             return field
         }

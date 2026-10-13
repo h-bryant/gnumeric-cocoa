@@ -21,14 +21,14 @@ final class AdvancedFilterDialog {
         alert.addButton(withTitle: Localization.title("OK"))
         alert.addButton(withTitle: Localization.title("Cancel"))
         listField.stringValue = sheet.rangeNames(inList: sheet.selectionText)?.joined(separator: ", ") ?? ""
-        destination.addItems(withTitles: ["Filter in-place", "Copy to range:", "New sheet"])
+        destination.addItems(withTitles: ["Filter in-place", "Copy to range:", "New sheet"].map(Localization.title))
         func label(_ text: String) -> NSTextField {
-            let field = NSTextField(labelWithString: text)
+            let field = NSTextField(labelWithString: Localization.title(text))
             field.alignment = .right
             return field
         }
         func heading(_ text: String) -> NSTextField {
-            let field = NSTextField(labelWithString: text)
+            let field = NSTextField(labelWithString: Localization.title(text))
             field.font = .boldSystemFont(ofSize: NSFont.systemFontSize)
             return field
         }

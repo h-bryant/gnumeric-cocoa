@@ -27,16 +27,16 @@ final class TabulateDialog {
         alert.addButton(withTitle: Localization.title("Tabulate"))
         alert.addButton(withTitle: Localization.title("Cancel"))
         func label(_ text: String) -> NSTextField {
-            let field = NSTextField(labelWithString: text)
+            let field = NSTextField(labelWithString: Localization.title(text))
             field.alignment = .right
             return field
         }
         func heading(_ text: String) -> NSTextField {
-            let field = NSTextField(labelWithString: text)
+            let field = NSTextField(labelWithString: Localization.title(text))
             field.font = .boldSystemFont(ofSize: NSFont.systemFontSize)
             return field
         }
-        mode.addItems(withTitles: ["Visual: a table", "Coordinate: one row per combination"])
+        mode.addItems(withTitles: ["Visual: a table", "Coordinate: one row per combination"].map(Localization.title))
         let edit = sheet.editPosition
         resultField.stringValue = sheet.name(of: CellRange(start: edit, end: edit))
         var views: [[NSView]] = [[heading("Dependency cell"), heading("Minimum"), heading("Maximum"), heading("Step")]]

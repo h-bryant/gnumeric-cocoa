@@ -78,7 +78,7 @@ final class ConditionalFormatDialog: NSObject, NSTableViewDataSource, NSTableVie
         for well in [fillWell, textWell] { well.widthAnchor.constraint(equalToConstant: 44).isActive = true }
 
         func label(_ text: String) -> NSTextField {
-            let field = NSTextField(labelWithString: text)
+            let field = NSTextField(labelWithString: Localization.title(text))
             field.alignment = .right
             return field
         }

@@ -72,12 +72,12 @@ final class ValidationDialog: NSObject {
 
     private func makeGrid() -> NSGridView {
         func label(_ text: String) -> NSTextField {
-            let field = NSTextField(labelWithString: text)
+            let field = NSTextField(labelWithString: Localization.title(text))
             field.alignment = .right
             return field
         }
         func heading(_ text: String) -> NSTextField {
-            let field = NSTextField(labelWithString: text)
+            let field = NSTextField(labelWithString: Localization.title(text))
             field.font = .boldSystemFont(ofSize: NSFont.systemFontSize)
             return field
         }

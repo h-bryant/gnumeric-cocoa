@@ -29,7 +29,7 @@ final class WidgetDialog {
         alert.addButton(withTitle: Localization.title("OK"))
         alert.addButton(withTitle: Localization.title("Cancel"))
         func label(_ text: String) -> NSTextField {
-            let field = NSTextField(labelWithString: text)
+            let field = NSTextField(labelWithString: Localization.title(text))
             field.alignment = .right
             return field
         }
@@ -68,7 +68,7 @@ final class WidgetDialog {
             contentField.stringValue = settings.contentText
             contentField.placeholderString = "The entries, such as A1:A7"
             rows.insert([label("Content:"), contentField], at: 0)
-            outputPopUp.addItems(withTitles: ["As value", "As index"])
+            outputPopUp.addItems(withTitles: ["As value", "As index"].map(Localization.title))
             outputPopUp.selectItem(at: settings.outputsIndex ? 1 : 0)
             rows.append([label("Output:"), outputPopUp])
         }

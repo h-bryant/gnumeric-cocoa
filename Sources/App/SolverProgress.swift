@@ -26,7 +26,7 @@ final class SolverProgress {
         alert.informativeText = "Solving…"
         alert.addButton(withTitle: Localization.title("Stop"))
         func label(_ text: String) -> NSTextField {
-            let field = NSTextField(labelWithString: text)
+            let field = NSTextField(labelWithString: Localization.title(text))
             field.alignment = .right
             return field
         }

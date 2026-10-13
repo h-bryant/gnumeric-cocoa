@@ -122,7 +122,7 @@ GNM_SNAPSHOT=/tmp/grid.png scripts/run-app.sh upstream/gnumeric/samples/format-t
 `GNM_SNAPSHOT_MERGE=1`, `GNM_SNAPSHOT_COMPARE=1`, `GNM_SNAPSHOT_PROTECT=1`,
 `GNM_SNAPSHOT_SHAPES=1`, `GNM_SNAPSHOT_PREVIEW=1`, `GNM_SNAPSHOT_SORTSETUP=1`,
 `GNM_SNAPSHOT_REPEAT=1`, `GNM_SNAPSHOT_XMLOPEN=1`, `GNM_SNAPSHOT_BUNDLE=1`, and
-`GNM_SNAPSHOT_RTL=1` (a right-to-left sheet: column A at the right, the row header on the right, Left moving to B, and back), `GNM_SNAPSHOT_LOCALE=1` (run under `LANG=de_DE.UTF-8 LANGUAGE=de`: the engine's messages in German, "1,5" a number), and `GNM_SNAPSHOT_MENUS=1` (under the same: the menu bar, Format → Sheet, the sheet tab menu, a dynamic title, the toolbar labels, and a sample of dialog buttons and labels in German, with the count of titles that changed; under English, none)
+`GNM_SNAPSHOT_RTL=1` (a right-to-left sheet: column A at the right, the row header on the right, Left moving to B, and back), `GNM_SNAPSHOT_LOCALE=1` (run under `LANG=de_DE.UTF-8 LANGUAGE=de`: the engine's messages in German, "1,5" a number), and `GNM_SNAPSHOT_MENUS=1` (under the same: the menu bar, Format → Sheet, the sheet tab menu, a dynamic title, the toolbar labels, and a sample of dialog buttons, labels, and helper rows in German, with the count of titles that changed; under English, none)
 exercise zoom, editing and saving, the Format Cells model, the Phase 3
 commands, frozen panes, sheet management, the autofilter with the Sort
 command, a sheet resize, and a tab color, the sheet objects (select, move,
@@ -364,9 +364,12 @@ same lookup, which also tries a title as a message id with a mnemonic on
 its first letter ("_Cancel") and under the GTK's "Stock label" context
 ("_Open", through `Engine.localizedString(_:context:)`, `g_dpgettext2`),
 as do the dialogs' labels, check boxes, radio buttons, window titles,
-and alert headings.  Still English: the dialogs' explanatory sentences,
-placeholders, pop-up entries, and rows built by helpers, the SwiftUI
-Settings window, and the titles with no GTK counterpart.
+alert headings, the rows their `label`, `heading`, and `row` helpers
+build, their pop-up entries (`addItems(withTitles:)`), and the SwiftUI
+dialogs' `Text`, `Toggle`, `Picker`, `Section`, and `Button` strings.
+Still English: the dialogs' explanatory sentences and placeholders, the
+labels the GTK words differently, and the titles with no GTK
+counterpart.
 
 ## Xcode build
 

@@ -2296,6 +2296,25 @@
   pop-up entries, the rows that dialog helpers build from strings (the
   larger part of the dialog text), and the titles with no GTK message.
 
+### 2026-10-13 (later): the dialogs' rows, pop-ups, and SwiftUI views follow too
+
+- The dialog helpers (`label(_:)`, `heading(_:)`, `row(_:…)`,
+  `sectionLabel`, the Properties dialog's `tab`) now pass their string
+  through `Localization.title` where they make the field, so every
+  call site localizes at once; the pop-up entries given as literal
+  arrays (`addItems(withTitles:)`, read back by index everywhere) and
+  single literals go through it too; and the SwiftUI dialogs (Format
+  Cells, the text import assistant, the chart guru, Settings) wrap
+  their `Text`, `Toggle`, `Section`, `Picker`, `Stepper`, `Label`,
+  `Button`, and `TextField` literals.  207 more sites in 27 files.
+- `GNM_SNAPSHOT_MENUS=1` under German also logs helper rows: Zeilen: |
+  Spalten: | Schutz | Rand | Hintergrund | Blätter:; "Keep formats with
+  the data" stays, the GTK wording it differently.  Under English
+  nothing changes (0 of 365 titles).
+- Still English: the dialogs' sentences and placeholders, and the labels
+  worded differently from the GTK's (the analysis dialogs' "Place in:",
+  "Predicted mean:", …), which want an alias each.
+
 ## How to resume (updated 2026-10-13)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -2336,8 +2355,8 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-13: `main` at the stock-labels-and-
-   dialog-chrome commit (after the toolbar and buttons, the menu titles, the engine's messages, right-to-left sheets, the bundled
+3. The state at the end of 2026-10-13: `main` at the dialog-rows-and-
+   SwiftUI commit (after the stock labels and dialog chrome, the toolbar and buttons, the menu titles, the engine's messages, right-to-left sheets, the bundled
    licenses, the relocatable bundle, the workbook properties, multi-line editing, drag and drop, the toolbar, the widget editors, AutoFormat, scenarios and simulation, the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,

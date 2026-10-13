@@ -100,11 +100,11 @@ struct PreferencesView: View {
 
     var body: some View {
         TabView(selection: $model.selectedTab) {
-            general.tabItem { Text("General") }.tag("General")
-            editing.tabItem { Text("Editing") }.tag("Editing")
-            undo.tabItem { Text("Undo") }.tag("Undo")
-            sorting.tabItem { Text("Sorting") }.tag("Sorting")
-            font.tabItem { Text("Font") }.tag("Font")
+            general.tabItem { Text(Localization.title("General")) }.tag("General")
+            editing.tabItem { Text(Localization.title("Editing")) }.tag("Editing")
+            undo.tabItem { Text(Localization.title("Undo")) }.tag("Undo")
+            sorting.tabItem { Text(Localization.title("Sorting")) }.tag("Sorting")
+            font.tabItem { Text(Localization.title("Font")) }.tag("Font")
         }
         .padding(16)
         .frame(width: 520, height: 400)
@@ -112,35 +112,35 @@ struct PreferencesView: View {
 
     private var general: some View {
         Form {
-            Section("Files") {
+            Section(Localization.title("Files")) {
                 Stepper("Compression of .gnumeric files: \(model.xmlCompressionLevel)", value: $model.xmlCompressionLevel, in: 0...9)
-                Text("0 writes plain XML, which diffs under version control; 9 makes the smallest file.")
+                Text(Localization.title("0 writes plain XML, which diffs under version control; 9 makes the smallest file."))
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Section("New Workbooks") {
+            Section(Localization.title("New Workbooks")) {
                 Stepper("Sheets: \(model.newWorkbookSheetCount)", value: $model.newWorkbookSheetCount, in: 1...64)
-                Picker("Rows:", selection: $model.newWorkbookRowCount) {
+                Picker(Localization.title("Rows:"), selection: $model.newWorkbookRowCount) {
                     ForEach(PreferencesModel.sizes(from: Workbook.minimumSheetRows, to: Workbook.maximumSheetRows), id: \.self) { size in
                         Text(size.formatted()).tag(size)
                     }
                 }
-                Picker("Columns:", selection: $model.newWorkbookColumnCount) {
+                Picker(Localization.title("Columns:"), selection: $model.newWorkbookColumnCount) {
                     ForEach(PreferencesModel.sizes(from: Workbook.minimumSheetColumns, to: Workbook.maximumSheetColumns), id: \.self) { size in
                         Text(size.formatted()).tag(size)
                     }
                 }
                 Stepper("Zoom: \(model.defaultZoom)%", value: $model.defaultZoom, in: 10...500, step: 5)
-                Toggle("Mark cells with spreadsheet functions", isOn: $model.newWorkbookShowsFunctionMarkers)
-                Toggle("Mark cells with truncated content", isOn: $model.newWorkbookShowsExtensionMarkers)
+                Toggle(Localization.title("Mark cells with spreadsheet functions"), isOn: $model.newWorkbookShowsFunctionMarkers)
+                Toggle(Localization.title("Mark cells with truncated content"), isOn: $model.newWorkbookShowsExtensionMarkers)
             }
-            Section("Screen") {
+            Section(Localization.title("Screen")) {
                 HStack {
-                    Text("Horizontal DPI:")
+                    Text(Localization.title("Horizontal DPI:"))
                     TextField("", value: $model.screenHorizontalDPI, format: .number.precision(.fractionLength(0...1))).frame(width: 70)
-                    Text("Vertical DPI:")
+                    Text(Localization.title("Vertical DPI:"))
                     TextField("", value: $model.screenVerticalDPI, format: .number.precision(.fractionLength(0...1))).frame(width: 70)
                 }
-                Text("The engine sizes columns and rows in pixels from these; sheets opened afterwards take a change.")
+                Text(Localization.title("The engine sizes columns and rows in pixels from these; sheets opened afterwards take a change."))
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
@@ -149,26 +149,26 @@ struct PreferencesView: View {
 
     private var editing: some View {
         Form {
-            Section("Cells") {
-                Picker("Return moves the selection:", selection: $model.enterMovesDirection) {
-                    Text("Down").tag(Preferences.Direction.down)
-                    Text("Up").tag(Preferences.Direction.up)
-                    Text("Right").tag(Preferences.Direction.right)
-                    Text("Left").tag(Preferences.Direction.left)
+            Section(Localization.title("Cells")) {
+                Picker(Localization.title("Return moves the selection:"), selection: $model.enterMovesDirection) {
+                    Text(Localization.title("Down")).tag(Preferences.Direction.down)
+                    Text(Localization.title("Up")).tag(Preferences.Direction.up)
+                    Text(Localization.title("Right")).tag(Preferences.Direction.right)
+                    Text(Localization.title("Left")).tag(Preferences.Direction.left)
                 }
             }
-            Section("While typing") {
-                Toggle("Autocomplete from the column's texts", isOn: $model.autocompletes)
+            Section(Localization.title("While typing")) {
+                Toggle(Localization.title("Autocomplete from the column's texts"), isOn: $model.autocompletes)
                 Stepper("After \(model.autocompleteMinimumCharacters) characters", value: $model.autocompleteMinimumCharacters, in: 1...20)
                     .disabled(!model.autocompletes)
-                Toggle("Show function name tooltips", isOn: $model.showsFunctionNameTooltips)
-                Toggle("Show function argument tooltips", isOn: $model.showsFunctionArgumentTooltips)
+                Toggle(Localization.title("Show function name tooltips"), isOn: $model.showsFunctionNameTooltips)
+                Toggle(Localization.title("Show function argument tooltips"), isOn: $model.showsFunctionArgumentTooltips)
             }
-            Section("Auto Correct") {
-                Toggle("Correct TWo INitial CApitals", isOn: $model.autocorrectsInitialCapitals)
-                Toggle("Capitalize the first letter of a sentence", isOn: $model.autocorrectsFirstLetter)
-                Toggle("Capitalize names of days", isOn: $model.autocorrectsNamesOfDays)
-                Toggle("Replace text as you type", isOn: $model.autocorrectsReplacements)
+            Section(Localization.title("Auto Correct")) {
+                Toggle(Localization.title("Correct TWo INitial CApitals"), isOn: $model.autocorrectsInitialCapitals)
+                Toggle(Localization.title("Capitalize the first letter of a sentence"), isOn: $model.autocorrectsFirstLetter)
+                Toggle(Localization.title("Capitalize names of days"), isOn: $model.autocorrectsNamesOfDays)
+                Toggle(Localization.title("Replace text as you type"), isOn: $model.autocorrectsReplacements)
             }
         }
         .formStyle(.grouped)
@@ -176,20 +176,20 @@ struct PreferencesView: View {
 
     private var undo: some View {
         Form {
-            Section("Undo") {
+            Section(Localization.title("Undo")) {
                 HStack {
-                    Text("Undoable commands:")
+                    Text(Localization.title("Undoable commands:"))
                     TextField("", value: $model.undoMaximumSteps, format: .number).frame(width: 80)
                     Stepper("", value: $model.undoMaximumSteps, in: 0...10000).labelsHidden()
                 }
                 HStack {
-                    Text("Maximum size of the undo list:")
+                    Text(Localization.title("Maximum size of the undo list:"))
                     TextField("", value: $model.undoMaximumSize, format: .number).frame(width: 80)
                     Stepper("", value: $model.undoMaximumSize, in: 1...1_000_000, step: 1000).labelsHidden()
                 }
-                Text("A one-cell edit counts 1; the list is cut when its total passes this.")
+                Text(Localization.title("A one-cell edit counts 1; the list is cut when its total passes this."))
                     .font(.caption).foregroundStyle(.secondary)
-                Toggle("Name the sheet in command descriptions", isOn: $model.undoShowsSheetName)
+                Toggle(Localization.title("Name the sheet in command descriptions"), isOn: $model.undoShowsSheetName)
                 Stepper("Longest description: \(model.undoMaximumDescriptorWidth) characters",
                         value: $model.undoMaximumDescriptorWidth, in: 5...256)
             }
@@ -199,10 +199,10 @@ struct PreferencesView: View {
 
     private var sorting: some View {
         Form {
-            Section("What the Sort dialog starts with") {
-                Toggle("Keep formats with the data", isOn: $model.sortRetainsFormats)
-                Toggle("Case sensitive", isOn: $model.sortIsCaseSensitive)
-                Toggle("Ascending", isOn: $model.sortAscending)
+            Section(Localization.title("What the Sort dialog starts with")) {
+                Toggle(Localization.title("Keep formats with the data"), isOn: $model.sortRetainsFormats)
+                Toggle(Localization.title("Case sensitive"), isOn: $model.sortIsCaseSensitive)
+                Toggle(Localization.title("Ascending"), isOn: $model.sortAscending)
                 Stepper("Clauses shown: \(model.sortInitialClauseCount)", value: $model.sortInitialClauseCount, in: 1...50)
             }
         }
@@ -211,8 +211,8 @@ struct PreferencesView: View {
 
     private var font: some View {
         Form {
-            Section("Default font of new workbooks") {
-                Picker("Family:", selection: $model.defaultFontName) {
+            Section(Localization.title("Default font of new workbooks")) {
+                Picker(Localization.title("Family:"), selection: $model.defaultFontName) {
                     if !Self.fontFamilies.contains(model.defaultFontName) {
                         Text(model.defaultFontName).tag(model.defaultFontName)
                     }
@@ -221,13 +221,13 @@ struct PreferencesView: View {
                     }
                 }
                 HStack {
-                    Text("Size:")
+                    Text(Localization.title("Size:"))
                     TextField("", value: $model.defaultFontSize, format: .number.precision(.fractionLength(0...1))).frame(width: 60)
                     Stepper("", value: $model.defaultFontSize, in: 4...100, step: 1).labelsHidden()
-                    Text("points")
+                    Text(Localization.title("points"))
                 }
-                Toggle("Bold", isOn: $model.defaultFontBold)
-                Toggle("Italic", isOn: $model.defaultFontItalic)
+                Toggle(Localization.title("Bold"), isOn: $model.defaultFontBold)
+                Toggle(Localization.title("Italic"), isOn: $model.defaultFontItalic)
             }
         }
         .formStyle(.grouped)

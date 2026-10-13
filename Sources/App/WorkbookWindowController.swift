@@ -1253,12 +1253,12 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         alert.addButton(withTitle: Localization.title("Fill"))
         alert.addButton(withTitle: Localization.title("Cancel"))
         let direction = NSPopUpButton(frame: .zero, pullsDown: false)
-        direction.addItems(withTitles: ["In columns (down)", "In rows (across)"])
+        direction.addItems(withTitles: ["In columns (down)", "In rows (across)"].map(Localization.title))
         direction.selectItem(at: preferRows ? 1 : 0)
         let kind = NSPopUpButton(frame: .zero, pullsDown: false)
-        kind.addItems(withTitles: ["Linear", "Growth", "Date"])
+        kind.addItems(withTitles: ["Linear", "Growth", "Date"].map(Localization.title))
         let unit = NSPopUpButton(frame: .zero, pullsDown: false)
-        unit.addItems(withTitles: ["Day", "Weekday", "Month", "Year"])
+        unit.addItems(withTitles: ["Day", "Weekday", "Month", "Year"].map(Localization.title))
         let start = NSTextField(string: sheet.displayTextOfCell(atColumn: range.start.column, row: range.start.row) ?? "")
         let lastColumn = preferRows ? range.end.column : range.start.column
         let lastRow = preferRows ? range.start.row : range.end.row
@@ -1267,7 +1267,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         let step = NSTextField(string: "1")
         for field in [start, step, stop] { field.widthAnchor.constraint(greaterThanOrEqualToConstant: 140).isActive = true }
         func label(_ text: String) -> NSTextField {
-            let field = NSTextField(labelWithString: text)
+            let field = NSTextField(labelWithString: Localization.title(text))
             field.alignment = .right
             return field
         }
@@ -1352,7 +1352,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         let atMost = NSTextField(string: "")
         for field in [setCell, toValue, changeCell, atLeast, atMost] { field.widthAnchor.constraint(greaterThanOrEqualToConstant: 140).isActive = true }
         func label(_ text: String) -> NSTextField {
-            let field = NSTextField(labelWithString: text)
+            let field = NSTextField(labelWithString: Localization.title(text))
             field.alignment = .right
             return field
         }
@@ -2615,8 +2615,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             alert.informativeText = "Show the rows with the largest or smallest values of the column."
             let isBucket = current.kind == .bucket
             let direction = NSPopUpButton(frame: .zero, pullsDown: false)
-            direction.addItem(withTitle: "Top")
-            direction.addItem(withTitle: "Bottom")
+            direction.addItem(withTitle: Localization.title("Top"))
+            direction.addItem(withTitle: Localization.title("Bottom"))
             direction.selectItem(at: isBucket && !current.isTop ? 1 : 0)
             let count = NSTextField(frame: NSRect(x: 0, y: 0, width: 60, height: 24))
             let formatter = NumberFormatter()
@@ -2626,8 +2626,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             count.doubleValue = isBucket ? current.count : 10
             count.widthAnchor.constraint(equalToConstant: 60).isActive = true
             let unit = NSPopUpButton(frame: .zero, pullsDown: false)
-            unit.addItem(withTitle: "Items")
-            unit.addItem(withTitle: "Percent")
+            unit.addItem(withTitle: Localization.title("Items"))
+            unit.addItem(withTitle: Localization.title("Percent"))
             unit.selectItem(at: isBucket && current.isPercent ? 1 : 0)
             let grid = NSGridView(views: [[direction, count, unit]])
             grid.columnSpacing = 8

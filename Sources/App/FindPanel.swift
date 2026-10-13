@@ -94,8 +94,8 @@ final class FindPanel: NSObject, NSTableViewDataSource, NSTableViewDelegate, NST
             button.target = self
             button.action = #selector(scopeChosen(_:))   // one action: one radio group
         }
-        textKind.addItems(withTitles: ["Plain text", "Regular expression", "Number"])
-        order.addItems(withTitles: ["By columns", "By rows"])
+        textKind.addItems(withTitles: ["Plain text", "Regular expression", "Number"].map(Localization.title))
+        order.addItems(withTitles: ["By columns", "By rows"].map(Localization.title))
         errorBehavior.addItems(withTitles: Self.errorChoices.map(\.0))
         previousButton.target = self
         previousButton.action = #selector(findPrevious(_:))
@@ -109,7 +109,7 @@ final class FindPanel: NSObject, NSTableViewDataSource, NSTableViewDelegate, NST
         findAllButton.keyEquivalent = "\r"
 
         func label(_ text: String) -> NSTextField {
-            let field = NSTextField(labelWithString: text)
+            let field = NSTextField(labelWithString: Localization.title(text))
             field.alignment = .right
             return field
         }

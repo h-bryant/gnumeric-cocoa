@@ -33,7 +33,7 @@ final class HyperlinkDialog: NSObject {
         alert.addButton(withTitle: Localization.title("OK"))
         alert.addButton(withTitle: Localization.title("Cancel"))
         if hasLink { alert.addButton(withTitle: Localization.title("Remove")) }
-        kind.addItems(withTitles: ["Internal Link", "External Link", "Email Link", "Web Link"])
+        kind.addItems(withTitles: ["Internal Link", "External Link", "Email Link", "Web Link"].map(Localization.title))
         kind.selectItem(at: 3)
         defaultTip.state = .on
         if let current {
@@ -65,7 +65,7 @@ final class HyperlinkDialog: NSObject {
 
     private func makeGrid() -> NSGridView {
         func label(_ text: String) -> NSTextField {
-            let field = NSTextField(labelWithString: text)
+            let field = NSTextField(labelWithString: Localization.title(text))
             field.alignment = .right
             return field
         }

@@ -10,18 +10,18 @@ struct FormatCellsView: View {
     var body: some View {
         VStack(spacing: 12) {
             TabView {
-                numberTab.tabItem { Text("Number") }
-                alignmentTab.tabItem { Text("Alignment") }
-                fontTab.tabItem { Text("Font") }
-                borderTab.tabItem { Text("Border") }
-                fillTab.tabItem { Text("Fill") }
-                protectionTab.tabItem { Text("Protection") }
+                numberTab.tabItem { Text(Localization.title("Number")) }
+                alignmentTab.tabItem { Text(Localization.title("Alignment")) }
+                fontTab.tabItem { Text(Localization.title("Font")) }
+                borderTab.tabItem { Text(Localization.title("Border")) }
+                fillTab.tabItem { Text(Localization.title("Fill")) }
+                protectionTab.tabItem { Text(Localization.title("Protection")) }
             }
             .frame(minHeight: 320)
             HStack {
                 Spacer()
-                Button("Cancel") { onDone(false) }.keyboardShortcut(.cancelAction)
-                Button("OK") { onDone(true) }.keyboardShortcut(.defaultAction)
+                Button(Localization.title("Cancel")) { onDone(false) }.keyboardShortcut(.cancelAction)
+                Button(Localization.title("OK")) { onDone(true) }.keyboardShortcut(.defaultAction)
             }
         }
         .padding(16)
@@ -31,7 +31,7 @@ struct FormatCellsView: View {
     private func mixedNote(_ key: FormatCellsModel.Key) -> some View {
         Group {
             if model.mixed.contains(key) && !model.touched.contains(key) {
-                Text("(mixed)").foregroundStyle(.secondary).font(.caption)
+                Text(Localization.title("(mixed)")).foregroundStyle(.secondary).font(.caption)
             }
         }
     }
@@ -41,7 +41,7 @@ struct FormatCellsView: View {
     private var numberTab: some View {
         Form {
             HStack {
-                Picker("Category", selection: $model.category) {
+                Picker(Localization.title("Category"), selection: $model.category) {
                     ForEach(FormatCellsModel.Category.allCases) { Text($0.rawValue).tag($0) }
                 }
                 mixedNote(.numberFormat)
@@ -50,15 +50,15 @@ struct FormatCellsView: View {
                 Stepper("Decimal places: \(model.decimals)", value: $model.decimals, in: 0...30)
             }
             if model.category.usesThousands {
-                Toggle("Use thousands separator", isOn: $model.thousandsSeparator)
+                Toggle(Localization.title("Use thousands separator"), isOn: $model.thousandsSeparator)
             }
             if !model.category.presets.isEmpty {
-                Picker("Format", selection: $model.preset) {
+                Picker(Localization.title("Format"), selection: $model.preset) {
                     ForEach(model.category.presets, id: \.self) { Text($0).tag($0) }
                 }
             }
             if model.category == .custom {
-                TextField("Format code", text: $model.customFormat)
+                TextField(Localization.title("Format code"), text: $model.customFormat)
                     .font(.system(.body, design: .monospaced))
             }
             LabeledContent("Code") {
@@ -73,30 +73,30 @@ struct FormatCellsView: View {
     private var alignmentTab: some View {
         Form {
             HStack {
-                Picker("Horizontal", selection: $model.horizontalAlignment) {
-                    Text("General").tag(HorizontalAlignment.general)
-                    Text("Left").tag(HorizontalAlignment.left)
-                    Text("Center").tag(HorizontalAlignment.center)
-                    Text("Right").tag(HorizontalAlignment.right)
-                    Text("Fill").tag(HorizontalAlignment.fill)
-                    Text("Justify").tag(HorizontalAlignment.justify)
-                    Text("Center across selection").tag(HorizontalAlignment.centerAcrossSelection)
-                    Text("Distributed").tag(HorizontalAlignment.distributed)
+                Picker(Localization.title("Horizontal"), selection: $model.horizontalAlignment) {
+                    Text(Localization.title("General")).tag(HorizontalAlignment.general)
+                    Text(Localization.title("Left")).tag(HorizontalAlignment.left)
+                    Text(Localization.title("Center")).tag(HorizontalAlignment.center)
+                    Text(Localization.title("Right")).tag(HorizontalAlignment.right)
+                    Text(Localization.title("Fill")).tag(HorizontalAlignment.fill)
+                    Text(Localization.title("Justify")).tag(HorizontalAlignment.justify)
+                    Text(Localization.title("Center across selection")).tag(HorizontalAlignment.centerAcrossSelection)
+                    Text(Localization.title("Distributed")).tag(HorizontalAlignment.distributed)
                 }
                 mixedNote(.horizontalAlignment)
             }
             HStack {
-                Picker("Vertical", selection: $model.verticalAlignment) {
-                    Text("Top").tag(VerticalAlignment.top)
-                    Text("Center").tag(VerticalAlignment.center)
-                    Text("Bottom").tag(VerticalAlignment.bottom)
-                    Text("Justify").tag(VerticalAlignment.justify)
-                    Text("Distributed").tag(VerticalAlignment.distributed)
+                Picker(Localization.title("Vertical"), selection: $model.verticalAlignment) {
+                    Text(Localization.title("Top")).tag(VerticalAlignment.top)
+                    Text(Localization.title("Center")).tag(VerticalAlignment.center)
+                    Text(Localization.title("Bottom")).tag(VerticalAlignment.bottom)
+                    Text(Localization.title("Justify")).tag(VerticalAlignment.justify)
+                    Text(Localization.title("Distributed")).tag(VerticalAlignment.distributed)
                 }
                 mixedNote(.verticalAlignment)
             }
             HStack {
-                Toggle("Wrap text", isOn: $model.wrapsText)
+                Toggle(Localization.title("Wrap text"), isOn: $model.wrapsText)
                 mixedNote(.wrapsText)
             }
         }
@@ -108,30 +108,30 @@ struct FormatCellsView: View {
     private var fontTab: some View {
         Form {
             HStack {
-                Picker("Family", selection: $model.fontName) {
+                Picker(Localization.title("Family"), selection: $model.fontName) {
                     ForEach(FormatCellsModel.fontFamilies, id: \.self) { Text($0).tag($0) }
                 }
                 mixedNote(.fontName)
             }
             HStack {
-                TextField("Size", value: $model.fontSize, format: .number.precision(.fractionLength(0...1)))
+                TextField(Localization.title("Size"), value: $model.fontSize, format: .number.precision(.fractionLength(0...1)))
                     .frame(width: 60)
                 Stepper("", value: $model.fontSize, in: 1...400, step: 1).labelsHidden()
-                Text("points").foregroundStyle(.secondary)
+                Text(Localization.title("points")).foregroundStyle(.secondary)
                 mixedNote(.fontSize)
             }
             HStack(spacing: 16) {
-                Toggle("Bold", isOn: $model.bold)
-                Toggle("Italic", isOn: $model.italic)
-                Toggle("Strikethrough", isOn: $model.strikethrough)
+                Toggle(Localization.title("Bold"), isOn: $model.bold)
+                Toggle(Localization.title("Italic"), isOn: $model.italic)
+                Toggle(Localization.title("Strikethrough"), isOn: $model.strikethrough)
                 mixedNote(.bold)
             }
-            Picker("Underline", selection: $model.underline) {
-                Text("None").tag(UnderlineStyle.none)
-                Text("Single").tag(UnderlineStyle.single)
-                Text("Double").tag(UnderlineStyle.double)
-                Text("Single low").tag(UnderlineStyle.singleLow)
-                Text("Double low").tag(UnderlineStyle.doubleLow)
+            Picker(Localization.title("Underline"), selection: $model.underline) {
+                Text(Localization.title("None")).tag(UnderlineStyle.none)
+                Text(Localization.title("Single")).tag(UnderlineStyle.single)
+                Text(Localization.title("Double")).tag(UnderlineStyle.double)
+                Text(Localization.title("Single low")).tag(UnderlineStyle.singleLow)
+                Text(Localization.title("Double low")).tag(UnderlineStyle.doubleLow)
             }
             HStack {
                 ColorPicker("Color", selection: Binding(
@@ -175,7 +175,7 @@ struct FormatCellsView: View {
             ColorPicker("Line color", selection: Binding(
                 get: { Color(nsColor: model.borderColor) },
                 set: { model.borderColor = NSColor($0) }), supportsOpacity: false)
-            Text("Changing a line style applies the line color to that edge.")
+            Text(Localization.title("Changing a line style applies the line color to that edge."))
                 .font(.caption).foregroundStyle(.secondary)
         }
         .padding()
@@ -187,17 +187,17 @@ struct FormatCellsView: View {
     private var protectionTab: some View {
         Form {
             HStack {
-                Toggle("Lock", isOn: $model.contentsLocked)
+                Toggle(Localization.title("Lock"), isOn: $model.contentsLocked)
                 mixedNote(.contentsLocked)
             }
             HStack {
-                Toggle("Hide", isOn: $model.contentsHidden)
+                Toggle(Localization.title("Hide"), isOn: $model.contentsHidden)
                 mixedNote(.contentsHidden)
             }
-            Text("Locking cells or hiding formulæ only affects protected worksheets.")
+            Text(Localization.title("Locking cells or hiding formulæ only affects protected worksheets."))
                 .font(.caption).foregroundStyle(.secondary)
             Divider()
-            Toggle("Protect worksheet", isOn: $model.sheetProtected)
+            Toggle(Localization.title("Protect worksheet"), isOn: $model.sheetProtected)
         }
         .padding()
     }
@@ -205,7 +205,7 @@ struct FormatCellsView: View {
     private var fillTab: some View {
         Form {
             HStack {
-                Toggle("Fill the cells with a solid color", isOn: $model.fillsBackground)
+                Toggle(Localization.title("Fill the cells with a solid color"), isOn: $model.fillsBackground)
                 mixedNote(.fill)
             }
             ColorPicker("Color", selection: Binding(

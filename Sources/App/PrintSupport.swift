@@ -111,7 +111,7 @@ final class PageSetupDialog: NSObject {
         alert.addButton(withTitle: Localization.title("Cancel"))
         paper.addItems(withTitles: papers.map(\.display))
         if let index = papers.firstIndex(where: { $0.name == settings.paperName }) { paper.selectItem(at: index) }
-        orientation.addItems(withTitles: ["Portrait", "Landscape"])
+        orientation.addItems(withTitles: ["Portrait", "Landscape"].map(Localization.title))
         orientation.selectItem(at: settings.orientation == .landscape || settings.orientation == .reverseLandscape ? 1 : 0)
         func inches(_ points: Double) -> String { String(format: "%.2f", points / Self.pointsPerInch) }
         topField.stringValue = inches(settings.topMargin)
@@ -120,7 +120,7 @@ final class PageSetupDialog: NSObject {
         rightField.stringValue = inches(settings.rightMargin)
         headerField.stringValue = inches(settings.headerMargin)
         footerField.stringValue = inches(settings.footerMargin)
-        scaling.addItems(withTitles: ["Percentage of normal size:", "Fit to pages across and down:"])
+        scaling.addItems(withTitles: ["Percentage of normal size:", "Fit to pages across and down:"].map(Localization.title))
         scaling.selectItem(at: settings.scaling == .fitPages ? 1 : 0)
         percentField.stringValue = String(format: "%g", settings.scalePercentage)
         fitColumnsField.stringValue = String(settings.fitColumns)
@@ -136,7 +136,7 @@ final class PageSetupDialog: NSObject {
         blackAndWhite.state = settings.printsBlackAndWhite ? .on : .off
         centerH.state = settings.centersHorizontally ? .on : .off
         centerV.state = settings.centersVertically ? .on : .off
-        acrossThenDown.addItems(withTitles: ["Down, then across", "Across, then down"])
+        acrossThenDown.addItems(withTitles: ["Down, then across", "Across, then down"].map(Localization.title))
         acrossThenDown.selectItem(at: settings.printsAcrossThenDown ? 1 : 0)
         repeatTopField.stringValue = settings.repeatTop
         repeatLeftField.stringValue = settings.repeatLeft
@@ -154,12 +154,12 @@ final class PageSetupDialog: NSObject {
 
     private func makeGrid() -> NSGridView {
         func label(_ text: String) -> NSTextField {
-            let field = NSTextField(labelWithString: text)
+            let field = NSTextField(labelWithString: Localization.title(text))
             field.alignment = .right
             return field
         }
         func heading(_ text: String) -> NSTextField {
-            let field = NSTextField(labelWithString: text)
+            let field = NSTextField(labelWithString: Localization.title(text))
             field.font = .boldSystemFont(ofSize: NSFont.systemFontSize)
             return field
         }

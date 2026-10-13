@@ -209,7 +209,7 @@ final class SheetCompareDialog: NSObject, NSOutlineViewDataSource, NSOutlineView
         }
         let cell = NSTableCellView()
         cell.identifier = identifier
-        let label = NSTextField(labelWithString: text)
+        let label = NSTextField(labelWithString: Localization.title(text))
         label.lineBreakMode = .byTruncatingTail
         label.translatesAutoresizingMaskIntoConstraints = false
         cell.addSubview(label)
