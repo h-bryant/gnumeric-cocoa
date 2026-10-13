@@ -913,7 +913,13 @@ gnm_cocoa_cairo_for_context (CGContextRef context, CGRect rect, cairo_surface_t 
     NSAssert (NSThread.isMainThread, @"engine access off the main thread");
     /* dialog-zoom.c cb_zoom_ok_clicked; cmd_zoom takes the list */
     double factor = MIN (MAX (zoomFactor, 0.1), 5.0);
-    GSList *sheets = all ? workbook_sheets (_sheet->workbook) : g_slist_append (NULL, _sheet);
+    GSList *sheets = NULL;
+    if (all) {
+        Workbook *wb = _sheet->workbook;
+        for (int i = workbook_sheet_count (wb) - 1; i >= 0; i--)
+            sheets = g_slist_prepend (sheets, workbook_sheet_by_index (wb, i));
+    } else
+        sheets = g_slist_append (NULL, _sheet);
     BOOL ok = [self.workbook _runCommand:^gboolean (WorkbookControl *wbc) {
         return cmd_zoom (wbc, sheets, factor);
     } description:@"Could not change the zoom." error:error];

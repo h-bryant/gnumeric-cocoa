@@ -94,6 +94,8 @@ targets:
     templates: [BridgeTestProgram]
   functions:
     templates: [BridgeTestProgram]
+  whatif:
+    templates: [BridgeTestProgram]
   BridgeTests:
     type: bundle.unit-test
     platform: macOS
@@ -124,6 +126,7 @@ targets:
       - target: printing
       - target: formula_range
       - target: functions
+      - target: whatif
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.github.h-bryant.gnumeric-cocoa.BridgeTests

@@ -363,9 +363,12 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    over `GnmSolverRun` (start, poll, stop, finish), and the in-cell editor
    took the cell's font, colors, and alignment (`formatOfCellAtColumn:`,
    `resolvedFontFamilyForName:`); Format → Sheet's display toggles and
-   the Zoom dialog followed (`toggleDisplayOption:`, `cmd_zoom`).  Next,
-   by usage: Data → Table and Tools → Tabulate, the random generator,
-   outlines, a plugin manager, the scenarios and simulation tools;
+   the Zoom dialog followed (`toggleDisplayOption:`, `cmd_zoom`), then
+   Data → Table…, Fill → Tabulate Dependency…, and the random
+   generators (`GnmWhatIf.h`, `GnmRandomNumbersAnalysis`, `whatif.m`).
+   Next, by usage: outlines (group and ungroup), a Manage Sheets
+   dialog, more sort keys, a plugin manager, the scenarios and
+   simulation tools;
    image and widget editors (`cmd_so_set_*`) later; the smaller Phase 3
    gaps (Insert/Delete Cells,
    Goto and the name box, the formula bar, autocomplete, drag and drop,

@@ -534,7 +534,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
              #selector(meanTest(_:)), #selector(varianceTest(_:)), #selector(anovaSingleFactor(_:)), #selector(ranking(_:)),
              #selector(sampling(_:)), #selector(movingAverage(_:)), #selector(exponentialSmoothing(_:)), #selector(insertHyperlink(_:)),
              #selector(solver(_:)), #selector(pageSetup(_:)), #selector(printSheet(_:)), #selector(setPrintArea(_:)), #selector(clearPrintArea(_:)),
-             #selector(toggleBold(_:)), #selector(toggleItalic(_:)), #selector(toggleUnderline(_:)), #selector(insertFunction(_:)):
+             #selector(toggleBold(_:)), #selector(toggleItalic(_:)), #selector(toggleUnderline(_:)), #selector(insertFunction(_:)),
+             #selector(dataTable(_:)), #selector(tabulate(_:)), #selector(randomNumbers(_:)), #selector(correlatedRandomNumbers(_:)):
             return gridView.sheet != nil && window?.attachedSheet == nil
         case #selector(removeSheet(_:)):
             return gridView.sheet != nil && workbook.canRemoveSheets
@@ -1315,6 +1316,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     @objc func anovaTwoFactor(_ sender: Any?) { runAnalysisDialog(.anovaTwoFactor) }
     @objc func homogeneity(_ sender: Any?) { runAnalysisDialog(.homogeneity) }
     @objc func independence(_ sender: Any?) { runAnalysisDialog(.independence) }
+    @objc func randomNumbers(_ sender: Any?) { runAnalysisDialog(.randomNumbers) }
+    @objc func correlatedRandomNumbers(_ sender: Any?) { runAnalysisDialog(.correlatedRandomNumbers) }
     // The GTK's four Claims About Two Means items preselect the kind.
     @objc func meanTestPaired(_ sender: Any?) { runAnalysisDialog(.meanTest) { $0.meanTestKind.selectItem(at: 0) } }
     @objc func meanTestKnownVariances(_ sender: Any?) { runAnalysisDialog(.meanTest) { $0.meanTestKind.selectItem(at: 1) } }
@@ -1335,6 +1338,42 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
             do {
                 let written = try sheet.run(analysis, output: output)
                 if written != gridView.sheet { workbook.select(written) }
+                return true
+            } catch {
+                presentMessage(error.localizedDescription)
+                return false
+            }
+        }
+    }
+
+    // MARK: What-if (Data → Table, Edit → Fill → Tabulate Dependency)
+
+    /// Data → Table…: the GTK dialog over the selection.
+    @objc func dataTable(_ sender: Any?) {
+        guard let window, let sheet = gridView.sheet, window.attachedSheet == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        DataTableDialog().present(in: window) { [weak self] rowInput, columnInput in
+            guard let self else { return true }
+            do {
+                try sheet.createDataTable(rowInput: rowInput, columnInput: columnInput)
+                return true
+            } catch {
+                presentMessage(error.localizedDescription)
+                return false
+            }
+        }
+    }
+
+    /// Edit → Fill → Tabulate Dependency…: the GTK dialog; the tabulation
+    /// lands on new sheets.
+    @objc func tabulate(_ sender: Any?) {
+        guard let window, let sheet = gridView.sheet, window.attachedSheet == nil else { return }
+        if gridView.isEditing { gridView.cancelEditing() }
+        TabulateDialog(sheet: sheet).present(in: window) { [weak self] dialog in
+            guard let self else { return true }
+            do {
+                try sheet.tabulate(target: dialog.resultField.stringValue, dimensions: dialog.dimensions, withCoordinates: dialog.withCoordinates)
+                if let last = workbook.sheets.last, last != gridView.sheet { workbook.select(last) }
                 return true
             } catch {
                 presentMessage(error.localizedDescription)

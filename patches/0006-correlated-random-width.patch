@@ -1,0 +1,23 @@
+Let the correlated random generator multiply by as many variables as it has.
+
+gnm_random_cor_tool_perform_calc writes each correlated row as
+MMULT(<the uncorrelated row>, TRANSPOSE(<the Cholesky factor>)), with
+the uncorrelated row as a relative range three columns wide
+(make_rangeref (-4, 0, -2, 0)) whatever the number of variables, so for
+any matrix but a 3x3 the product's dimensions do not match and every
+correlated cell is #VALUE!.  The uncorrelated block sits variables + 1
+columns to the left (dao->offset_col += rtool->variables + 1).  Found
+through the Cocoa front end on 2026-10-12; the GTK front end runs the
+same code.
+
+--- a/src/tools/random-generator-cor.c	2026-10-12 20:04:21
++++ b/src/tools/random-generator-cor.c	2026-10-12 20:04:21
+@@ -135,7 +135,7 @@
+ 	dao_set_cell (dao, 0, 0, _("Correlated Random Variables"));
+ 
+ 	expr_rand = gnm_expr_new_funcall2 (fd_mmult,
+-					   make_rangeref (-4, 0, -2, 0),
++					   make_rangeref (-(rtool->variables + 1), 0, -2, 0),
+ 					   gnm_expr_new_funcall1
+ 					   (fd_transpose,
+ 					    expr_matrix));

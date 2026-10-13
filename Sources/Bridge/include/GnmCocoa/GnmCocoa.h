@@ -27,6 +27,7 @@
 #import <GnmCocoa/GnmPrinting.h>
 #import <GnmCocoa/GnmFormulaEditing.h>
 #import <GnmCocoa/GnmFunctions.h>
+#import <GnmCocoa/GnmWhatIf.h>
 #import <GnmCocoa/GnmSearch.h>
 #import <GnmCocoa/GnmTextExport.h>
 #import <GnmCocoa/GnmTextImport.h>

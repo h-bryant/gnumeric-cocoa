@@ -111,11 +111,13 @@ but there is no UI yet), **no** (not started). The "Phase" column is where
 |---|---|---|
 | DataSort | partial | Data → Sort… (2026-10-12): rows or columns, header, three keys with order and case, keep formats; no locale, no more than three keys, no saved setups |
 | DataValidate | ported | Data → Validation… (2026-10-12): the criteria, the action's alerts on entry, the in-cell list, the input message |
-| DataShuffle, DataConsolidate, DataTable | no | Phase 5 |
+| DataTable | ported | Data → Table… (2026-10-12): the GTK dialog's row and column input cells over the selection, `cmd_create_data_table` |
+| DataShuffle, DataConsolidate | no | Phase 5 |
 | DataTextToColumns | ported | Data → Text to Columns… through the import assistant (2026-10-12) |
 | CopyDown, CopyRight | ported | Edit → Fill → Down ⌘D, Right ⌘R |
 | EditFillAutofill | ported | the fill handle on the selection; Option makes a single number count up (the GTK Ctrl) |
-| ToolsMerge, ToolsTabulate, RandomGenerator* | no | Phase 3/5 |
+| ToolsTabulate, RandomGenerator* | ported | Edit → Fill (2026-10-12): Tabulate Dependency… (three dependencies, visual or coordinate layout, `cmd_tabulate` onto new sheets), Random Generator → Uncorrelated… (the 30 distributions with the dialog's parameter labels) and Correlated… (a covariance matrix or its Cholesky factor; engine patch 0006 for matrices other than 3×3), both analysis tools with the Output page |
+| ToolsMerge | no | Phase 5 |
 | EditFillSeries | ported | Edit → Fill → Series… (2026-10-12): linear, growth, date series in rows or columns |
 | DataAutoFilter, DataFilterShowAll | ported | Data → Filter (2026-10-12): buttons in the heading cells with the GTK list, Custom… and Top 10… sheets; Show All also drops every autofilter condition (GTK's only serves the advanced filter) |
 | DataFilterAdvancedfilter | no | Phase 5 |

@@ -94,5 +94,6 @@
 - (void)testPrinting { [self runProgram:@"printing"]; }
 - (void)testFormulaRange { [self runProgram:@"formula_range"]; }
 - (void)testFunctions { [self runProgram:@"functions"]; }
+- (void)testWhatIf { [self runProgram:@"whatif"]; }
 
 @end

@@ -451,6 +451,80 @@ NS_SWIFT_NAME(AnovaTwoFactorAnalysis)
 @property (nonatomic) NSInteger rowsPerSample;
 @end
 
+/// random-generator.h's distributions, the engine's values.
+typedef NS_ENUM(NSInteger, GnmRandomDistribution) {
+    GnmRandomDistributionDiscrete = 0,
+    GnmRandomDistributionUniform,
+    GnmRandomDistributionNormal,
+    GnmRandomDistributionBernoulli,
+    GnmRandomDistributionBeta,
+    GnmRandomDistributionBinomial,
+    GnmRandomDistributionPoisson,
+    GnmRandomDistributionCauchy,
+    GnmRandomDistributionChiSquared,
+    GnmRandomDistributionGamma,
+    GnmRandomDistributionWeibull,
+    GnmRandomDistributionF,
+    GnmRandomDistributionGeometric,
+    GnmRandomDistributionGumbel1,
+    GnmRandomDistributionGumbel2,
+    GnmRandomDistributionLaplace,
+    GnmRandomDistributionStudentT,
+    GnmRandomDistributionLogarithmic,
+    GnmRandomDistributionLogistic,
+    GnmRandomDistributionPareto,
+    GnmRandomDistributionLognormal,
+    GnmRandomDistributionRayleigh,
+    GnmRandomDistributionLevy,
+    GnmRandomDistributionExponentialPower,
+    GnmRandomDistributionRayleighTail,
+    GnmRandomDistributionLandau,
+    GnmRandomDistributionGaussianTail,
+    GnmRandomDistributionUniformInteger,
+    GnmRandomDistributionNegativeBinomial,
+    GnmRandomDistributionExponential,
+} NS_SWIFT_NAME(RandomNumbersAnalysis.Distribution);
+
+/// Data → Fill → Random Generator → Uncorrelated…: `variableCount`
+/// columns of `count` numbers from one distribution, its one or two
+/// parameters in the dialog's order (random-generation.ui).
+NS_SWIFT_NAME(RandomNumbersAnalysis)
+@interface GnmRandomNumbersAnalysis : GnmAnalysis
+- (instancetype)init;
+/// Uniform at first.
+@property (nonatomic) GnmRandomDistribution distribution;
+/// 1 at first.
+@property (nonatomic) NSInteger variableCount;
+/// 10 at first.
+@property (nonatomic) NSInteger count;
+/// The dialog's first and second entries (lower and upper bound, mean
+/// and standard deviation, a and b, p and the number of trials, …).
+@property (nonatomic) double firstParameter;
+@property (nonatomic) double secondParameter;
+/// Discrete: the two-column range of values and their probabilities.
+@property (nonatomic, copy, nullable) NSString *valueRange;
+/// The dialog's order: the common ones first, then alphabetical.
+@property (class, nonatomic, readonly) NSArray<NSNumber *> *allDistributions;
++ (NSString *)labelForDistribution:(GnmRandomDistribution)distribution NS_SWIFT_NAME(label(for:));
+/// The entries' labels, nil for one the distribution lacks.
++ (nullable NSString *)firstParameterLabelForDistribution:(GnmRandomDistribution)distribution NS_SWIFT_NAME(firstParameterLabel(for:));
++ (nullable NSString *)secondParameterLabelForDistribution:(GnmRandomDistribution)distribution NS_SWIFT_NAME(secondParameterLabel(for:));
+@end
+
+/// Data → Fill → Random Generator → Correlated…: `count` rows of
+/// normal numbers with a covariance matrix, given as the matrix itself
+/// or its Cholesky factor (random-generation-cor.ui).
+NS_SWIFT_NAME(CorrelatedRandomNumbersAnalysis)
+@interface GnmCorrelatedRandomNumbersAnalysis : GnmAnalysis
+- (instancetype)init;
+/// A square range.
+@property (nonatomic, copy) NSString *matrixRange;
+/// The range holds the Cholesky decomposition rather than the covariance matrix; NO at first.
+@property (nonatomic) BOOL isCholesky;
+/// 2 at first.
+@property (nonatomic) NSInteger count;
+@end
+
 @interface GnmSheet (Analysis)
 /// Run a tool with its ranges read relative to this sheet, writing as the
 /// output says, as one undoable command named for the tool.  The sheet

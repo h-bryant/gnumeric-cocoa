@@ -17,6 +17,8 @@
 #include <tools/analysis-kaplan-meier.h>
 #include <tools/analysis-chi-squared.h>
 #include <tools/analysis-anova.h>
+#include <tools/random-generator.h>
+#include <tools/random-generator-cor.h>
 
 static NSError *
 analysis_error (GnmEngine *engine, NSString *message)
@@ -1098,6 +1100,200 @@ kaplan_meier_column (Sheet *sheet, NSString *text, GnmValue const *time, NSStrin
 
 @end
 
+
+#pragma mark - Random numbers
+
+/* dialog-random-generator.c distribution_strs */
+typedef struct {
+    GnmRandomDistribution distribution;
+    const char *name, *first, *second;
+} random_distribution_strings;
+
+static const random_distribution_strings random_strings[] = {
+    { GnmRandomDistributionUniform, "Uniform", "Lower bound:", "Upper bound:" },
+    { GnmRandomDistributionUniformInteger, "Uniform Integer", "Lower bound:", "Upper bound:" },
+    { GnmRandomDistributionNormal, "Normal", "Mean:", "Standard deviation:" },
+    { GnmRandomDistributionDiscrete, "Discrete", "Value and probability input range:", NULL },
+    { GnmRandomDistributionBernoulli, "Bernoulli", "p value:", NULL },
+    { GnmRandomDistributionBeta, "Beta", "a value:", "b value:" },
+    { GnmRandomDistributionBinomial, "Binomial", "p value:", "Number of trials:" },
+    { GnmRandomDistributionCauchy, "Cauchy", "a value:", NULL },
+    { GnmRandomDistributionChiSquared, "Chisq", "nu value:", NULL },
+    { GnmRandomDistributionExponential, "Exponential", "b value:", NULL },
+    { GnmRandomDistributionExponentialPower, "Exponential Power", "a value:", "b value:" },
+    { GnmRandomDistributionF, "F", "nu1 value:", "nu2 value:" },
+    { GnmRandomDistributionGamma, "Gamma", "a value:", "b value:" },
+    { GnmRandomDistributionGaussianTail, "Gaussian Tail", "a value:", "Sigma:" },
+    { GnmRandomDistributionGeometric, "Geometric", "p value:", NULL },
+    { GnmRandomDistributionGumbel1, "Gumbel (Type I)", "a value:", "b value:" },
+    { GnmRandomDistributionGumbel2, "Gumbel (Type II)", "a value:", "b value:" },
+    { GnmRandomDistributionLandau, "Landau", NULL, NULL },
+    { GnmRandomDistributionLaplace, "Laplace", "a value:", NULL },
+    { GnmRandomDistributionLevy, "Levy alpha-Stable", "c value:", "alpha:" },
+    { GnmRandomDistributionLogarithmic, "Logarithmic", "p value:", NULL },
+    { GnmRandomDistributionLogistic, "Logistic", "a value:", NULL },
+    { GnmRandomDistributionLognormal, "Lognormal", "Zeta value:", "Sigma:" },
+    { GnmRandomDistributionNegativeBinomial, "Negative Binomial", "p value:", "Number of failures:" },
+    { GnmRandomDistributionPareto, "Pareto", "a value:", "b value:" },
+    { GnmRandomDistributionPoisson, "Poisson", "Lambda:", NULL },
+    { GnmRandomDistributionRayleigh, "Rayleigh", "Sigma:", NULL },
+    { GnmRandomDistributionRayleighTail, "Rayleigh Tail", "a value:", "Sigma:" },
+    { GnmRandomDistributionStudentT, "Student t", "nu value:", NULL },
+    { GnmRandomDistributionWeibull, "Weibull", "a value:", "b value:" },
+};
+
+static const random_distribution_strings *
+random_strings_find (GnmRandomDistribution distribution)
+{
+    for (size_t i = 0; i < G_N_ELEMENTS (random_strings); i++)
+        if (random_strings[i].distribution == distribution)
+            return &random_strings[i];
+    return NULL;
+}
+
+@implementation GnmRandomNumbersAnalysis
+
+- (instancetype)init
+{
+    if (!(self = [super initWithTitle:@"Random Numbers"]))
+        return nil;
+    _distribution = GnmRandomDistributionUniform;
+    _variableCount = 1;
+    _count = 10;
+    _secondParameter = 1;
+    return self;
+}
+
++ (NSArray<NSNumber *> *)allDistributions
+{
+    NSMutableArray *result = [NSMutableArray array];
+    for (size_t i = 0; i < G_N_ELEMENTS (random_strings); i++)
+        [result addObject:@(random_strings[i].distribution)];
+    return result;
+}
+
++ (NSString *)labelForDistribution:(GnmRandomDistribution)distribution
+{
+    const random_distribution_strings *strings = random_strings_find (distribution);
+    return strings ? [NSString stringWithUTF8String:strings->name] : @"";
+}
+
++ (NSString *)firstParameterLabelForDistribution:(GnmRandomDistribution)distribution
+{
+    const random_distribution_strings *strings = random_strings_find (distribution);
+    return strings && strings->first ? [NSString stringWithUTF8String:strings->first] : nil;
+}
+
++ (NSString *)secondParameterLabelForDistribution:(GnmRandomDistribution)distribution
+{
+    const random_distribution_strings *strings = random_strings_find (distribution);
+    return strings && strings->second ? [NSString stringWithUTF8String:strings->second] : nil;
+}
+
+- (GnmAnalysisTool *)_engineToolForSheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error
+{
+    /* random_tool_update_sensitivity_cb and random_tool_ok_clicked_cb */
+    if (_variableCount < 1) {
+        if (error)
+            *error = analysis_error (engine, @"The number of variables should be a positive integer.");
+        return NULL;
+    }
+    if (_count < 1) {
+        if (error)
+            *error = analysis_error (engine, @"The number of random numbers requested is invalid.");
+        return NULL;
+    }
+    GnmValue *values = NULL;
+    if (_distribution == GnmRandomDistributionDiscrete) {
+        values = single_range (sheet, _valueRange ?: @"");
+        if (!values) {
+            if (error)
+                *error = analysis_error (engine, @"The value and probability input range is invalid.");
+            return NULL;
+        }
+    }
+    GnmAnalysisTool *tool = gnm_random_tool_new ();
+    GnmRandomTool *rtool = GNM_RANDOM_TOOL (tool);
+    rtool->n_vars = (gint) _variableCount;
+    rtool->count = (gint) _count;
+    rtool->distribution = (random_distribution_t) _distribution;
+    double a = _firstParameter, b = _secondParameter;
+    switch (_distribution) {
+    case GnmRandomDistributionNormal: rtool->param.normal.mean = a; rtool->param.normal.stdev = b; break;
+    case GnmRandomDistributionBernoulli: rtool->param.bernoulli.p = a; break;
+    case GnmRandomDistributionBeta: rtool->param.beta.a = a; rtool->param.beta.b = b; break;
+    case GnmRandomDistributionPoisson: rtool->param.poisson.lambda = a; break;
+    case GnmRandomDistributionExponential: rtool->param.exponential.b = a; break;
+    case GnmRandomDistributionExponentialPower: rtool->param.exppow.a = a; rtool->param.exppow.b = b; break;
+    case GnmRandomDistributionCauchy: rtool->param.cauchy.a = a; break;
+    case GnmRandomDistributionLandau: break;
+    case GnmRandomDistributionLaplace: rtool->param.laplace.a = a; break;
+    case GnmRandomDistributionGaussianTail: rtool->param.gaussian_tail.a = a; rtool->param.gaussian_tail.sigma = b; break;
+    case GnmRandomDistributionChiSquared: rtool->param.chisq.nu = a; break;
+    case GnmRandomDistributionLogarithmic: rtool->param.logarithmic.p = a; break;
+    case GnmRandomDistributionLogistic: rtool->param.logistic.a = a; break;
+    case GnmRandomDistributionRayleigh: rtool->param.rayleigh.sigma = a; break;
+    case GnmRandomDistributionRayleighTail: rtool->param.rayleigh_tail.a = a; rtool->param.rayleigh_tail.sigma = b; break;
+    case GnmRandomDistributionLognormal: rtool->param.lognormal.zeta = a; rtool->param.lognormal.sigma = b; break;
+    case GnmRandomDistributionLevy: rtool->param.levy.c = a; rtool->param.levy.alpha = b; break;
+    case GnmRandomDistributionF: rtool->param.fdist.nu1 = a; rtool->param.fdist.nu2 = b; break;
+    case GnmRandomDistributionPareto: rtool->param.pareto.a = a; rtool->param.pareto.b = b; break;
+    case GnmRandomDistributionStudentT: rtool->param.tdist.nu = a; break;
+    case GnmRandomDistributionWeibull: rtool->param.weibull.a = a; rtool->param.weibull.b = b; break;
+    case GnmRandomDistributionGeometric: rtool->param.geometric.p = a; break;
+    case GnmRandomDistributionGamma: rtool->param.gamma.a = a; rtool->param.gamma.b = b; break;
+    case GnmRandomDistributionGumbel1:
+    case GnmRandomDistributionGumbel2: rtool->param.gumbel.a = a; rtool->param.gumbel.b = b; break;
+    case GnmRandomDistributionBinomial: rtool->param.binomial.p = a; rtool->param.binomial.trials = (int) b; break;
+    case GnmRandomDistributionNegativeBinomial: rtool->param.negbinom.p = a; rtool->param.negbinom.f = (int) b; break;
+    case GnmRandomDistributionDiscrete: rtool->param.discrete.range = values; break;
+    case GnmRandomDistributionUniformInteger:
+    case GnmRandomDistributionUniform:
+    default: rtool->param.uniform.lower_limit = a; rtool->param.uniform.upper_limit = b; break;
+    }
+    return tool;
+}
+
+@end
+
+@implementation GnmCorrelatedRandomNumbersAnalysis
+
+- (instancetype)init
+{
+    if (!(self = [super initWithTitle:@"Correlated Random Numbers"]))
+        return nil;
+    _matrixRange = @"";
+    _count = 2;
+    return self;
+}
+
+- (GnmAnalysisTool *)_engineToolForSheet:(Sheet *)sheet engine:(GnmEngine *)engine error:(NSError **)error
+{
+    /* random_cor_tool_update_sensitivity_cb and random_cor_tool_ok_clicked_cb */
+    GnmValue *matrix = single_range (sheet, _matrixRange);
+    if (!matrix || matrix->v_range.cell.b.row - matrix->v_range.cell.a.row != matrix->v_range.cell.b.col - matrix->v_range.cell.a.col) {
+        if (matrix)
+            value_release (matrix);
+        if (error)
+            *error = analysis_error (engine, @"The matrix range is not valid.");
+        return NULL;
+    }
+    if (_count < 1) {
+        value_release (matrix);
+        if (error)
+            *error = analysis_error (engine, @"The number of random numbers requested is invalid.");
+        return NULL;
+    }
+    GnmAnalysisTool *tool = gnm_random_cor_tool_new ();
+    GnmRandomCorTool *rtool = GNM_RANDOM_COR_TOOL (tool);
+    rtool->count = (gint) _count;
+    rtool->matrix = matrix;
+    rtool->variables = matrix->v_range.cell.b.row - matrix->v_range.cell.a.row + 1;
+    rtool->matrix_type = _isCholesky ? random_gen_cor_type_cholesky : random_gen_cor_type_cov;
+    return tool;
+}
+
+@end
 
 #pragma mark - Running
 

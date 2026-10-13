@@ -15,6 +15,7 @@ final class AnalysisDialog {
         case normality, oneMeanTest, oneMedianSignTest, oneMedianSignedRank
         case twoMedianSignTest, twoMedianSignedRank, mannWhitney
         case anovaTwoFactor, homogeneity, independence
+        case randomNumbers, correlatedRandomNumbers
 
         var title: String {
             switch self {
@@ -42,6 +43,8 @@ final class AnalysisDialog {
             case .anovaTwoFactor: return "ANOVA: Two Factor"
             case .homogeneity: return "Test of Homogeneity"
             case .independence: return "Test of Independence"
+            case .randomNumbers: return "Random Number Generation"
+            case .correlatedRandomNumbers: return "Correlated Random Number Generation"
             }
         }
 
@@ -147,6 +150,18 @@ final class AnalysisDialog {
     // Tables
     let chiKind = NSPopUpButton(frame: .zero, pullsDown: false)
     let replicationField = NSTextField(string: "1")
+    // Random numbers
+    let distribution = NSPopUpButton(frame: .zero, pullsDown: false)
+    let variablesField = NSTextField(string: "1")
+    let countField = NSTextField(string: "10")
+    let firstParameterLabel = NSTextField(labelWithString: "")
+    let firstParameterField = NSTextField(string: "0")
+    let secondParameterLabel = NSTextField(labelWithString: "")
+    let secondParameterField = NSTextField(string: "1")
+    let valueRangeField = NSTextField(string: "")
+    let matrixKind = NSPopUpButton(frame: .zero, pullsDown: false)
+    private var relay: PopUpRelay?
+    private weak var parameterGrid: NSGridView?
     // Descriptive statistics
     let summary = NSButton(checkboxWithTitle: "Summary statistics", target: nil, action: nil)
     let ssmedian = NSButton(checkboxWithTitle: "Use SSMEDIAN for the median", target: nil, action: nil)
@@ -199,17 +214,53 @@ final class AnalysisDialog {
         chiKind.addItems(withTitles: ["Test of homogeneity", "Test of independence"])
         chiKind.selectItem(at: tool == .independence ? 1 : 0)
         timeField.stringValue = selection
-        for field in [inputField, xField, yField, outputField, cutoffRangeField, timeField, censorField, groupsRangeField, groupsField] {
+        distribution.addItems(withTitles: RandomNumbersAnalysis.allDistributions.map {
+            RandomNumbersAnalysis.label(for: RandomNumbersAnalysis.Distribution(rawValue: $0.intValue) ?? .uniform)
+        })
+        matrixKind.addItems(withTitles: ["Covariance matrix", "Cholesky decomposition"])
+        if tool == .correlatedRandomNumbers { countField.stringValue = "2" }
+        for field in [inputField, xField, yField, outputField, cutoffRangeField, timeField, censorField, groupsRangeField, groupsField, valueRangeField] {
             field.widthAnchor.constraint(greaterThanOrEqualToConstant: 220).isActive = true
         }
         for field in [confidenceField, intervalField, largestField, smallestField, alphaField, meanDifferenceField, firstVarianceField,
                       secondVarianceField, sampleSizeField, sampleCountField, periodField, offsetField, maIntervalField, averageOffsetField,
                       dampingField, growthField, seasonalField, seasonalPeriodField, cutoffCountField, minField, maxField, meanField,
-                      medianField, censorFromField, censorToField, replicationField] {
+                      medianField, censorFromField, censorToField, replicationField, variablesField, countField,
+                      firstParameterField, secondParameterField] {
             field.widthAnchor.constraint(equalToConstant: 70).isActive = true
         }
         alert.accessoryView = makeGrid()
         alert.window.initialFirstResponder = tool.isGrouped ? inputField : (tool == .kaplanMeier ? timeField : xField)
+        if tool == .randomNumbers {
+            firstParameterLabel.alignment = .right
+            secondParameterLabel.alignment = .right
+            relay = PopUpRelay { [weak self] in self?.distributionChanged() }
+            distribution.target = relay
+            distribution.action = #selector(PopUpRelay.fire(_:))
+            distributionChanged()
+        }
+    }
+
+    /// The chosen distribution as the bridge names it.
+    var chosenDistribution: RandomNumbersAnalysis.Distribution {
+        let raw = RandomNumbersAnalysis.allDistributions[max(0, distribution.indexOfSelectedItem)].intValue
+        return RandomNumbersAnalysis.Distribution(rawValue: raw) ?? .uniform
+    }
+
+    /// random_tool_distribution_callback: the parameter rows follow the
+    /// distribution; Discrete takes a range instead of a first number.
+    private func distributionChanged() {
+        let chosen = chosenDistribution
+        let first = RandomNumbersAnalysis.firstParameterLabel(for: chosen)
+        let second = RandomNumbersAnalysis.secondParameterLabel(for: chosen)
+        firstParameterLabel.stringValue = first ?? ""
+        secondParameterLabel.stringValue = second ?? ""
+        let discrete = chosen == .discrete
+        firstParameterField.isHidden = first == nil || discrete
+        valueRangeField.isHidden = !discrete
+        firstParameterLabel.isHidden = first == nil
+        secondParameterLabel.isHidden = second == nil
+        secondParameterField.isHidden = second == nil
     }
 
     private func makeGrid() -> NSGridView {
@@ -223,7 +274,7 @@ final class AnalysisDialog {
             field.font = .boldSystemFont(ofSize: NSFont.systemFontSize)
             return field
         }
-        func pair(_ check: NSButton, _ field: NSTextField) -> NSStackView {
+        func pair(_ check: NSView, _ field: NSView) -> NSStackView {
             let stack = NSStackView(views: [check, field])
             stack.orientation = .horizontal
             stack.spacing = 6
@@ -267,6 +318,16 @@ final class AnalysisDialog {
         case .homogeneity, .independence:
             rows += [[label("Input range:"), inputField], [NSGridCell.emptyContentView, labels],
                      [heading("Test"), NSGridCell.emptyContentView], [label("Test:"), chiKind], [label("Alpha:"), alphaField]]
+        case .randomNumbers:
+            rows = [[heading("Distribution"), NSGridCell.emptyContentView],
+                    [label("Distribution:"), distribution], [label("Number of variables:"), variablesField],
+                    [label("Size of sample:"), countField],
+                    [firstParameterLabel, pair(firstParameterField, valueRangeField)],
+                    [secondParameterLabel, secondParameterField]]
+        case .correlatedRandomNumbers:
+            rows = [[heading("Input"), NSGridCell.emptyContentView],
+                    [label("Matrix is:"), matrixKind], [label("Matrix range:"), inputField],
+                    [label("Number of random numbers:"), countField]]
         default:
             rows += [[label("Input range:"), inputField], [label("Grouped by:"), grouping], [NSGridCell.emptyContentView, labels]]
             switch tool {
@@ -527,6 +588,21 @@ final class AnalysisDialog {
             test.testsIndependence = chiKind.indexOfSelectedItem == 1
             test.alpha = Double(alphaField.stringValue) ?? -1
             return test
+        case .randomNumbers:
+            let random = RandomNumbersAnalysis()
+            random.distribution = chosenDistribution
+            random.variableCount = Int(variablesField.stringValue) ?? 0
+            random.count = Int(countField.stringValue) ?? 0
+            random.firstParameter = Double(firstParameterField.stringValue) ?? .nan
+            random.secondParameter = Double(secondParameterField.stringValue) ?? .nan
+            random.valueRange = valueRangeField.stringValue.isEmpty ? nil : valueRangeField.stringValue
+            return random
+        case .correlatedRandomNumbers:
+            let random = CorrelatedRandomNumbersAnalysis()
+            random.matrixRange = inputField.stringValue
+            random.isCholesky = matrixKind.indexOfSelectedItem == 1
+            random.count = Int(countField.stringValue) ?? 0
+            return random
         }
     }
 
@@ -578,4 +654,12 @@ final class AnalysisDialog {
             }
         }
     }
+}
+
+/// A pop-up's target for a dialog that is not an NSObject.
+@MainActor
+final class PopUpRelay: NSObject {
+    let handler: () -> Void
+    init(_ handler: @escaping () -> Void) { self.handler = handler }
+    @objc func fire(_ sender: Any?) { handler() }
 }

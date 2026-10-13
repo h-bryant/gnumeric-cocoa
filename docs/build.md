@@ -108,7 +108,7 @@ GNM_SNAPSHOT=/tmp/grid.png scripts/run-app.sh upstream/gnumeric/samples/format-t
 `GNM_SNAPSHOT_GOAL=1`, `GNM_SNAPSHOT_COND=1`, `GNM_SNAPSHOT_STATS=1`,
 `GNM_SNAPSHOT_VALID=1`, `GNM_SNAPSHOT_LINK=1`, `GNM_SNAPSHOT_SOLVE=1`,
 `GNM_SNAPSHOT_PRINT=1`, `GNM_SNAPSHOT_FORMULA=1`, `GNM_SNAPSHOT_FUNC=1`,
-and `GNM_SNAPSHOT_SHEET=1`
+`GNM_SNAPSHOT_SHEET=1`, and `GNM_SNAPSHOT_WHATIF=1`
 exercise zoom, editing and saving, the Format Cells model, the Phase 3
 commands, frozen panes, sheet management, the autofilter with the Sort
 command, a sheet resize, and a tab color, the sheet objects (select, move,
@@ -154,8 +154,10 @@ function selector ("app" under "apple" completes; SUM inserted through
 the dialog, captured to `-func.png`), and the sheet display toggles
 (A1 a formula and B1 a zero, then Display Formulæ, Hide Zeros, Hide
 Gridlines, Hide Row Headers, R1C1 column names, and Zoom… to 150%
-through its dialog, captured to `-zoom.png`) before the
-capture (`AppDelegate.swift`, `Snapshot`). The typing hook saves as a
+through its dialog, captured to `-zoom.png`), and the what-if tools
+(a data table over C1:E3 through its dialog, captured to `-table.png`,
+normal random numbers into H1, a tabulation of A3 over A1 onto a new
+sheet) before the capture (`AppDelegate.swift`, `Snapshot`). The typing hook saves as a
 Save As next to the snapshot; with `GNM_SNAPSHOT_SAVE_INPLACE=1` it saves
 the opened file in place instead (give it a copy). Should a quit ever go
 nowhere again (an alert sheet on the window did that once,

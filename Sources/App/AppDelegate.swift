@@ -696,6 +696,73 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_WHATIF"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // What-if: A3 = A1·A2; a data table over C1:E3 through its
+                // dialog (captured to `-table.png`), uniform random numbers
+                // into H1 through the generator's dialog, then a tabulation
+                // of A3 over A1 through its dialog, which lands on a new
+                // sheet the grid capture shows.
+                let texts = [(0, 0, "2"), (0, 1, "3"), (0, 2, "=A1*A2"), (2, 0, "=A3"), (3, 0, "10"), (4, 0, "20"), (2, 1, "1"), (2, 2, "2")]
+                do {
+                    for (c, r, text) in texts { try sheet.setText(text, atColumn: c, row: r, autocorrect: false) }
+                } catch {
+                    NSLog("whatif: model failed: %@", error.localizedDescription)
+                }
+                sheet.selectRange(CellRange(start: CellCoordinate(column: 2, row: 0), end: CellCoordinate(column: 4, row: 2)),
+                                  editPosition: CellCoordinate(column: 2, row: 0))
+                DataTableDialog.headlessDriver = { dialog in
+                    dialog.rowField.stringValue = "A1"
+                    dialog.columnField.stringValue = "A2"
+                    if let content = dialog.alert.accessoryView {
+                        content.layoutSubtreeIfNeeded()
+                        if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                            content.cacheDisplay(in: content.bounds, to: rep)
+                            let tablePath = (path as NSString).deletingPathExtension + "-table.png"
+                            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: tablePath))
+                            NSLog("whatif: captured %@ (%@)", tablePath, NSStringFromRect(content.bounds))
+                        }
+                    }
+                    return true
+                }
+                controller.dataTable(nil)
+                DataTableDialog.headlessDriver = nil
+                NSLog("whatif: table D2=%@ E3=%@ undo=%@", sheet.displayTextOfCell(atColumn: 3, row: 1) ?? "nil",
+                      sheet.displayTextOfCell(atColumn: 4, row: 2) ?? "nil", sheet.workbook?.undoLabel ?? "nil")
+                AnalysisDialog.headlessDriver = { dialog in
+                    dialog.distribution.selectItem(at: 2)   // Normal
+                    dialog.firstParameterField.stringValue = "50"
+                    dialog.secondParameterField.stringValue = "0"
+                    dialog.countField.stringValue = "3"
+                    dialog.destination.selectItem(at: 1)
+                    dialog.outputField.stringValue = "H1"
+                    NSLog("whatif: random dialog labels '%@' / '%@' chosen %ld", dialog.firstParameterLabel.stringValue,
+                          dialog.secondParameterLabel.stringValue, dialog.chosenDistribution.rawValue)
+                    return true
+                }
+                controller.randomNumbers(nil)
+                AnalysisDialog.headlessDriver = nil
+                NSLog("whatif: random H1=%@ H3=%@ H4=%@ undo=%@", sheet.displayTextOfCell(atColumn: 7, row: 0) ?? "nil",
+                      sheet.displayTextOfCell(atColumn: 7, row: 2) ?? "nil", sheet.displayTextOfCell(atColumn: 7, row: 3) ?? "nil",
+                      sheet.workbook?.undoLabel ?? "nil")
+                TabulateDialog.headlessDriver = { dialog in
+                    dialog.rows[0].cell.stringValue = "A1"
+                    dialog.rows[0].minimum.stringValue = "1"
+                    dialog.rows[0].maximum.stringValue = "4"
+                    dialog.rows[0].step.stringValue = "1"
+                    dialog.resultField.stringValue = "A3"
+                    return true
+                }
+                controller.tabulate(nil)
+                TabulateDialog.headlessDriver = nil
+                let shown = controller.gridView.sheet
+                NSLog("whatif: tabulation on '%@' of %ld sheets: B2=%@ B5=%@ undo=%@", shown?.name ?? "nil", sheet.workbook?.sheets.count ?? 0,
+                      shown?.displayTextOfCell(atColumn: 1, row: 1) ?? "nil", shown?.displayTextOfCell(atColumn: 1, row: 4) ?? "nil",
+                      sheet.workbook?.undoLabel ?? "nil")
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_SHEET"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {
