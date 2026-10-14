@@ -37,8 +37,12 @@ Requirements: macOS 15 or later on Apple silicon.
 
 ## Running the release
 
-The release zip on the Releases page holds `GnumericCocoa.app` with the
-engine, its plugins, the libraries, templates, and translations inside.
+Each release on the repository's GitHub
+[Releases page](https://github.com/h-bryant/gnumeric-cocoa/releases)
+carries a download named `GnumericCocoa-<version>.zip` (for example
+`GnumericCocoa-0.2.0.zip`). Unzipping it gives `GnumericCocoa.app`, with
+the engine, its plugins, the libraries, templates, and translations
+inside; move it to `/Applications` or anywhere else you like.
 It is not signed with an Apple Developer ID, so macOS blocks the first
 launch. Either of these lets it run:
 
