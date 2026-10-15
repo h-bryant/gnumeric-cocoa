@@ -62,11 +62,18 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         rowHeaderBottom?.constant = scrollView.hasHorizontalScroller ? -width : 0
     }
 
+    /// For the headless checks: the vertical scroller drawn on its own.
+    func captureScrollerForTesting(to path: String) {
+        guard let scroller = scrollView.verticalScroller, let rep = scroller.bitmapImageRepForCachingDisplay(in: scroller.bounds) else { return }
+        scroller.cacheDisplay(in: scroller.bounds, to: rep)
+        try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: path))
+    }
+
     /// For the headless checks: the scrollers and the headers' frames.
     var scrollerInfoForTesting: String {
         func describe(_ scroller: NSScroller?) -> String {
             guard let scroller else { return "none" }
-            return "\(NSStringFromRect(scroller.frame)) style=\(scroller.scrollerStyle == .legacy ? "legacy" : "overlay") "
+            return "\(String(describing: type(of: scroller))) \(NSStringFromRect(scroller.frame)) style=\(scroller.scrollerStyle == .legacy ? "legacy" : "overlay") "
                 + "knob=\(String(format: "%.2f", scroller.knobProportion)) hidden=\(scroller.isHidden) alpha=\(scroller.alphaValue)"
         }
         let v = describe(scrollView.verticalScroller)
@@ -2867,8 +2874,28 @@ final class SheetTabControl: NSSegmentedControl {
 /// scrollbars do, whatever the system's scroller setting (AppKit sets the
 /// preferred style on every scroll view when that setting changes).
 final class GridScrollView: NSScrollView {
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        verticalScroller = GridScroller()
+        horizontalScroller = GridScroller()
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("not used") }
+
     override var scrollerStyle: NSScroller.Style {
         get { .legacy }
         set { super.scrollerStyle = .legacy }
+    }
+}
+
+/// A legacy scroller whose track is the headers' grey: the default track
+/// is white and vanished against white cells (Henry's report).
+final class GridScroller: NSScroller {
+    override class var isCompatibleWithOverlayScrollers: Bool { false }
+
+    override func drawKnobSlot(in slotRect: NSRect, highlight flag: Bool) {
+        NSColor.windowBackgroundColor.setFill()
+        slotRect.fill()
     }
 }

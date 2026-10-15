@@ -877,6 +877,7 @@ enum Snapshot {
                 // across a sheet switch and across a save and reopen.
                 let grid = controller.gridView
                 NSLog("restore: scrollers %@", controller.scrollerInfoForTesting)
+                controller.captureScrollerForTesting(to: (path as NSString).deletingPathExtension + "-scroller.png")
                 sheet.selectCell(atColumn: 3, row: 19)   // D20
                 grid.scroll(NSPoint(x: sheet.leftEdge(ofColumn: 1), y: sheet.topEdge(ofRow: 5)))   // B6 at the top left
                 NSLog("restore: top left recorded %ld,%ld edit position %ld,%ld visible origin %@", sheet.initialTopLeft.column, sheet.initialTopLeft.row,
