@@ -2358,7 +2358,96 @@
   release zip (`scripts/bundle.sh`, then zip `build/dist/GnumericCocoa.app`),
   and the push, all Henry's.
 
-## How to resume (updated 2026-10-13)
+## 2026-10-15: Henry's second usage report
+
+Henry's report from using 0.2.0: no scroll bars, the selected cell not
+kept across save and open, no way to insert rows or columns from a
+right-click on a selected row or column, and no reference by mouse while
+typing a formula.  All four answered; none seen by him yet.
+
+- Scroll bars: the grid's scroll view had scrollers, but in the system's
+  default overlay style they show only while scrolling.  `GridScrollView`
+  keeps the legacy style whatever the setting (AppKit re-applies the
+  preferred style to every scroll view when that setting changes, so the
+  property is overridden, not just set), and the column and row headers
+  stop where the scrollers begin (`updateHeaderInsets`, 17 px).  The
+  headless capture does not draw NSScroller; `GNM_SNAPSHOT_RESTORE=1`
+  logs the scrollers' style, frames, and knob proportions instead
+  (legacy, 0.80 and 0.69 on the sample).
+- The selection across save and open: the engine already restored the
+  edit position, the selection, and the focused sheet (`xml-sax-read.c`
+  sets them on the sheet views, `SelectedTab` focuses the sheet) and
+  saved them from the same views, and the grid draws the selection from
+  the engine, so the cursor came back but the grid scrolled to A1
+  (`scrollToSheetStart`), which could leave it out of view.  The file
+  also carries each sheet's TopLeft (`SheetView.initial_top_left`, which
+  the GTK's pane 0 keeps up to date as it scrolls and restores through
+  `sc_set_top_left`).  The bridge exposes it as `initialTopLeft`; the
+  grid scrolls to it when a sheet is shown (deferred until the clip view
+  has a size: before the first layout the frame has no page beyond the
+  data, and the clamp would lose the place) and records the first
+  scrolling cell on every scroll (`recordTopLeft`).  So the scroll
+  position survives save and open, and a sheet comes back where it was
+  when the tabs switch.  The engine's scroll requests
+  (`sheet:scrollToColumn:row:`) go through the same mapping, which
+  clears the frozen strips and mirrors right to left.  `selection_io.m`
+  round-trips the edit position, the selection, the focused sheet, and
+  the top-left through .gnumeric and xlsx, and checks that a bad
+  top-left (outside the sheet, or before a frozen sheet's unfrozen
+  corner) is ignored without the engine's critical warning.
+- Context menus: the cell's menu had only the comment items.  It is now
+  the GTK's `scg_context_menu`: Cut, Copy, Paste, Paste Special…; Insert
+  and Delete N Cells… for a cell selection, Insert and Delete N Columns
+  or Rows when whole columns or rows are selected (neither when the
+  whole sheet is); Clear Contents; for cells the comment and hyperlink
+  items with Remove N Comments/Links over the selection; Format All
+  Cells…, Conditional Formatting…; and the Cell, Column, and Row
+  submenus (Merge, Unmerge, Auto Fit; Width…/Height…, Auto Fit, Hide,
+  Unhide, Hide refused when every column or row is selected).  A
+  right-click outside the selection moves the selection to the cell;
+  inside it the selection stays, as the GTK pane's does (the old menu
+  collapsed it to the cell).  The column and row headers show the same
+  menu on a right-click (item-bar.c's button 3): the column (row) under
+  the pointer becomes the selection unless the selected columns (rows)
+  include it already.  The actions go through the responder chain,
+  validated as the menu bar's.  The counted titles use the GTK's
+  ngettext pairs through `Localization.title` ("_Insert %d Columns" and
+  so on), the rest the catalog's labels; the label table was regenerated
+  (two new loose matches).  `GNM_SNAPSHOT_CONTEXT=1` lists the menus for
+  a cell, two columns, a row, and the whole sheet, and the headers'
+  right-clicks (D with B:C selected selects D; C keeps B:C; row 3 with
+  row 5 selected selects row 3), then inserts a column from D's menu
+  ("Inserting 1 column before D").
+- Reference by mouse: the code existed since 2026-10-12 but had only
+  been exercised by calling `takeFormulaRange` directly.  A real click
+  never reached it: `NSWindow` makes the clicked view the first
+  responder before sending `mouseDown` when the view accepts it (its
+  private `_makingFirstResponderForMouseDown` names the step), which
+  ended the cell editor's editing, and `controlTextDidEndEditing`
+  committed the "=" as text.  `GridView.acceptsFirstResponder` is now
+  false while the formula at the cursor can take a range
+  (`formulaReplacement()`), so the editor keeps the focus, the grid's
+  `mouseDown` puts the reference in, a drag extends it, and typing goes
+  on in the editor.  A plain text edit still ends on a click, as before.
+  `GNM_SNAPSHOT_CLICKREF=1` models the window's rule (the headless window
+  cannot be key, so `sendEvent` drops mouse events; the hook makes the
+  view first responder when it accepts that, then calls `mouseDown`):
+  "=" then a click on B2, a drag to B3, "+", and a click on B1 give
+  "=B2:B3+B1".  The headers still commit on a click (the GTK inserts
+  A:A there); the formula bar's own editing is still separate from the
+  grid's.
+- Seen on the way, not fixed: `GNM_SNAPSHOT_EVERYDAY=1` ends in a
+  segmentation fault, on the baseline build too: after the hook closes
+  the untitled document, its grid draws once more with the workbook gone
+  (`drawCommentMarkers` → `commentsInRange:` → `sheet_objects_get` on a
+  freed sheet).  A `GridView` whose window is closing should drop its
+  sheet first.
+- Also seen: a file saved with a scroll position now opens there
+  (chart-tests.gnumeric opens on tab 19 at E13 with D39 selected), so the
+  headless captures of that file show that region; hooks that click
+  around A1 scroll to the origin first.
+
+## How to resume (updated 2026-10-15)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
    continue with Phase 4". `HANDOFF.md` §9 is the checklist: smoke tests,
@@ -2398,8 +2487,10 @@
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-13: `main` at the public-repository
-   preparations commit (after the loose matches and aliases, the dialog rows and SwiftUI, the stock labels and dialog chrome, the toolbar and buttons, the menu titles, the engine's messages, right-to-left sheets, the bundled
+3. The state at the end of 2026-10-15: `main` at the usage-report commits
+   (scroll bars, the selection and scroll position across save and open,
+   the cell and header context menus, references by mouse; the 2026-10-15
+   entry) after the public-repository preparations commit (after the loose matches and aliases, the dialog rows and SwiftUI, the stock labels and dialog chrome, the toolbar and buttons, the menu titles, the engine's messages, right-to-left sheets, the bundled
    licenses, the relocatable bundle, the workbook properties, multi-line editing, drag and drop, the toolbar, the widget editors, AutoFormat, scenarios and simulation, the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,

@@ -306,6 +306,12 @@ Add new ones here as they arise, and do not resolve them unilaterally.
    changing UI behavior, and take his report over the captures. First
    thing to ask: edit, ⌘S, ⌘Q, and Save As to a new name and to `.xml`
    (`docs/progress.md`, "Quit did nothing after a save (fixed)").
+   Henry's second report, after using 0.2.0 (2026-10-15): no scroll
+   bars, the selected cell not kept across save and open, no row or
+   column insertion from a right-click on a selected row or column, no
+   reference by mouse while typing a formula.  All four answered that
+   day (`docs/progress.md`, "Henry's second usage report"); none seen by
+   him yet.
 5. Phase 3 (`docs/mvp-known-gaps.md` says what the MVP lacks). Done on
    2026-10-11 and 2026-10-12: insert/delete rows and columns, hide and
    unhide, clear variants (filtered ones too), fill and autofill (fill
