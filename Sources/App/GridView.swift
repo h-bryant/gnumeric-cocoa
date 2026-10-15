@@ -438,7 +438,11 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
 
     override var isFlipped: Bool { true }
     override var isOpaque: Bool { true }
-    override var acceptsFirstResponder: Bool { true }
+    /// Not while a click would put a range into the formula being typed:
+    /// the window makes the clicked view the first responder before its
+    /// mouseDown, which would end the cell editor's editing (and commit
+    /// it) before the click could take the range.
+    override var acceptsFirstResponder: Bool { formulaReplacement() == nil }
 
     // MARK: Geometry
 
