@@ -198,6 +198,28 @@ class SheetHeaderView: NSView {
         }
     }
 
+    /// A right-click (item-bar.c's button 3): the column (row) under the
+    /// pointer becomes the selection unless the selected columns (rows)
+    /// include it already, then the grid's menu offers the selection's
+    /// Insert and Delete Columns (Rows) with the rest.
+    override func menu(for event: NSEvent) -> NSMenu? {
+        guard let gridView, let sheet else { return nil }
+        window?.makeFirstResponder(gridView)
+        let point = convert(event.locationInWindow, from: nil)
+        guard let index = index(at: point) else { return nil }
+        let selection = sheet.selectedRange
+        let selected = isColumnHeader
+            ? (selection.start.row == 0 && selection.end.row == sheet.rowCount - 1
+               && index >= selection.start.column && index <= selection.end.column)
+            : (selection.start.column == 0 && selection.end.column == sheet.columnCount - 1
+               && index >= selection.start.row && index <= selection.end.row)
+        if !selected {
+            dragAnchor = index
+            select(from: index, to: index)
+        }
+        return gridView.contextMenu()
+    }
+
     /// outline_button_press: collapse or expand the group at a column (row)
     /// and level.
     func toggleOutline(at index: Int, step: Int) {

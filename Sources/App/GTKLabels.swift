@@ -275,6 +275,7 @@ enum GTKLabels {
     /// trailing colon, an ellipsis, or spacing, by the string as written.
     static let looseMatches: [String: String] = [
         "Action:": "Ac_tion:",
+        "Add Comment…": "Add _Comment...",
         "All functions": "All Functions",
         "Allow:": "Allo_w:",
         "Anderson-Darling test": "Anderson-Darling Test",
@@ -293,6 +294,7 @@ enum GTKLabels {
         "Category": "C_ategory:",
         "Chart": "C_hart...",
         "Chart:": "C_hart...",
+        "Clear Contents": "Clear Co_ntents",
         "Clear output range": "C_lear output range",
         "Compare Sheets": "Compare Sheets...",
         "Conditional Formatting": "C_onditional Formatting...",

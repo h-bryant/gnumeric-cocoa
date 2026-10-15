@@ -1175,28 +1175,110 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         }
     }
 
+    /// The GTK's cell menu (scg_context_menu), for the selection: the
+    /// clipboard, then Insert and Delete Cells…, or Insert and Delete
+    /// Columns or Rows when whole columns or rows are selected (neither
+    /// when the whole sheet is), Clear Contents, the edit position's
+    /// comment and hyperlink with the selection's removals, Format All
+    /// Cells…, Conditional Formatting…, and the Cell, Column, and Row
+    /// submenus.  The actions go through the responder chain, validated
+    /// as the menu bar's are.
+    func contextMenu() -> NSMenu {
+        let menu = NSMenu(title: "Cell")
+        guard let sheet else { return menu }
+        let selection = sheet.selectedRange
+        let wholeRows = selection.start.column == 0 && selection.end.column == sheet.columnCount - 1
+        let wholeColumns = selection.start.row == 0 && selection.end.row == sheet.rowCount - 1
+        let columns = selection.end.column - selection.start.column + 1
+        let rows = selection.end.row - selection.start.row + 1
+        let forCells = !wholeRows && !wholeColumns
+        @discardableResult
+        func add(_ title: String, _ action: Selector?, to target: NSMenu = menu) -> NSMenuItem {
+            target.addItem(withTitle: title, action: action, keyEquivalent: "")
+        }
+        /// The GTK's ngettext pair, the count put in.
+        func counted(_ title: String, _ n: Int) -> String {
+            title.replacingOccurrences(of: "%d", with: String(n))
+        }
+        func submenu(_ title: String) -> NSMenu {
+            let sub = NSMenu(title: title)
+            let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+            item.submenu = sub
+            menu.addItem(item)
+            return sub
+        }
+        add(Localization.title("Cut"), #selector(NSText.cut(_:)))
+        add(Localization.title("Copy"), #selector(NSText.copy(_:)))
+        add(Localization.title("Paste"), #selector(NSText.paste(_:)))
+        add(Localization.title("Paste Special…"), Selector(("pasteSpecial:")))
+        menu.addItem(.separator())
+        if forCells {
+            let cells = columns * rows
+            add(counted(cells == 1 ? Localization.title("Insert %d Cell…") : Localization.title("Insert %d Cells…"), cells), Selector(("insertCells:")))
+            add(counted(cells == 1 ? Localization.title("Delete %d Cell…") : Localization.title("Delete %d Cells…"), cells), Selector(("deleteCells:")))
+        } else if wholeColumns && !wholeRows {
+            add(counted(columns == 1 ? Localization.title("Insert %d Column") : Localization.title("Insert %d Columns"), columns), #selector(insertColumns(_:)))
+            add(counted(columns == 1 ? Localization.title("Delete %d Column") : Localization.title("Delete %d Columns"), columns), #selector(deleteColumns(_:)))
+        } else if wholeRows && !wholeColumns {
+            add(counted(rows == 1 ? Localization.title("Insert %d Row") : Localization.title("Insert %d Rows"), rows), #selector(insertRows(_:)))
+            add(counted(rows == 1 ? Localization.title("Delete %d Row") : Localization.title("Delete %d Rows"), rows), #selector(deleteRows(_:)))
+        }
+        add(Localization.title("Clear Contents"), #selector(NSText.delete(_:)))
+        if forCells {
+            menu.addItem(.separator())
+            let edit = sheet.editPosition
+            add(sheet.comment(atColumn: edit.column, row: edit.row) == nil ? Localization.title("Add Comment…") : Localization.title("Edit Comment…"),
+                #selector(insertComment(_:)))
+            let comments = sheet.comments(in: selection).count
+            if comments > 0 {
+                add(counted(comments == 1 ? Localization.title("Remove %d Comment") : Localization.title("Remove %d Comments"), comments),
+                    #selector(clearComments(_:)))
+            }
+            add(sheet.hyperlink(atColumn: edit.column, row: edit.row) == nil ? Localization.title("Add Hyperlink…") : Localization.title("Edit Hyperlink…"),
+                Selector(("insertHyperlink:")))
+            let links = sheet.hyperlinkRanges(in: selection).count
+            if links > 0 {
+                add(counted(links == 1 ? Localization.title("Remove %d Link") : Localization.title("Remove %d Links"), links), #selector(clearHyperlinks(_:)))
+            }
+        }
+        menu.addItem(.separator())
+        add(Localization.title("Format All Cells…"), Selector(("formatCells:")))
+        add(Localization.title("Conditional Formatting…"), Selector(("conditionalFormatting:")))
+        let cellMenu = submenu(Localization.title("Cell"))
+        add(Localization.title("Merge"), #selector(mergeCells(_:)), to: cellMenu)
+        add(Localization.title("Unmerge"), #selector(unmergeCells(_:)), to: cellMenu)
+        add(Localization.title("Auto Fit Width"), #selector(autofitColumns(_:)), to: cellMenu)
+        add(Localization.title("Auto Fit Height"), #selector(autofitRows(_:)), to: cellMenu)
+        let columnMenu = submenu(Localization.title("Column"))
+        add(Localization.title("Width…"), Selector(("setColumnWidth:")), to: columnMenu)
+        add(Localization.title("Auto Fit Width"), #selector(autofitColumns(_:)), to: columnMenu)
+        // Hiding every column (row) is refused, as the GTK greys it.
+        add(Localization.title("Hide"), wholeRows ? nil : #selector(hideColumns(_:)), to: columnMenu)
+        add(Localization.title("Unhide"), #selector(unhideColumns(_:)), to: columnMenu)
+        let rowMenu = submenu(Localization.title("Row"))
+        add(Localization.title("Height…"), Selector(("setRowHeight:")), to: rowMenu)
+        add(Localization.title("Auto Fit Height"), #selector(autofitRows(_:)), to: rowMenu)
+        add(Localization.title("Hide"), wholeColumns ? nil : #selector(hideRows(_:)), to: rowMenu)
+        add(Localization.title("Unhide"), #selector(unhideRows(_:)), to: rowMenu)
+        return menu
+    }
+
     /// Right-click on an object: the GTK object menu's delete and order items.
     override func menu(for event: NSEvent) -> NSMenu? {
         guard let sheet else { return nil }
         let point = sheetPoint(forViewPoint: convert(event.locationInWindow, from: nil))
         guard let object = sheet.sheetObject(at: point) else {
-            // A cell: its comment.
+            // A cell: the selection's menu; a click outside the selection
+            // moves the selection there first (gnm_pane_button_press).
             if isEditing { commitEditing(text: editor.stringValue, movement: .none) }
             let cell = CellCoordinate(column: sheet.column(atX: point.x), row: sheet.row(atY: point.y))
             let selection = sheet.selectedRange
             let inside = cell.column >= selection.start.column && cell.column <= selection.end.column
                 && cell.row >= selection.start.row && cell.row <= selection.end.row
-            if !inside || sheet.editPosition.column != cell.column || sheet.editPosition.row != cell.row {
+            if !inside {
                 sheet.selectCell(atColumn: cell.column, row: cell.row)
             }
-            let menu = NSMenu(title: "Cell")
-            if sheet.comment(atColumn: cell.column, row: cell.row) != nil {
-                menu.addItem(withTitle: Localization.title("Edit Comment…"), action: #selector(insertComment(_:)), keyEquivalent: "")
-                menu.addItem(withTitle: Localization.title("Delete Comment"), action: #selector(deleteComment(_:)), keyEquivalent: "")
-            } else {
-                menu.addItem(withTitle: Localization.title("Insert Comment…"), action: #selector(insertComment(_:)), keyEquivalent: "")
-            }
-            return menu
+            return contextMenu()
         }
         if !selectedObjects.contains(object) {
             select(objects: [object])
