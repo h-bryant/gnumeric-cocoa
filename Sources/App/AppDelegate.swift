@@ -742,6 +742,171 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_CLICKREF"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // A reference by mouse as the user does it: "=" typed in A5,
+                // then a click on B2 and a drag to B3 through the window's
+                // own path when it can be key, else that path modeled (the
+                // clicked view becomes the first responder when it accepts
+                // that, then gets the event); "+" and a click on B1 after.
+                let grid = controller.gridView
+                do {
+                    for r in 0..<3 { try sheet.setText("\(r + 1)", atColumn: 1, row: r, autocorrect: false) }
+                } catch {
+                    NSLog("clickref: data failed: %@", error.localizedDescription)
+                }
+                window.makeKey()
+                NSLog("clickref: key=%d", window.isKeyWindow ? 1 : 0)
+                @MainActor func mouse(_ type: NSEvent.EventType, column: Int, row: Int) {
+                    let cell = grid.viewRect(forSheetRect: sheet.frameOfCell(atColumn: column, row: row))
+                    let inWindow = grid.convert(NSPoint(x: cell.midX, y: cell.midY), to: nil)
+                    guard let event = NSEvent.mouseEvent(with: type, location: inWindow, modifierFlags: [],
+                                                         timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
+                                                         context: nil, eventNumber: 1, clickCount: 1, pressure: 1) else { return }
+                    if window.isKeyWindow {
+                        window.sendEvent(event)
+                        return
+                    }
+                    switch type {
+                    case .leftMouseDown:
+                        if grid.acceptsFirstResponder { window.makeFirstResponder(grid) }
+                        grid.mouseDown(with: event)
+                    case .leftMouseDragged: grid.mouseDragged(with: event)
+                    default: grid.mouseUp(with: event)
+                    }
+                }
+                @MainActor func key(_ code: UInt16, _ character: String) {
+                    if let event = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                                   windowNumber: window.windowNumber, context: nil, characters: character,
+                                                   charactersIgnoringModifiers: character, isARepeat: false, keyCode: code) {
+                        window.sendEvent(event)
+                    }
+                }
+                @MainActor func state(_ step: String) {
+                    NSLog("clickref: %@: editing=%d text='%@' responder=%@ outlined=%@", step, grid.isEditing ? 1 : 0, grid.editorTextForTesting,
+                          String(describing: type(of: window.firstResponder as AnyObject)),
+                          grid.formulaRangeShown.map { "\($0.start.column),\($0.start.row)-\($0.end.column),\($0.end.row)" } ?? "nil")
+                }
+                grid.scroll(.zero)   // the file opens where it was saved; the cells clicked must be in view
+                sheet.selectCell(atColumn: 0, row: 4)
+                grid.beginEditing(initialText: "=")
+                state("before")
+                mouse(.leftMouseDown, column: 1, row: 1)
+                state("down on B2")
+                mouse(.leftMouseDragged, column: 1, row: 2)
+                state("drag to B3")
+                mouse(.leftMouseUp, column: 1, row: 2)
+                key(24, "+")
+                mouse(.leftMouseDown, column: 1, row: 0)
+                mouse(.leftMouseUp, column: 1, row: 0)
+                state("+ and click on B1")
+                grid.commitEditing(text: grid.editorTextForTesting, movement: .none)
+                NSLog("clickref: A5='%@' entered '%@'", sheet.displayTextOfCell(atColumn: 0, row: 4) ?? "nil",
+                      sheet.enteredTextOfCell(atColumn: 0, row: 4) ?? "nil")
+                // Plain text being typed: the click ends the edit and
+                // selects the clicked cell, as before.
+                sheet.selectCell(atColumn: 0, row: 5)
+                grid.beginEditing(initialText: "hello")
+                mouse(.leftMouseDown, column: 2, row: 2)
+                mouse(.leftMouseUp, column: 2, row: 2)
+                NSLog("clickref: text edit then click: editing=%d A6='%@' selection=%ld,%ld", grid.isEditing ? 1 : 0,
+                      sheet.displayTextOfCell(atColumn: 0, row: 5) ?? "nil", sheet.editPosition.column, sheet.editPosition.row)
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_CONTEXT"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // The context menus: a cell's, whole columns', a whole
+                // row's, the whole sheet's; the header's right-click moves
+                // the selection to the column (row) under the pointer unless
+                // it is selected; Insert from the column menu.
+                let grid = controller.gridView
+                @MainActor func titles(_ menu: NSMenu) -> String {
+                    menu.items.map { $0.isSeparatorItem ? "|" : $0.title + ($0.submenu != nil ? ">" : $0.action == nil ? "(off)" : "") }
+                        .joined(separator: ", ")
+                }
+                grid.scroll(.zero)   // the file opens where it was saved; the headers clicked must be in view
+                sheet.selectCell(atColumn: 2, row: 2)
+                NSLog("context: cell C3: %@", titles(grid.contextMenu()))
+                grid.selectColumns(from: 1, to: 2, anchor: 1)
+                NSLog("context: columns B:C: %@", titles(grid.contextMenu()))
+                grid.selectRows(from: 4, to: 4, anchor: 4)
+                NSLog("context: row 5: %@", titles(grid.contextMenu()))
+                grid.selectAll(nil)
+                NSLog("context: all: %@", titles(grid.contextMenu()))
+                @MainActor func rightClick(_ header: SheetHeaderView, atSheetX x: CGFloat, sheetY y: CGFloat) -> NSMenu? {
+                    let inGrid = NSPoint(x: grid.viewX(forSheetX: x), y: grid.viewY(forSheetY: y))
+                    var point = header.convert(inGrid, from: grid)
+                    if header.isColumnHeader { point.y = header.bounds.height - 4 } else { point.x = header.bounds.width - 4 }
+                    guard let event = NSEvent.mouseEvent(with: .rightMouseDown, location: header.convert(point, to: nil), modifierFlags: [],
+                                                         timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
+                                                         context: nil, eventNumber: 1, clickCount: 1, pressure: 1) else { return nil }
+                    return header.menu(for: event)
+                }
+                @MainActor func selection() -> String {
+                    let r = sheet.selectedRange
+                    return "\(r.start.column),\(r.start.row)-\(r.end.column),\(r.end.row)"
+                }
+                grid.selectColumns(from: 1, to: 2, anchor: 1)
+                var menu = rightClick(grid.headerViews[0], atSheetX: sheet.leftEdge(ofColumn: 3) + 2, sheetY: 0)
+                NSLog("context: header D with B:C selected -> selection %@ menu %@", selection(), menu.map(titles) ?? "nil")
+                grid.selectColumns(from: 1, to: 2, anchor: 1)
+                menu = rightClick(grid.headerViews[0], atSheetX: sheet.leftEdge(ofColumn: 2) + 2, sheetY: 0)
+                NSLog("context: header C with B:C selected -> selection %@ menu %@", selection(), menu.map(titles) ?? "nil")
+                do { try sheet.setText("d1", atColumn: 3, row: 0, autocorrect: false) } catch { NSLog("context: data failed") }
+                grid.selectRows(from: 4, to: 4, anchor: 4)
+                menu = rightClick(grid.headerViews[1], atSheetX: 0, sheetY: sheet.topEdge(ofRow: 2) + 2)
+                NSLog("context: row header 3 with row 5 selected -> selection %@ menu %@", selection(), menu.map(titles) ?? "nil")
+                menu = rightClick(grid.headerViews[0], atSheetX: sheet.leftEdge(ofColumn: 3) + 2, sheetY: 0)
+                if let item = menu?.items.first(where: { $0.title.hasPrefix("Insert") }), let action = item.action {
+                    _ = grid.perform(action, with: item)
+                }
+                NSLog("context: Insert from D's menu: D1='%@' E1='%@' undo=%@", sheet.displayTextOfCell(atColumn: 3, row: 0) ?? "",
+                      sheet.displayTextOfCell(atColumn: 4, row: 0) ?? "", sheet.workbook?.undoLabel ?? "nil")
+                grid.undo(nil)
+                sheet.selectCell(atColumn: 0, row: 0)
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_RESTORE"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet, let workbook = sheet.workbook {
+                // The scrollers, then the selection and the scroll position
+                // across a sheet switch and across a save and reopen.
+                let grid = controller.gridView
+                NSLog("restore: scrollers %@", controller.scrollerInfoForTesting)
+                sheet.selectCell(atColumn: 3, row: 19)   // D20
+                grid.scroll(NSPoint(x: sheet.leftEdge(ofColumn: 1), y: sheet.topEdge(ofRow: 5)))   // B6 at the top left
+                NSLog("restore: top left recorded %ld,%ld edit position %ld,%ld visible origin %@", sheet.initialTopLeft.column, sheet.initialTopLeft.row,
+                      sheet.editPosition.column, sheet.editPosition.row, NSStringFromPoint(grid.visibleRect.origin))
+                if workbook.sheets.count > 1 {
+                    workbook.select(workbook.sheets[1])
+                    NSLog("restore: on sheet 2 visible origin %@", NSStringFromPoint(grid.visibleRect.origin))
+                    workbook.select(sheet)
+                    NSLog("restore: back on sheet 1 visible origin %@ top left %ld,%ld", NSStringFromPoint(grid.visibleRect.origin),
+                          sheet.initialTopLeft.column, sheet.initialTopLeft.row)
+                }
+                let url = URL(fileURLWithPath: (path as NSString).deletingPathExtension + "-restore.gnumeric")
+                do {
+                    try workbook.write(to: url, adoptingURL: false)
+                    let document = try WorkbookDocument(contentsOf: url, ofType: "org.gnome.gnumeric.spreadsheet")
+                    document.makeWindowControllers()
+                    if let reopened = document.windowControllers.first as? WorkbookWindowController, let again = reopened.gridView.sheet {
+                        reopened.window?.contentView?.layoutSubtreeIfNeeded()
+                        let r = again.selectedRange
+                        NSLog("restore: reopened sheet '%@' edit position %ld,%ld selection %ld,%ld-%ld,%ld top left %ld,%ld visible origin %@",
+                              again.name, again.editPosition.column, again.editPosition.row, r.start.column, r.start.row, r.end.column, r.end.row,
+                              again.initialTopLeft.column, again.initialTopLeft.row, NSStringFromPoint(reopened.gridView.visibleRect.origin))
+                    }
+                    document.close()
+                } catch {
+                    NSLog("restore: failed: %@", error.localizedDescription)
+                }
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_PRINT"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {
