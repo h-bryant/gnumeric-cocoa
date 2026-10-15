@@ -1221,10 +1221,13 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
             add(counted(cells == 1 ? Localization.title("Insert %d Cell…") : Localization.title("Insert %d Cells…"), cells), Selector(("insertCells:")))
             add(counted(cells == 1 ? Localization.title("Delete %d Cell…") : Localization.title("Delete %d Cells…"), cells), Selector(("deleteCells:")))
         } else if wholeColumns && !wholeRows {
-            add(counted(columns == 1 ? Localization.title("Insert %d Column") : Localization.title("Insert %d Columns"), columns), #selector(insertColumns(_:)))
+            // Where the insertion goes is in the title (Henry's wording;
+            // the GTK says "Insert %d Columns").
+            add(counted(columns == 1 ? Localization.title("Insert %d Column to the Left") : Localization.title("Insert %d Columns to the Left"), columns),
+                #selector(insertColumns(_:)))
             add(counted(columns == 1 ? Localization.title("Delete %d Column") : Localization.title("Delete %d Columns"), columns), #selector(deleteColumns(_:)))
         } else if wholeRows && !wholeColumns {
-            add(counted(rows == 1 ? Localization.title("Insert %d Row") : Localization.title("Insert %d Rows"), rows), #selector(insertRows(_:)))
+            add(counted(rows == 1 ? Localization.title("Insert %d Row Above") : Localization.title("Insert %d Rows Above"), rows), #selector(insertRows(_:)))
             add(counted(rows == 1 ? Localization.title("Delete %d Row") : Localization.title("Delete %d Rows"), rows), #selector(deleteRows(_:)))
         }
         add(Localization.title("Clear Contents"), #selector(NSText.delete(_:)))

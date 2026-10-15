@@ -2468,6 +2468,11 @@ cells; and the headers' Insert and Delete items were greyed out.
   (`menu.update()`, each item marked "(off)" when disabled): with an
   empty clipboard only Paste and Paste Special are off.
 
+- Henry's wording for the insertions: "Insert 1 Row Above" and "Insert
+  1 Column to the Left" (plural "Rows"/"Columns"), where the GTK says
+  "Insert %d Rows"; these two titles have no catalog message, so they
+  stay English under other languages.
+
 ## How to resume (updated 2026-10-15)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
