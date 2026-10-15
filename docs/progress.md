@@ -2473,6 +2473,24 @@ cells; and the headers' Insert and Delete items were greyed out.
   "Insert %d Rows"; these two titles have no catalog message, so they
   stay English under other languages.
 
+### 2026-10-15 (later): the double-click opened an old copy
+
+Henry's double-click on a .gnumeric file opened an earlier build.
+Three copies of the app were registered with LaunchServices, all with
+version 0.2.0 build 2: `build/app` (rebuilt all day, deleted and
+recreated each time), the Xcode product under `build/DerivedData` (from
+2026-10-13), and `build/dist` (the bundle of 2026-10-13).  With equal
+versions LaunchServices picks one at its discretion, and a double-click
+during or after a rebuild fell through to the stale Xcode product.
+Done: the version is 0.2.1, build 3 (`Info.plist`; the release number
+stays Henry's), `build/app` and `build/dist` rebuilt at it, the stale
+Xcode product removed and unregistered, the two current copies
+re-registered (`lsregister -f`).  LaunchServices prefers the highest
+version, so an old copy left on the machine loses to these.  The lasting
+answer is one installed copy: `build/dist/GnumericCocoa.app` moved to
+`/Applications` (LaunchServices prefers that location), the development
+build run through `scripts/run-app.sh`.
+
 ## How to resume (updated 2026-10-15)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
