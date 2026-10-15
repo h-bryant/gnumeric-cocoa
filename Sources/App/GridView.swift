@@ -21,7 +21,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
             layoutIsRightToLeft = isRightToLeft
             updateFrameSize()
             updateCommentToolTips()
-            scrollToSheetStart()
+            scrollToInitialTopLeft()
             needsDisplay = true
             headerViews.forEach { $0.needsDisplay = true }
             if wasRightToLeft != layoutIsRightToLeft { directionDidChange?() }
@@ -206,11 +206,40 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         directionDidChange?()
     }
 
-    /// The document's start: A1 at the top left, or at the top right of a
-    /// right-to-left sheet.
-    private func scrollToSheetStart() {
-        guard let clip = enclosingScrollView?.contentView else { scroll(.zero); return }
-        scroll(NSPoint(x: isRightToLeft ? max(0, bounds.width - clip.bounds.width) : 0, y: 0))
+    /// Where the sheet was last shown: the first scrolling cell its view
+    /// keeps (restored from the file, or recorded as the grid scrolled),
+    /// at the top left, or at the top right of a right-to-left sheet.
+    private func scrollToInitialTopLeft() {
+        guard let sheet, let clip = enclosingScrollView?.contentView else { scroll(.zero); return }
+        // Before the first layout the clip view has no size and the grid
+        // no page beyond the data: the scroll waits for the frame.
+        guard !clip.bounds.isEmpty else { needsInitialScroll = true; return }
+        needsInitialScroll = false
+        scroll(toFirstScrollingCell: sheet.initialTopLeft)
+    }
+    private var needsInitialScroll = false
+
+    /// Scroll so `cell` is the first cell past the frozen strips (what the
+    /// GTK's pane 0 shows at its top left; sc_set_top_left), at the top
+    /// right of a right-to-left sheet.
+    func scroll(toFirstScrollingCell cell: CellCoordinate) {
+        guard let sheet else { return }
+        let clipWidth = enclosingScrollView?.contentView.bounds.width ?? 0
+        let strip = (width: panes?.width ?? 0, height: panes?.height ?? 0)
+        let x = sheet.leftEdge(ofColumn: cell.column)
+        scroll(NSPoint(x: isRightToLeft ? max(0, mirrorWidth - x + strip.width - clipWidth) : max(0, x - strip.width),
+                       y: max(0, sheet.topEdge(ofRow: cell.row) - strip.height)))
+    }
+
+    /// The first scrolling cell, kept in the sheet's view as the grid
+    /// scrolls (gnm_pane_update_inital_top_left): the file saves it and
+    /// the sheet shows it again when it comes back.
+    private func recordTopLeft() {
+        guard let sheet, !needsInitialScroll else { return }
+        let r = scrollingVisibleRect
+        let x = isRightToLeft ? max(0, sheetX(forViewX: r.maxX) - 0.5) : sheetX(forViewX: r.minX)
+        let cell = CellCoordinate(column: sheet.column(atX: x), row: sheet.row(atY: sheetY(forViewY: r.minY)))
+        if cell != sheet.initialTopLeft { sheet.initialTopLeft = cell }
     }
 
     /// The sheet x range the visible rect covers, apart from the strips.
@@ -442,6 +471,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     @objc private func clipFrameChanged(_ note: Notification) {
         guard let clip = enclosingScrollView?.contentView, note.object as? NSView === clip else { return }
         updateFrameSize()
+        if needsInitialScroll { scrollToInitialTopLeft() }
         headerViews.forEach { $0.needsDisplay = true }
     }
 
@@ -451,6 +481,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         guard let clip = enclosingScrollView?.contentView, note.object as? NSView === clip else { return }
         headerViews.forEach { $0.needsDisplay = true }
         if panes != nil { needsDisplay = true }
+        recordTopLeft()
     }
 
     func rect(of range: CellRange, in sheet: Sheet) -> NSRect {
@@ -2538,7 +2569,7 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
     }
 
     func sheet(_ sheet: Sheet, scrollToColumn column: Int, row: Int) {
-        scroll(NSPoint(x: sheet.leftEdge(ofColumn: column), y: sheet.topEdge(ofRow: row)))
+        scroll(toFirstScrollingCell: CellCoordinate(column: column, row: row))
     }
 
     /// Scroll so the cell shows; a scrolling cell must clear the frozen
