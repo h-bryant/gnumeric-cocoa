@@ -204,6 +204,13 @@ NS_SWIFT_UI_ACTOR NS_SWIFT_NAME(Sheet)
 /// use).
 @property (nonatomic, readonly) GnmCellCoordinate scrollableExtent;
 
+/// The first scrolling cell a view of the sheet shows (`SheetView
+/// initial_top_left`, the file's TopLeft): read when the sheet is shown,
+/// set as the grid scrolls so a save keeps the position
+/// (`gnm_sheet_view_set_initial_top_left`).  A cell outside the sheet
+/// or, with frozen panes, before the unfrozen corner is ignored.
+@property (nonatomic) GnmCellCoordinate initialTopLeft;
+
 // Geometry.  Hidden columns and rows have size 0.
 - (CGFloat)widthOfColumn:(NSInteger)column NS_SWIFT_NAME(width(ofColumn:));
 - (CGFloat)heightOfRow:(NSInteger)row NS_SWIFT_NAME(height(ofRow:));

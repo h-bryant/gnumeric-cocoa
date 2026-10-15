@@ -962,6 +962,28 @@ cell_range_from (GnmRange const *r)
     return GnmCellCoordinateMake (MAX (col, 0), MAX (row, 0));
 }
 
+- (GnmCellCoordinate)initialTopLeft
+{
+    if (_sv == NULL)
+        return GnmCellCoordinateMake (0, 0);
+    return GnmCellCoordinateMake (_sv->initial_top_left.col, _sv->initial_top_left.row);
+}
+
+- (void)setInitialTopLeft:(GnmCellCoordinate)cell
+{
+    if (_sv == NULL || _sheet == NULL)
+        return;
+    int col = (int) cell.column, row = (int) cell.row;
+    /* the engine's own checks, which it answers with a critical warning */
+    if (col < 0 || col >= gnm_sheet_get_max_cols (_sheet) || row < 0 || row >= gnm_sheet_get_max_rows (_sheet))
+        return;
+    if (gnm_sheet_view_is_frozen (_sv) && (_sv->unfrozen_top_left.col > col || _sv->unfrozen_top_left.row > row))
+        return;
+    if (_sv->initial_top_left.col == col && _sv->initial_top_left.row == row)
+        return;
+    gnm_sheet_view_set_initial_top_left (_sv, col, row);
+}
+
 #pragma mark - Geometry
 
 - (CGFloat)widthOfColumn:(NSInteger)column
