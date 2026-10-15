@@ -2447,6 +2447,27 @@ typing a formula.  All four answered; none seen by him yet.
   headless captures of that file show that region; hooks that click
   around A1 scroll to the origin first.
 
+### 2026-10-15 (later): Henry's answer
+
+Henry saw the four on screen: the selection across save and open and
+the references by mouse are good; the scroll bars blended into white
+cells; and the headers' Insert and Delete items were greyed out.
+
+- Grey scroll bars: `GridScroller` (an NSScroller subclass installed in
+  `GridScrollView`) fills its track with the headers' grey
+  (`windowBackgroundColor`) under the standard knob; the hook captures
+  the vertical scroller on its own to `-scroller.png`.
+- The greyed items: a context menu popped up from a header sends its
+  nil-target actions along the header's responder chain, which does
+  not include the grid, so the grid's actions (Insert and Delete
+  Columns and Rows, Cut, Copy, Paste, Clear Contents) found no target
+  there; the cell menu, popped from the grid, was fine.  The menu's
+  items now carry explicit targets (the grid where it implements the
+  action, else the window controller), so the items validate the same
+  from either view, and the headless hook can now validate them
+  (`menu.update()`, each item marked "(off)" when disabled): with an
+  empty clipboard only Paste and Paste Special are off.
+
 ## How to resume (updated 2026-10-15)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
