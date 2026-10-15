@@ -11,7 +11,11 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     let workbook: Workbook
     private weak var workbookDocument: WorkbookDocument?
     let gridView = GridView()
-    private let scrollView = NSScrollView()
+    private let scrollView = GridScrollView()
+    /// The headers stop where the scrollers begin (the column header's
+    /// trailing edge, the row header's bottom), by the scrollers' width.
+    private var columnHeaderTrailing: NSLayoutConstraint?
+    private var rowHeaderBottom: NSLayoutConstraint?
     private let nameBox = NSTextField(labelWithString: "")
     private let formulaField = NSTextField(labelWithString: "")
     private var formulaFieldHeight: NSLayoutConstraint?
@@ -46,6 +50,30 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         scrollView.hasHorizontalScroller = workbook.showsHorizontalScrollbar
         scrollView.hasVerticalScroller = workbook.showsVerticalScrollbar
         tabBar?.isHidden = !workbook.showsSheetTabs
+        updateHeaderInsets()
+    }
+
+    /// The headers end at the scrollers, which sit inside the scroll
+    /// view's frame (the legacy style; the column header would otherwise
+    /// run on above the vertical scroller).
+    private func updateHeaderInsets() {
+        let width = NSScroller.scrollerWidth(for: .regular, scrollerStyle: .legacy)
+        columnHeaderTrailing?.constant = scrollView.hasVerticalScroller ? -width : 0
+        rowHeaderBottom?.constant = scrollView.hasHorizontalScroller ? -width : 0
+    }
+
+    /// For the headless checks: the scrollers and the headers' frames.
+    var scrollerInfoForTesting: String {
+        func describe(_ scroller: NSScroller?) -> String {
+            guard let scroller else { return "none" }
+            return "\(NSStringFromRect(scroller.frame)) style=\(scroller.scrollerStyle == .legacy ? "legacy" : "overlay") "
+                + "knob=\(String(format: "%.2f", scroller.knobProportion)) hidden=\(scroller.isHidden) alpha=\(scroller.alphaValue)"
+        }
+        let v = describe(scrollView.verticalScroller)
+        let h = describe(scrollView.horizontalScroller)
+        return "style=\(scrollView.scrollerStyle == .legacy ? "legacy" : "overlay") vertical=\(v) horizontal=\(h) "
+            + "clip=\(NSStringFromRect(scrollView.contentView.frame)) columnHeader=\(columnHeaderView.map { NSStringFromRect($0.frame) } ?? "none") "
+            + "rowHeader=\(rowHeaderView.map { NSStringFromRect($0.frame) } ?? "none")"
     }
 
     /// Format → Workbook… (dialog_workbook_attr).
@@ -268,6 +296,7 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = true
         scrollView.autohidesScrollers = false
+        scrollView.scrollerStyle = .legacy   // always visible, as the GTK's scrollbars
         scrollView.usesPredominantAxisScrolling = false
         scrollView.borderType = .noBorder
         scrollView.backgroundColor = .white
@@ -291,9 +320,10 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         pane.addSubview(columnHeader)
         pane.addSubview(scrollView)
         sheetPane = pane
+        rowHeaderBottom = rowHeader.bottomAnchor.constraint(equalTo: pane.bottomAnchor)
         NSLayoutConstraint.activate([
             rowHeader.topAnchor.constraint(equalTo: pane.topAnchor),
-            rowHeader.bottomAnchor.constraint(equalTo: pane.bottomAnchor),
+            rowHeaderBottom!,
             columnHeader.topAnchor.constraint(equalTo: pane.topAnchor),
             scrollView.topAnchor.constraint(equalTo: columnHeader.bottomAnchor),
             scrollView.bottomAnchor.constraint(equalTo: pane.bottomAnchor),
@@ -674,20 +704,26 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
               headerConstraints.isEmpty || rightToLeft != headersAreRightToLeft else { return }
         NSLayoutConstraint.deactivate(headerConstraints)
         headersAreRightToLeft = rightToLeft
+        // The vertical scroller keeps the scroll view's right edge either
+        // way, so the column header's trailing edge stops short of it.
+        columnHeaderTrailing = rightToLeft
+            ? columnHeader.trailingAnchor.constraint(equalTo: rowHeader.leadingAnchor)
+            : columnHeader.trailingAnchor.constraint(equalTo: pane.trailingAnchor)
         headerConstraints = rightToLeft ? [
             rowHeader.trailingAnchor.constraint(equalTo: pane.trailingAnchor),
             columnHeader.leadingAnchor.constraint(equalTo: pane.leadingAnchor),
-            columnHeader.trailingAnchor.constraint(equalTo: rowHeader.leadingAnchor),
+            columnHeaderTrailing!,
             scrollView.leadingAnchor.constraint(equalTo: pane.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: rowHeader.leadingAnchor),
         ] : [
             rowHeader.leadingAnchor.constraint(equalTo: pane.leadingAnchor),
             columnHeader.leadingAnchor.constraint(equalTo: rowHeader.trailingAnchor),
-            columnHeader.trailingAnchor.constraint(equalTo: pane.trailingAnchor),
+            columnHeaderTrailing!,
             scrollView.leadingAnchor.constraint(equalTo: rowHeader.trailingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: pane.trailingAnchor),
         ]
         NSLayoutConstraint.activate(headerConstraints)
+        updateHeaderInsets()
     }
 
     /// The sheet's Hide Column Headers and Hide Row Headers, on the
@@ -2824,5 +2860,15 @@ final class SheetTabControl: NSSegmentedControl {
             x += width
         }
         return super.menu(for: event)
+    }
+}
+
+/// The grid's scroll view: its scrollers stay visible, as the GTK's
+/// scrollbars do, whatever the system's scroller setting (AppKit sets the
+/// preferred style on every scroll view when that setting changes).
+final class GridScrollView: NSScrollView {
+    override var scrollerStyle: NSScroller.Style {
+        get { .legacy }
+        set { super.scrollerStyle = .legacy }
     }
 }
