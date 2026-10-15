@@ -1264,6 +1264,21 @@ final class GridView: NSView, SheetDelegate, NSUserInterfaceValidations {
         add(Localization.title("Auto Fit Height"), #selector(autofitRows(_:)), to: rowMenu)
         add(Localization.title("Hide"), wholeColumns ? nil : #selector(hideRows(_:)), to: rowMenu)
         add(Localization.title("Unhide"), #selector(unhideRows(_:)), to: rowMenu)
+        // Explicit targets: a menu popped up from a header sends nil-target
+        // actions along the header's responder chain, which does not
+        // include the grid, so its items would be disabled there.
+        func aim(_ items: [NSMenuItem]) {
+            for item in items {
+                if let sub = item.submenu { aim(sub.items) }
+                guard let action = item.action else { continue }
+                if responds(to: action) {
+                    item.target = self
+                } else if let controller = window?.windowController, controller.responds(to: action) {
+                    item.target = controller
+                }
+            }
+        }
+        aim(menu.items)
         return menu
     }
 

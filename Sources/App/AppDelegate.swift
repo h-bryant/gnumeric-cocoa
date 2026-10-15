@@ -823,8 +823,11 @@ enum Snapshot {
                 // the selection to the column (row) under the pointer unless
                 // it is selected; Insert from the column menu.
                 let grid = controller.gridView
+                // The items validated as the menu would be on screen, each
+                // marked (off) when disabled.
                 @MainActor func titles(_ menu: NSMenu) -> String {
-                    menu.items.map { $0.isSeparatorItem ? "|" : $0.title + ($0.submenu != nil ? ">" : $0.action == nil ? "(off)" : "") }
+                    menu.update()
+                    return menu.items.map { $0.isSeparatorItem ? "|" : $0.title + ($0.submenu != nil ? ">" : $0.isEnabled ? "" : "(off)") }
                         .joined(separator: ", ")
                 }
                 grid.scroll(.zero)   // the file opens where it was saved; the headers clicked must be in view
