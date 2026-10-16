@@ -2491,7 +2491,33 @@ answer is one installed copy: `build/dist/GnumericCocoa.app` moved to
 `/Applications` (LaunchServices prefers that location), the development
 build run through `scripts/run-app.sh`.
 
-## How to resume (updated 2026-10-15)
+## 2026-10-16: release 0.2.1
+
+Henry asked for the release of the usage-report fixes.  The release
+build is `c876b9a` ("Version 0.2.1, build 3"), tagged `v0.2.1`
+(lightweight, as `v0.2.0` is):
+
+- `scripts/smoke-test.sh` passed (the 15 conversions, the two smoke
+  programs, the 36 bridge tests); `scripts/build-app.sh` rebuilt the
+  bridge and the app from the commit; `scripts/verify-bundle.sh` made
+  `build/dist/GnumericCocoa.app` (48 dylibs, 59 plugins, 35 libraries'
+  licenses, 62 catalogs, 86 MB) and ran it with `build/prefix` hidden:
+  the engine, the plugins, the autoformat categories, a chart, the image
+  loaders, the licenses, and the German catalogs all came from inside
+  the bundle, with no warning in the log.
+- `build/dist/GnumericCocoa-0.2.1.zip` (29 MB, 711 entries) is
+  `ditto -c -k --norsrc --keepParent` of the bundle; `--norsrc` leaves
+  out the AppleDouble `._` entries the 0.2.0 zip carried beside every
+  file.  Unzipped, it is identical to the bundle, and
+  `codesign --verify --deep --strict` accepts it.
+- `docs/release-notes.md` holds each release's text (the 0.2.0 one as
+  Henry wrote it on GitHub) and the zip's SHA-256; the GitHub release is
+  made from it with `gh release create v0.2.1 --target c876b9a`, which
+  creates the tag on GitHub itself, so no `git push` from the session
+  (SSH to GitHub is refused from the sandbox anyway).  `gh` was not
+  logged in on this machine; Henry's `gh auth login` comes first.
+
+## How to resume (updated 2026-10-16)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
    continue with Phase 4". `HANDOFF.md` §9 is the checklist: smoke tests,
@@ -2531,12 +2557,15 @@ build run through `scripts/run-app.sh`.
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-15: `main` at the usage-report commits
+3. The state at the end of 2026-10-16: `main` at the 0.2.1 release's
+   documentation (the 2026-10-16 entry; `v0.2.1` on the version commit
+   `c876b9a`) after the usage-report commits
    (scroll bars, the selection and scroll position across save and open,
    the cell and header context menus, references by mouse; the 2026-10-15
    entry) after the public-repository preparations commit (after the loose matches and aliases, the dialog rows and SwiftUI, the stock labels and dialog chrome, the toolbar and buttons, the menu titles, the engine's messages, right-to-left sheets, the bundled
    licenses, the relocatable bundle, the workbook properties, multi-line editing, drag and drop, the toolbar, the widget editors, AutoFormat, scenarios and simulation, the Plugin Manager, Manage Sheets, function tooltips, consolidate, sort keys, the advanced filter, outlines, the what-if tools, the sheet display toggles, the editor style, the solver progress sheet, the remaining statistics, keyboard range selection, the function selector, formula range selection, printing, the Solver, hyperlinks, the second analysis tools commit, data validation, the first analysis tools, conditional formatting, Goal Seek, Fill Series and Text to Columns, defined names, cell comments, the text import assistant, Export as Text, the Settings window, Find and Replace, the everyday items, Save as Image, the Quit fix, the plain-XML saves, the
    chart editor, the object clipboard, chart guru, sheet objects, and
    autofilter ones), clean tree, nothing pushed,
-   `v0.1.0` and `upstream-baseline-2026-10-11` tagged. The engine in
+   `v0.1.0`, `v0.2.0`, `v0.2.1`, and
+   `upstream-baseline-2026-10-11` tagged. The engine in
    `build/prefix` has patches 0001–0010 applied.
