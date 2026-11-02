@@ -2517,7 +2517,43 @@ build is `c876b9a` ("Version 0.2.1, build 3"), tagged `v0.2.1`
   (SSH to GitHub is refused from the sandbox anyway).  `gh` was not
   logged in on this machine; Henry's `gh auth login` comes first.
 
-## How to resume (updated 2026-10-16)
+## 2026-11-02: The toolbar's color wells applied nothing
+
+Henry's report (on the 0.2.1 release): the Text Color and Fill Color
+wells open the color panel, the color can be chosen, and nothing reaches
+the cell (Enter in the panel does nothing either).
+
+- The wells were non-continuous `NSColorWell`s relying on their action.
+  The panel does not send that: it pushes colors into its active well
+  through `_takeColorFromAndSendActionIfContinuous:` (the ObjC runtime
+  lists the well's `_takeColorFrom:andSendAction:` and
+  `_takeColorFromAndSendActionIfContinuous:`, and the well answers no
+  `changeColor:`), so a non-continuous well only changed color, and a
+  continuous one would have run a command for every step of a drag
+  across the picker.
+- `ToolbarColorWell` watches its own color instead: while the well is
+  active (the panel's), changes within 0.3 s coalesce into one command
+  (`pickNow`), and the last one is applied at once when the well
+  deactivates (the panel closed or another well taken).  A color set
+  while the well is inactive applies nothing: AppKit sets the color
+  during the toolbar's setup, and the first version of the watcher ran
+  "Changing format of D39" at launch from that.  The toolbar's refresh
+  (`show(_:)`) applies nothing and records the shown color, so the same
+  color chosen again is not a command.  A color dropped on the well
+  still comes through the action, applied at once.
+- `GNM_SNAPSHOT_COLORWELL=1`: nothing at the start; a color set while
+  inactive applies nothing; two colors set while active then
+  deactivation apply the last (red text, then a yellow fill, one command
+  each); the refresh applies nothing; two undos restore.  The panel is
+  kept from ordering front there (`orderColorPanelOnActivate` off) since
+  `activate(true)` hangs headless; a debounced apply cannot run inside
+  the hook's nested run loop (the hook is itself a main-queue block), so
+  the hook ends with `deactivate()`.
+- The version is 0.2.2, build 4, so the fixed build is told apart from
+  the 0.2.1 release; `build/app` and `build/dist` (what Henry runs)
+  carry it.  The release and its tag stay Henry's.
+
+## How to resume (updated 2026-11-02)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
    continue with Phase 4". `HANDOFF.md` §9 is the checklist: smoke tests,
@@ -2557,7 +2593,8 @@ build is `c876b9a` ("Version 0.2.1, build 3"), tagged `v0.2.1`
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-10-16: `main` at the 0.2.1 release's
+3. The state at the end of 2026-11-02: `main` at the color wells fix (the
+   2026-11-02 entry, version 0.2.2) after the 0.2.1 release's
    documentation (the 2026-10-16 entry; `v0.2.1` on the version commit
    `c876b9a`) after the usage-report commits
    (scroll bars, the selection and scroll position across save and open,
