@@ -6,6 +6,20 @@ Each release carries `GnumericCocoa-<version>.zip`: the relocatable bundle
 from `scripts/bundle.sh`, zipped with `ditto -c -k --norsrc --keepParent`.
 The tag `v<version>` marks the commit the bundle was built from.
 
+## 0.2.2 (2026-11-02)
+
+One fix from using 0.2.1:
+
+- The toolbar's Text Color and Fill Color wells apply the color chosen
+  in the color panel. They used to show the color and change nothing.
+  A drag across the picker settles into a single undo entry, and the
+  last color is applied when the panel closes.
+
+Unsigned; see README for first launch. macOS 15 or later, Apple silicon.
+
+SHA-256 of `GnumericCocoa-0.2.2.zip`:
+`53e846a84a095c9faf2b2d4bbb3ea74b4ff991ed5172a39ded02150231928266`
+
 ## 0.2.1 (2026-10-16)
 
 Fixes from the first use of 0.2.0:

@@ -2553,6 +2553,28 @@ the cell (Enter in the panel does nothing either).
   the 0.2.1 release; `build/app` and `build/dist` (what Henry runs)
   carry it.  The release and its tag stay Henry's.
 
+## 2026-11-02 (later): release 0.2.2
+
+Henry asked for the release of the color wells fix.  The release build
+is `a0890d5` ("Version 0.2.2, build 4, and the color wells entry"),
+tagged `v0.2.2` (lightweight, as the others):
+
+- `scripts/smoke-test.sh` passed (the 15 conversions, the two smoke
+  programs, the 36 bridge tests); `scripts/verify-bundle.sh` made
+  `build/dist/GnumericCocoa.app` (48 dylibs, 59 plugins, 35 libraries'
+  licenses, 62 catalogs, 86 MB) and ran it with `build/prefix` hidden,
+  everything coming from inside the bundle with no warning in the log.
+- `build/dist/GnumericCocoa-0.2.2.zip` (29 MB, 711 entries) is
+  `ditto -c -k --norsrc --keepParent` of the bundle; unzipped, it is
+  identical to the bundle, `codesign --verify --deep --strict` accepts
+  it, and `docs/release-notes.md` has the 0.2.2 text and the SHA-256.
+- Henry has no `gh` in his habits (it is installed but not logged in),
+  so the release is made by hand: `git push origin main` and
+  `git push origin v0.2.2` from his terminal (the sandbox cannot reach
+  GitHub over SSH), then "Draft a new release" on GitHub for the tag
+  `v0.2.2`, the notes pasted from `docs/release-notes.md`, and the zip
+  attached.
+
 ## How to resume (updated 2026-11-02)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -2593,8 +2615,9 @@ the cell (Enter in the panel does nothing either).
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-11-02: `main` at the color wells fix (the
-   2026-11-02 entry, version 0.2.2) after the 0.2.1 release's
+3. The state at the end of 2026-11-02: `main` at the 0.2.2 release's
+   documentation (the 2026-11-02 entries; `v0.2.2` on the version commit
+   `a0890d5`) after the 0.2.1 release's
    documentation (the 2026-10-16 entry; `v0.2.1` on the version commit
    `c876b9a`) after the usage-report commits
    (scroll bars, the selection and scroll position across save and open,
