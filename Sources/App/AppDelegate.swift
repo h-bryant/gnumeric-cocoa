@@ -911,6 +911,45 @@ enum Snapshot {
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_COLORWELL"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let sheet = controller.gridView.sheet {
+                // The toolbar's color wells as the color panel drives them:
+                // the well active (the panel kept from ordering front, which
+                // hangs headless), its color set twice as a drag does, then
+                // deactivated, which applies the last color once; a color
+                // set while inactive (AppKit's own setup) applies nothing,
+                // nor does the toolbar's refresh.
+                @MainActor func rgb(_ color: CGColor?) -> String {
+                    guard let color, let ns = NSColor(cgColor: color)?.usingColorSpace(.sRGB) else { return "nil" }
+                    return String(format: "%.2f,%.2f,%.2f", ns.redComponent, ns.greenComponent, ns.blueComponent)
+                }
+                @MainActor func state(_ step: String) {
+                    let format = sheet.formatOfSelection
+                    NSLog("colorwell: %@: text=%@ fill=%@ background=%@ undo=%@", step, rgb(format.textColor), format.fillsBackground ?? -1,
+                          rgb(format.backgroundColor), sheet.workbook?.undoLabel ?? "nil")
+                }
+                sheet.selectCell(atColumn: 2, row: 2)
+                state("C3 at the start")
+                for (name, colors) in [("textColor", [NSColor.systemGreen, NSColor.systemRed]), ("fillColor", [NSColor.systemBlue, NSColor.systemYellow])] {
+                    guard let well = window.toolbar?.items.first(where: { $0.itemIdentifier.rawValue == name })?.view as? ToolbarColorWell else { continue }
+                    well.color = .systemPurple   // inactive: nothing applies
+                    state("\(name) set while inactive")
+                    well.setValue(false, forKey: "orderColorPanelOnActivate")
+                    well.activate(true)
+                    for color in colors { well.color = color }
+                    state("\(name) set twice while active, before the pause")
+                    well.deactivate()
+                    state("\(name) deactivated")
+                }
+                controller.updateToolbarState()
+                state("after the toolbar's refresh")
+                controller.gridView.undo(nil)
+                controller.gridView.undo(nil)
+                state("two undos")
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
             if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_PRINT"] != nil,
                let controller = window.windowController as? WorkbookWindowController,
                let sheet = controller.gridView.sheet {

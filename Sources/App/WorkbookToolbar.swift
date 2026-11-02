@@ -130,11 +130,13 @@ extension WorkbookWindowController: NSToolbarDelegate {
             item.label = Localization.title("Borders")
             item.toolTip = Localization.title("Borders")
         case "textColor", "fillColor":
-            let well = NSColorWell(frame: NSRect(x: 0, y: 0, width: 40, height: 24))
-            well.isContinuous = false
-            well.color = itemIdentifier.rawValue == "textColor" ? .black : .white
-            well.target = self
-            well.action = itemIdentifier.rawValue == "textColor" ? #selector(textColorChosen(_:)) : #selector(fillColorChosen(_:))
+            let well = ToolbarColorWell(frame: NSRect(x: 0, y: 0, width: 40, height: 24))
+            well.show(itemIdentifier.rawValue == "textColor" ? .black : .white)
+            let isText = itemIdentifier.rawValue == "textColor"
+            well.onPick = { [weak self, weak well] in
+                guard let self, let well else { return }
+                if isText { textColorChosen(well) } else { fillColorChosen(well) }
+            }
             item.view = well
             item.label = Localization.title(itemIdentifier.rawValue == "textColor" ? "Text Color" : "Fill Color")
             item.toolTip = item.label
@@ -192,10 +194,10 @@ extension WorkbookWindowController: NSToolbarDelegate {
             case "superscript": (item.view as? NSButton)?.state = sheet.fontScriptOfSelection == .superscript ? .on : .off
             case "subscript": (item.view as? NSButton)?.state = sheet.fontScriptOfSelection == .subscript ? .on : .off
             case "textColor":
-                if let well = item.view as? NSColorWell, let color = format.textColor, let ns = NSColor(cgColor: color) { well.color = ns }
+                if let well = item.view as? ToolbarColorWell, let color = format.textColor, let ns = NSColor(cgColor: color) { well.show(ns) }
             case "fillColor":
-                if let well = item.view as? NSColorWell {
-                    well.color = format.fillsBackground?.boolValue == true ? (format.backgroundColor.flatMap(NSColor.init(cgColor:)) ?? .white) : .white
+                if let well = item.view as? ToolbarColorWell {
+                    well.show(format.fillsBackground?.boolValue == true ? (format.backgroundColor.flatMap(NSColor.init(cgColor:)) ?? .white) : .white)
                 }
             case "fontFamily":
                 if let popUp = item.view as? NSPopUpButton, let name = format.fontName, popUp.titleOfSelectedItem != name {
@@ -324,5 +326,65 @@ extension WorkbookWindowController: NSComboBoxDelegate {
         guard let combo = notification.object as? NSComboBox, let value = combo.objectValueOfSelectedItem as? String else { return }
         combo.stringValue = value
         fontSizeChosen(combo)
+    }
+}
+
+/// A toolbar color well that applies every color the panel gives it.  A
+/// well's action is not the way to learn of a choice: the panel pushes
+/// colors into its well with `_takeColorFromAndSendActionIfContinuous:`,
+/// so a non-continuous well only changes color, and a continuous one
+/// would run a command for every step of a drag across the picker.  The
+/// color is watched instead, while the well is active (the panel's; AppKit
+/// sets the color on its own while the well is being set up, which must
+/// apply nothing), changes within a short interval coalescing into one
+/// command and the last one applied at once when the well deactivates.
+/// A color dropped on the well arrives through the action, applied at
+/// once.  `show(_:)` is the toolbar's own refresh from the cell's format.
+@MainActor
+final class ToolbarColorWell: NSColorWell {
+    var onPick: (() -> Void)?
+    private var showing = false
+    private var applied: NSColor?
+    private var pending: DispatchWorkItem?
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        isContinuous = false
+        target = self
+        action = #selector(pickNow(_:))
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("not used") }
+
+    func show(_ color: NSColor) {
+        showing = true
+        self.color = color
+        showing = false
+        applied = color
+    }
+
+    override var color: NSColor {
+        didSet {
+            guard !showing, isActive, color != oldValue else { return }
+            pending?.cancel()
+            let item = DispatchWorkItem { [weak self] in self?.pickNow(nil) }
+            pending = item
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: item)
+        }
+    }
+
+    /// Apply the color now, unless it is the one applied (or shown) last.
+    @objc func pickNow(_ sender: Any?) {
+        pending?.cancel()
+        pending = nil
+        guard color != applied else { return }
+        applied = color
+        onPick?()
+    }
+
+    override func deactivate() {
+        super.deactivate()
+        if pending != nil { pickNow(nil) }
     }
 }
