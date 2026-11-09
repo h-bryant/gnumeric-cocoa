@@ -2575,7 +2575,56 @@ tagged `v0.2.2` (lightweight, as the others):
   `v0.2.2`, the notes pasted from `docs/release-notes.md`, and the zip
   attached.
 
-## How to resume (updated 2026-11-02)
+## 2026-11-09: The toolbar wraps
+
+Henry asked for the toolbar's buttons to spill into a second row (and
+a third) when the window is too narrow for one.  An NSToolbar cannot:
+what does not fit goes into its "»" overflow menu.
+
+- `ToolbarRibbon` (WorkbookToolbar.swift) replaces the NSToolbar: a
+  view at the top of the window's content column, above the formula
+  bar, holding the same items in the same order (`defaultToolbarItems`,
+  now strings with "|" for a separator and "~" for the gap between the
+  GTK's two toolbars).  Its `layout()` lays the items out left to right,
+  starting a new row when the next item would pass the width, and sets
+  its own height constraint to the rows used (28 pt each plus padding),
+  so the formula bar and the grid move down; a separator or gap that
+  would start a row is left out.  The item factory is
+  `makeToolbarView(for:)`, what the toolbar delegate's method was: the
+  image items of the NSToolbar are now `RibbonButton`s (textured
+  rounded, momentary, 36 × 24) and the toggles the same class with
+  push-on-push-off, as before.
+- Validation: NSToolbar validated its items against the responder chain
+  on every window update; the ribbon does the same on
+  `NSWindow.didUpdateNotification` (`validateButtons`: the target found
+  by `NSApp.target(forAction:to:from:)` is asked
+  `validateUserInterfaceItem`, `RibbonButton` conforming to
+  `NSValidatedUserInterfaceItem`), so Undo, Redo, Paste, and the rest
+  grey out as the menus do.  The target comes from the ribbon's own
+  search (`target(for:)`: the responder chain from the window's first
+  responder, then the window's delegate, controller, and document, the
+  application, its delegate, and the document controller), since
+  `NSApp.target(forAction:to:from:)` starts at the key window and finds
+  nothing headless, where it disabled every button and let the toolbar
+  hook's presses fall through; a click on screen still goes through
+  AppKit's own search.
+- At 1600 points the ribbon needs two rows (one row wants about 2000:
+  31 buttons of 36, five pop-ups of 60 to 150, two wells), three at
+  1000, four at 640; the NSToolbar had been overflowing on a laptop
+  screen all along.
+- The version is 0.2.3, build 5, for the release that carries this;
+  `build/app` and `build/dist` rebuilt at it.
+- Gone with the NSToolbar: the user's customization (drag to rearrange,
+  Customize Toolbar…) and the toolbar-in-title-bar look; the window has
+  a plain title bar now.  The View menu never had a toolbar item.
+- `GNM_SNAPSHOT_RIBBON=1` sets the window to 1600, 1000, and 640 points
+  wide and logs the rows, the ribbon's height, where the last row starts,
+  and the disabled buttons, with a capture of each (`-ribbon-<width>.png`);
+  the toolbar, color well, and menus hooks go through
+  `toolbarItemView(_:)`, `toolbarLabelsForTesting`, and
+  `toolbarItemCountForTesting` now.
+
+## How to resume (updated 2026-11-09)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
    continue with Phase 4". `HANDOFF.md` §9 is the checklist: smoke tests,
@@ -2615,7 +2664,8 @@ tagged `v0.2.2` (lightweight, as the others):
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-11-02: `main` at the 0.2.2 release's
+3. The state at the end of 2026-11-09: `main` at the wrapping toolbar (the
+   2026-11-09 entry) after the 0.2.2 release's
    documentation (the 2026-11-02 entries; `v0.2.2` on the version commit
    `a0890d5`) after the 0.2.1 release's
    documentation (the 2026-10-16 entry; `v0.2.1` on the version commit
