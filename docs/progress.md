@@ -2624,6 +2624,25 @@ what does not fit goes into its "»" overflow menu.
   `toolbarItemView(_:)`, `toolbarLabelsForTesting`, and
   `toolbarItemCountForTesting` now.
 
+## 2026-11-09 (later): release 0.2.3
+
+Henry asked for the release of the wrapping toolbar.  The release build
+is `c45809e` ("Version 0.2.3, build 5, and the ribbon entry"), tagged
+`v0.2.3` (lightweight, as the others):
+
+- `scripts/smoke-test.sh` passed (the 15 conversions, the two smoke
+  programs, the 36 bridge tests); `scripts/verify-bundle.sh` made
+  `build/dist/GnumericCocoa.app` (48 dylibs, 59 plugins, 35 libraries'
+  licenses, 62 catalogs, 86 MB) and ran it with `build/prefix` hidden,
+  everything from inside the bundle with no warning in the log.
+- `build/dist/GnumericCocoa-0.2.3.zip` (29 MB, 711 entries) is
+  `ditto -c -k --norsrc --keepParent` of the bundle; unzipped, it is
+  identical to the bundle, `codesign --verify --deep --strict` accepts
+  it, and `docs/release-notes.md` has the 0.2.3 text and the SHA-256.
+- As for 0.2.2, the push of `main` and the tag and the GitHub release
+  (the notes pasted, the zip attached) are Henry's, from his terminal
+  and the website.
+
 ## How to resume (updated 2026-11-09)
 
 1. Start Claude Code here and say "read HANDOFF.md and docs/progress.md and
@@ -2664,8 +2683,9 @@ what does not fit goes into its "»" overflow menu.
    reference to the caller (unref it); `gog_graph_dup` duplicates the
    data objects and `gnm_go_data_dup` links them as sheet dependents; a
    command's `update_after_action` does not redraw objects.
-3. The state at the end of 2026-11-09: `main` at the wrapping toolbar (the
-   2026-11-09 entry) after the 0.2.2 release's
+3. The state at the end of 2026-11-09: `main` at the 0.2.3 release's
+   documentation (the 2026-11-09 entries; `v0.2.3` on the version commit
+   `c45809e`) after the 0.2.2 release's
    documentation (the 2026-11-02 entries; `v0.2.2` on the version commit
    `a0890d5`) after the 0.2.1 release's
    documentation (the 2026-10-16 entry; `v0.2.1` on the version commit

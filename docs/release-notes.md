@@ -6,6 +6,21 @@ Each release carries `GnumericCocoa-<version>.zip`: the relocatable bundle
 from `scripts/bundle.sh`, zipped with `ditto -c -k --norsrc --keepParent`.
 The tag `v<version>` marks the commit the bundle was built from.
 
+## 0.2.3 (2026-11-09)
+
+One change from using 0.2.2:
+
+- The toolbar wraps. When the window is too narrow for all of its
+  buttons in one row, they continue on a second row, and a third if
+  needed; the formula bar and the grid move down to make room. The
+  toolbar used to hide what did not fit behind a "»" menu. It can no
+  longer be customized by dragging its items.
+
+Unsigned; see README for first launch. macOS 15 or later, Apple silicon.
+
+SHA-256 of `GnumericCocoa-0.2.3.zip`:
+`d1b2f1573016a0b7ed1791e96723b0c67fe0c63593811c3975e2a54f08c17aac`
+
 ## 0.2.2 (2026-11-02)
 
 One fix from using 0.2.1:
