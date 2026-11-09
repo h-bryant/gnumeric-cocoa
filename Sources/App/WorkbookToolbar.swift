@@ -2,12 +2,16 @@ import AppKit
 import GnmCocoa
 
 /// The GTK standard and format toolbars (GNOME_Gnumeric-gtk.xml) as one
-/// NSToolbar: file, clipboard, undo and redo, hyperlink, AutoSum, the
-/// function selector, sorting, a chart, zoom; then the font, bold,
-/// italic, underline, the alignments, merging, and the number formats.
-/// Items act through the responder chain and validate as the menus do;
-/// the toggles and pop-ups show the cursor cell's format.
-extension WorkbookWindowController: NSToolbarDelegate {
+/// ribbon of buttons above the formula bar: file, clipboard, undo and
+/// redo, hyperlink, AutoSum, the function selector, sorting, a chart,
+/// zoom; then the font, bold, italic, underline, the alignments, merging,
+/// and the number formats.  The ribbon wraps into as many rows as the
+/// window's width needs (Henry's choice, 2026-11-09; an NSToolbar puts
+/// what does not fit into an overflow menu instead, and its user
+/// customization went with it).  Items act through the responder chain
+/// and validate as the menus do; the toggles and pop-ups show the cursor
+/// cell's format.
+extension WorkbookWindowController {
     private static let fontSizes = ["6", "7", "8", "9", "10", "11", "12", "14", "16", "18", "20", "24", "28", "32", "36", "48", "72"]
     private static let zoomLevels: [(String, Double)] = [("50%", 0.5), ("75%", 0.75), ("100%", 1), ("125%", 1.25), ("150%", 1.5), ("200%", 2)]
 
@@ -57,53 +61,56 @@ extension WorkbookWindowController: NSToolbarDelegate {
         ToolbarSpec(identifier: "clearFill", label: "No Fill", symbol: "paintbrush", action: Selector(("clearFill:")), toggles: false),
     ]
 
-    static let defaultToolbarItems: [NSToolbarItem.Identifier] = {
-        let names = ["new", "open", "save", "print", "printPreview", "|", "cut", "copy", "paste", "|", "undo", "redo", "|",
-                     "autosum", "function", "sortAscending", "sortDescending", "chart", "objects", "zoom", "~",
-                     "fontFamily", "fontSize", "bold", "italic", "underline", "|", "alignLeft", "alignCenter", "alignRight", "merge", "|",
-                     "accounting", "percent", "thousands", "morePrecision", "lessPrecision", "|",
-                     "indentLess", "indentMore", "superscript", "subscript", "borders", "textColor", "fillColor"]
-        return names.map { $0 == "|" ? .space : $0 == "~" ? .flexibleSpace : NSToolbarItem.Identifier($0) }
-    }()
+    /// The ribbon's order: "|" is a separator, "~" the wider gap where the
+    /// GTK's standard toolbar ends and its format toolbar begins.
+    static let defaultToolbarItems: [String] = [
+        "new", "open", "save", "print", "printPreview", "|", "cut", "copy", "paste", "|", "undo", "redo", "|",
+        "autosum", "function", "sortAscending", "sortDescending", "chart", "objects", "zoom", "~",
+        "fontFamily", "fontSize", "bold", "italic", "underline", "|", "alignLeft", "alignCenter", "alignRight", "merge", "|",
+        "accounting", "percent", "thousands", "morePrecision", "lessPrecision", "|",
+        "indentLess", "indentMore", "superscript", "subscript", "borders", "textColor", "fillColor",
+    ]
 
-    func installToolbar(in window: NSWindow) {
-        let toolbar = NSToolbar(identifier: "WorkbookToolbar")
-        toolbar.delegate = self
-        toolbar.allowsUserCustomization = true
-        toolbar.autosavesConfiguration = true
-        toolbar.displayMode = .iconOnly
-        window.toolbar = toolbar
-        window.toolbarStyle = .expanded
+    /// The ribbon with every item in the default order.
+    func makeToolbarRibbon() -> ToolbarRibbon {
+        let ribbon = ToolbarRibbon()
+        for identifier in Self.defaultToolbarItems {
+            switch identifier {
+            case "|": ribbon.addSeparator()
+            case "~": ribbon.addGap()
+            default:
+                if let (view, label) = makeToolbarView(for: identifier) {
+                    ribbon.add(view, identifier: identifier, label: label)
+                }
+            }
+        }
+        return ribbon
     }
 
-    func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] { Self.defaultToolbarItems }
+    /// For the headless checks and the hooks: an item's view, the labels,
+    /// and the count.
+    func toolbarItemView(_ identifier: String) -> NSView? { toolbarRibbon?.view(for: identifier) }
+    var toolbarLabelsForTesting: [String] { toolbarRibbon?.entries.map(\.label) ?? [] }
+    var toolbarItemCountForTesting: Int { toolbarRibbon?.entries.count ?? 0 }
 
-    func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        Self.toolbarSpecs.map { NSToolbarItem.Identifier($0.identifier) }
-            + ["zoom", "fontFamily", "fontSize", "borders", "textColor", "fillColor", "objects"].map { NSToolbarItem.Identifier($0) }
-            + [.space, .flexibleSpace]
-    }
-
-    func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier itemIdentifier: NSToolbarItem.Identifier, willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
-        let item = NSToolbarItem(itemIdentifier: itemIdentifier)
-        switch itemIdentifier.rawValue {
+    /// One item's view and label; nil for an unknown identifier.
+    private func makeToolbarView(for identifier: String) -> (NSView, String)? {
+        switch identifier {
         case "zoom":
             let popUp = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 84, height: 24), pullsDown: false)
             popUp.addItems(withTitles: Self.zoomLevels.map(\.0))
             popUp.selectItem(at: 2)
             popUp.target = self
             popUp.action = #selector(zoomChosen(_:))
-            item.view = popUp
-            item.label = Localization.title("Zoom")
-            item.toolTip = Localization.title("Zoom")
+            popUp.toolTip = Localization.title("Zoom")
+            return (popUp, Localization.title("Zoom"))
         case "fontFamily":
             let popUp = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 150, height: 24), pullsDown: false)
             popUp.addItems(withTitles: FormatCellsModel.fontFamilies)
             popUp.target = self
             popUp.action = #selector(fontFamilyChosen(_:))
-            item.view = popUp
-            item.label = Localization.title("Font")
-            item.toolTip = Localization.title("Font")
+            popUp.toolTip = Localization.title("Font")
+            return (popUp, Localization.title("Font"))
         case "objects":
             // The GTK object toolbar as one pull-down.
             let popUp = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 120, height: 24), pullsDown: true)
@@ -114,9 +121,8 @@ extension WorkbookWindowController: NSToolbarDelegate {
                 menuItem.tag = tag
                 popUp.menu?.addItem(menuItem)
             }
-            item.view = popUp
-            item.label = Localization.title("Objects")
-            item.toolTip = Localization.title("Insert a shape or a widget")
+            popUp.toolTip = Localization.title("Insert a shape or a widget")
+            return (popUp, Localization.title("Objects"))
         case "borders":
             let popUp = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 150, height: 24), pullsDown: true)
             popUp.addItem(withTitle: Localization.title("Borders"))
@@ -126,52 +132,39 @@ extension WorkbookWindowController: NSToolbarDelegate {
                 menuItem.tag = preset.intValue
                 popUp.menu?.addItem(menuItem)
             }
-            item.view = popUp
-            item.label = Localization.title("Borders")
-            item.toolTip = Localization.title("Borders")
+            popUp.toolTip = Localization.title("Borders")
+            return (popUp, Localization.title("Borders"))
         case "textColor", "fillColor":
             let well = ToolbarColorWell(frame: NSRect(x: 0, y: 0, width: 40, height: 24))
-            well.show(itemIdentifier.rawValue == "textColor" ? .black : .white)
-            let isText = itemIdentifier.rawValue == "textColor"
+            let isText = identifier == "textColor"
+            well.show(isText ? .black : .white)
             well.onPick = { [weak self, weak well] in
                 guard let self, let well else { return }
                 if isText { textColorChosen(well) } else { fillColorChosen(well) }
             }
-            item.view = well
-            item.label = Localization.title(itemIdentifier.rawValue == "textColor" ? "Text Color" : "Fill Color")
-            item.toolTip = item.label
+            let label = Localization.title(isText ? "Text Color" : "Fill Color")
+            well.toolTip = label
+            return (well, label)
         case "fontSize":
             let combo = NSComboBox(frame: NSRect(x: 0, y: 0, width: 60, height: 24))
             combo.addItems(withObjectValues: Self.fontSizes)
             combo.target = self
             combo.action = #selector(fontSizeChosen(_:))
             combo.delegate = self
-            item.view = combo
-            item.label = Localization.title("Size")
-            item.toolTip = Localization.title("Font size")
+            combo.toolTip = Localization.title("Font size")
+            return (combo, Localization.title("Size"))
         default:
-            guard let spec = Self.toolbarSpecs.first(where: { $0.identifier == itemIdentifier.rawValue }) else { return nil }
-            item.label = Localization.title(spec.label)
-            item.toolTip = Localization.title(spec.label)
+            guard let spec = Self.toolbarSpecs.first(where: { $0.identifier == identifier }) else { return nil }
+            let label = Localization.title(spec.label)
             let image = NSImage(systemSymbolName: spec.symbol, accessibilityDescription: spec.label)
                 ?? NSImage(systemSymbolName: "questionmark", accessibilityDescription: spec.label)
-            if spec.toggles {
-                let button = NSButton(image: image ?? NSImage(), target: nil, action: spec.action)
-                button.bezelStyle = .texturedRounded
-                button.setButtonType(.pushOnPushOff)
-                button.frame = NSRect(x: 0, y: 0, width: 36, height: 24)
-                item.view = button
-                // the item's own action is what validation looks up
-                item.action = spec.action
-                item.target = nil
-            } else {
-                item.image = image
-                item.action = spec.action
-                item.target = nil
-                item.isBordered = true
-            }
+            let button = RibbonButton(image: image ?? NSImage(), target: nil, action: spec.action)
+            button.bezelStyle = .texturedRounded
+            button.setButtonType(spec.toggles ? .pushOnPushOff : .momentaryPushIn)
+            button.frame = NSRect(x: 0, y: 0, width: 36, height: 24)
+            button.toolTip = label
+            return (button, label)
         }
-        return item
     }
 
     // MARK: State
@@ -179,36 +172,37 @@ extension WorkbookWindowController: NSToolbarDelegate {
     /// The toggles and pop-ups follow the cursor cell's format
     /// (wbcg_update_ui's toolbar updates).
     func updateToolbarState() {
-        guard let toolbar = window?.toolbar, let sheet = gridView.sheet else { return }
+        guard let ribbon = toolbarRibbon, let sheet = gridView.sheet else { return }
         let format = sheet.formatOfSelection
         let alignment = format.horizontalAlignment?.intValue ?? 0x01
-        for item in toolbar.items {
-            switch item.itemIdentifier.rawValue {
-            case "bold": (item.view as? NSButton)?.state = format.bold?.boolValue == true ? .on : .off
-            case "italic": (item.view as? NSButton)?.state = format.italic?.boolValue == true ? .on : .off
-            case "underline": (item.view as? NSButton)?.state = (format.underline?.intValue ?? 0) != UnderlineStyle.none.rawValue ? .on : .off
-            case "alignLeft": (item.view as? NSButton)?.state = alignment == 0x02 ? .on : .off
-            case "alignCenter": (item.view as? NSButton)?.state = alignment == 0x08 ? .on : .off
-            case "alignRight": (item.view as? NSButton)?.state = alignment == 0x04 ? .on : .off
-            case "centerAcross": (item.view as? NSButton)?.state = alignment == 0x40 ? .on : .off
-            case "superscript": (item.view as? NSButton)?.state = sheet.fontScriptOfSelection == .superscript ? .on : .off
-            case "subscript": (item.view as? NSButton)?.state = sheet.fontScriptOfSelection == .subscript ? .on : .off
+        for entry in ribbon.entries {
+            let view = entry.view
+            switch entry.identifier {
+            case "bold": (view as? NSButton)?.state = format.bold?.boolValue == true ? .on : .off
+            case "italic": (view as? NSButton)?.state = format.italic?.boolValue == true ? .on : .off
+            case "underline": (view as? NSButton)?.state = (format.underline?.intValue ?? 0) != UnderlineStyle.none.rawValue ? .on : .off
+            case "alignLeft": (view as? NSButton)?.state = alignment == 0x02 ? .on : .off
+            case "alignCenter": (view as? NSButton)?.state = alignment == 0x08 ? .on : .off
+            case "alignRight": (view as? NSButton)?.state = alignment == 0x04 ? .on : .off
+            case "centerAcross": (view as? NSButton)?.state = alignment == 0x40 ? .on : .off
+            case "superscript": (view as? NSButton)?.state = sheet.fontScriptOfSelection == .superscript ? .on : .off
+            case "subscript": (view as? NSButton)?.state = sheet.fontScriptOfSelection == .subscript ? .on : .off
             case "textColor":
-                if let well = item.view as? ToolbarColorWell, let color = format.textColor, let ns = NSColor(cgColor: color) { well.show(ns) }
+                if let well = view as? ToolbarColorWell, let color = format.textColor, let ns = NSColor(cgColor: color) { well.show(ns) }
             case "fillColor":
-                if let well = item.view as? ToolbarColorWell {
+                if let well = view as? ToolbarColorWell {
                     well.show(format.fillsBackground?.boolValue == true ? (format.backgroundColor.flatMap(NSColor.init(cgColor:)) ?? .white) : .white)
                 }
             case "fontFamily":
-                if let popUp = item.view as? NSPopUpButton, let name = format.fontName, popUp.titleOfSelectedItem != name {
+                if let popUp = view as? NSPopUpButton, let name = format.fontName, popUp.titleOfSelectedItem != name {
                     popUp.selectItem(withTitle: name)
                 }
             case "fontSize":
-                if let combo = item.view as? NSComboBox, let size = format.fontSize?.doubleValue, combo.currentEditor() == nil {
+                if let combo = view as? NSComboBox, let size = format.fontSize?.doubleValue, combo.currentEditor() == nil {
                     combo.stringValue = size == size.rounded() ? String(Int(size)) : String(size)
                 }
             case "zoom":
-                if let popUp = item.view as? NSPopUpButton {
+                if let popUp = view as? NSPopUpButton {
                     let percent = "\(Int((sheet.zoomFactor * 100).rounded()))%"
                     if popUp.titleOfSelectedItem != percent {
                         if popUp.indexOfItem(withTitle: percent) < 0 { popUp.addItem(withTitle: percent) }
@@ -222,24 +216,27 @@ extension WorkbookWindowController: NSToolbarDelegate {
 
     /// The toolbar's state for the checks: "bold=1 italic=0 … align=8".
     var toolbarStateForTesting: String {
-        guard let toolbar = window?.toolbar else { return "no toolbar" }
+        guard let ribbon = toolbarRibbon else { return "no toolbar" }
         var parts: [String] = []
-        for item in toolbar.items {
-            if let button = item.view as? NSButton, button.allowsMixedState == false, Self.toolbarSpecs.first(where: { $0.identifier == item.itemIdentifier.rawValue })?.toggles == true {
-                parts.append("\(item.itemIdentifier.rawValue)=\(button.state == .on ? 1 : 0)")
-            } else if let popUp = item.view as? NSPopUpButton {
-                parts.append("\(item.itemIdentifier.rawValue)=\(popUp.titleOfSelectedItem ?? "")")
-            } else if let combo = item.view as? NSComboBox {
-                parts.append("\(item.itemIdentifier.rawValue)=\(combo.stringValue)")
+        for entry in ribbon.entries {
+            if let button = entry.view as? NSButton, Self.toolbarSpecs.first(where: { $0.identifier == entry.identifier })?.toggles == true {
+                parts.append("\(entry.identifier)=\(button.state == .on ? 1 : 0)")
+            } else if let popUp = entry.view as? NSPopUpButton {
+                parts.append("\(entry.identifier)=\(popUp.titleOfSelectedItem ?? "")")
+            } else if let combo = entry.view as? NSComboBox {
+                parts.append("\(entry.identifier)=\(combo.stringValue)")
             }
         }
         return parts.joined(separator: " ")
     }
 
-    /// Press a toolbar item for the checks.
+    /// Press a toolbar button for the checks: its action to the target a
+    /// click would reach (through the ribbon's own search, since the
+    /// headless window is never key).
     func performToolbarItemForTesting(_ identifier: String) {
-        guard let item = window?.toolbar?.items.first(where: { $0.itemIdentifier.rawValue == identifier }), let action = item.action else { return }
-        NSApp.sendAction(action, to: item.target, from: item)
+        guard let ribbon = toolbarRibbon, let button = ribbon.view(for: identifier) as? NSButton, let action = button.action,
+              let target = button.target ?? ribbon.target(for: action) else { return }
+        _ = target.perform(action, with: button)
     }
 
     // MARK: Actions
@@ -386,5 +383,152 @@ final class ToolbarColorWell: NSColorWell {
     override func deactivate() {
         super.deactivate()
         if pending != nil { pickNow(nil) }
+    }
+}
+
+/// A toolbar button: it validates like a menu item (NSValidatedUserInterfaceItem
+/// wants an action and a tag, which every control has).
+final class RibbonButton: NSButton, NSValidatedUserInterfaceItem {}
+
+/// The toolbar as a strip of views that wraps: the items go left to right,
+/// each row taking what fits in the width, and the strip is as tall as its
+/// rows (a separator or gap that would start a row is left out of it).
+/// The buttons validate through the responder chain whenever the window
+/// updates, as NSToolbar's items do.
+@MainActor
+final class ToolbarRibbon: NSView {
+    struct Entry {
+        let identifier: String
+        let view: NSView
+        let label: String
+    }
+    private(set) var entries: [Entry] = []
+    /// The entries' views with the separators and gaps, in order.
+    private var pieces: [NSView] = []
+    private var spacers: Set<NSView> = []
+    private static let inset: CGFloat = 8
+    private static let spacing: CGFloat = 4
+    private static let rowHeight: CGFloat = 28
+    private static let padding: CGFloat = 4
+    private var heightConstraint: NSLayoutConstraint!
+    /// The rows the last layout needed.
+    private(set) var rowCount = 1
+    private var updateObserver: (any NSObjectProtocol)?
+
+    init() {
+        super.init(frame: .zero)
+        translatesAutoresizingMaskIntoConstraints = false
+        heightConstraint = heightAnchor.constraint(equalToConstant: Self.rowHeight + 2 * Self.padding)
+        heightConstraint.isActive = true
+        setContentHuggingPriority(.required, for: .vertical)
+        setContentCompressionResistancePriority(.required, for: .vertical)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("not used") }
+
+    override var isFlipped: Bool { true }
+
+    func add(_ view: NSView, identifier: String, label: String) {
+        entries.append(Entry(identifier: identifier, view: view, label: label))
+        pieces.append(view)
+        addSubview(view)
+    }
+
+    func addSeparator() {
+        let box = NSBox(frame: NSRect(x: 0, y: 0, width: 1, height: 18))
+        box.boxType = .separator
+        spacers.insert(box)
+        pieces.append(box)
+        addSubview(box)
+    }
+
+    func addGap() {
+        let gap = NSView(frame: NSRect(x: 0, y: 0, width: 12, height: 1))
+        spacers.insert(gap)
+        pieces.append(gap)
+        addSubview(gap)
+    }
+
+    func view(for identifier: String) -> NSView? { entries.first { $0.identifier == identifier }?.view }
+
+    /// Each piece's frame for a width (empty for a spacer left out), and
+    /// the rows used.
+    private func arrange(width: CGFloat) -> (frames: [NSRect], rows: Int) {
+        var frames: [NSRect] = []
+        var x = Self.inset
+        var row = 0
+        let limit = max(width - Self.inset, Self.inset + 1)
+        for piece in pieces {
+            let size = piece.frame.size
+            if x > Self.inset, x + size.width > limit {
+                row += 1
+                x = Self.inset
+            }
+            if spacers.contains(piece), x == Self.inset {
+                frames.append(.zero)
+                continue
+            }
+            let y = Self.padding + CGFloat(row) * Self.rowHeight + (Self.rowHeight - size.height) / 2
+            frames.append(NSRect(x: x, y: y, width: size.width, height: size.height))
+            x += size.width + Self.spacing
+        }
+        return (frames, row + 1)
+    }
+
+    override func layout() {
+        super.layout()
+        let (frames, rows) = arrange(width: bounds.width)
+        for (piece, frame) in zip(pieces, frames) {
+            piece.isHidden = frame.isEmpty
+            if !frame.isEmpty { piece.frame = frame }
+        }
+        rowCount = rows
+        let height = CGFloat(rows) * Self.rowHeight + 2 * Self.padding
+        if heightConstraint.constant != height { heightConstraint.constant = height }
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        NSColor.windowBackgroundColor.setFill()
+        dirtyRect.fill()
+        NSColor.separatorColor.setFill()
+        NSRect(x: 0, y: bounds.height - 1, width: bounds.width, height: 1).fill()
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if let observer = updateObserver { NotificationCenter.default.removeObserver(observer) }
+        updateObserver = nil
+        guard let window else { return }
+        updateObserver = NotificationCenter.default.addObserver(forName: NSWindow.didUpdateNotification, object: window, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.validateButtons() }
+        }
+    }
+
+    /// The object a nil-targeted action reaches from this window: along
+    /// the responder chain from the first responder, then the window's
+    /// delegate, controller, and document, the application, its delegate,
+    /// and the document controller (NSApplication's own search, which
+    /// starts at the key window and so finds nothing headless).
+    func target(for action: Selector) -> AnyObject? {
+        var responder: NSResponder? = window?.firstResponder ?? window
+        while let current = responder {
+            if current.responds(to: action) { return current }
+            responder = current.nextResponder
+        }
+        let rest: [AnyObject?] = [window?.delegate, window?.windowController, window?.windowController?.document as AnyObject?,
+                                  NSApp, NSApp.delegate, NSDocumentController.shared]
+        return rest.compactMap { $0 }.first { $0.responds(to: action) }
+    }
+
+    /// What NSToolbar does for its items: the target the action would
+    /// reach says whether a button is enabled.
+    func validateButtons() {
+        for entry in entries {
+            guard let button = entry.view as? RibbonButton, let action = button.action else { continue }
+            let target = button.target ?? target(for: action)
+            let enabled = (target as? any NSUserInterfaceValidations)?.validateUserInterfaceItem(button) ?? (target != nil)
+            if button.isEnabled != enabled { button.isEnabled = enabled }
+        }
     }
 }

@@ -16,6 +16,8 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
     /// trailing edge, the row header's bottom), by the scrollers' width.
     private var columnHeaderTrailing: NSLayoutConstraint?
     private var rowHeaderBottom: NSLayoutConstraint?
+    /// The toolbar, a wrapping ribbon above the formula bar (WorkbookToolbar.swift).
+    var toolbarRibbon: ToolbarRibbon?
     private let nameBox = NSTextField(labelWithString: "")
     private let formulaField = NSTextField(labelWithString: "")
     private var formulaFieldHeight: NSLayoutConstraint?
@@ -159,7 +161,6 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         super.init(window: window)
         window.delegate = self
         buildContent(in: window)
-        installToolbar(in: window)
         workbook.delegate = self
         workbook.resendDelegateState()
         rebuildTabs()
@@ -381,7 +382,9 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
         tabBar.edgeInsets = NSEdgeInsets(top: 0, left: 8, bottom: 0, right: 8)
         tabScroller.setContentHuggingPriority(NSLayoutConstraint.Priority(1), for: .horizontal)
 
-        let column = NSStackView(views: [formulaBar, pane, tabBar])
+        let ribbon = makeToolbarRibbon()
+        toolbarRibbon = ribbon
+        let column = NSStackView(views: [ribbon, formulaBar, pane, tabBar])
         column.orientation = .vertical
         column.distribution = .fill   /* the default, gravity areas, would not stretch the pane */
         column.spacing = 0
@@ -804,10 +807,6 @@ final class WorkbookWindowController: NSWindowController, WorkbookDelegate, NSWi
 
     @objc func zoomActualSize(_ sender: Any?) {
         setZoom(1)
-    }
-
-    func validateToolbarItem(_ item: NSToolbarItem) -> Bool {
-        validateUserInterfaceItem(item)
     }
 
     func validateUserInterfaceItem(_ item: any NSValidatedUserInterfaceItem) -> Bool {

@@ -932,7 +932,7 @@ enum Snapshot {
                 sheet.selectCell(atColumn: 2, row: 2)
                 state("C3 at the start")
                 for (name, colors) in [("textColor", [NSColor.systemGreen, NSColor.systemRed]), ("fillColor", [NSColor.systemBlue, NSColor.systemYellow])] {
-                    guard let well = window.toolbar?.items.first(where: { $0.itemIdentifier.rawValue == name })?.view as? ToolbarColorWell else { continue }
+                    guard let well = controller.toolbarItemView(name) as? ToolbarColorWell else { continue }
                     well.color = .systemPurple   // inactive: nothing applies
                     state("\(name) set while inactive")
                     well.setValue(false, forKey: "orderColorPanelOnActivate")
@@ -947,6 +947,30 @@ enum Snapshot {
                 controller.gridView.undo(nil)
                 controller.gridView.undo(nil)
                 state("two undos")
+                view.layoutSubtreeIfNeeded()
+                view.displayIfNeeded()
+            }
+            if ProcessInfo.processInfo.environment["GNM_SNAPSHOT_RIBBON"] != nil,
+               let controller = window.windowController as? WorkbookWindowController,
+               let ribbon = controller.toolbarRibbon {
+                // The ribbon at three widths: one row when wide, two or
+                // three when the window is narrow, the grid below moving
+                // down; captured to -ribbon-<width>.png.
+                for width in [1600, 1000, 640] {
+                    window.setContentSize(NSSize(width: width, height: 600))
+                    view.layoutSubtreeIfNeeded()
+                    let lastRow = ribbon.entries.filter { !$0.view.isHidden }.map { $0.view.frame.minY }.max() ?? 0
+                    let firstOnLastRow = ribbon.entries.first { $0.view.frame.minY == lastRow }?.identifier ?? "none"
+                    NSLog("ribbon: width %ld rows=%ld height=%.0f last row starts at %@; disabled: %@", width, ribbon.rowCount,
+                          ribbon.frame.height, firstOnLastRow,
+                          ribbon.entries.filter { ($0.view as? NSButton)?.isEnabled == false }.map(\.identifier).joined(separator: ","))
+                    view.displayIfNeeded()
+                    if let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
+                        view.cacheDisplay(in: view.bounds, to: rep)
+                        let ribbonPath = (path as NSString).deletingPathExtension + "-ribbon-\(width).png"
+                        try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: ribbonPath))
+                    }
+                }
                 view.layoutSubtreeIfNeeded()
                 view.displayIfNeeded()
             }
@@ -2183,13 +2207,13 @@ enum Snapshot {
                 // font size 14 through the combo, AutoSum in C5, zoom 150%.
                 try? sheet.setText("1234.5678", atColumn: 2, row: 2, autocorrect: false)
                 sheet.selectCell(atColumn: 2, row: 2)
-                NSLog("toolbar: %ld items; state %@", window.toolbar?.items.count ?? 0, controller.toolbarStateForTesting)
+                NSLog("toolbar: %ld items; state %@", controller.toolbarItemCountForTesting, controller.toolbarStateForTesting)
                 for identifier in ["bold", "alignCenter", "percent", "morePrecision"] { controller.performToolbarItemForTesting(identifier) }
                 let format = sheet.formatOfCell(atColumn: 2, row: 2)
                 NSLog("toolbar: C3 bold=%@ align=%@ format='%@' shows '%@' undo=%@", format.bold ?? -1, format.horizontalAlignment ?? -1,
                       format.numberFormat ?? "nil", sheet.displayTextOfCell(atColumn: 2, row: 2) ?? "nil", sheet.workbook?.undoLabel ?? "nil")
                 NSLog("toolbar: state %@", controller.toolbarStateForTesting)
-                if let combo = window.toolbar?.items.first(where: { $0.itemIdentifier.rawValue == "fontSize" })?.view as? NSComboBox {
+                if let combo = controller.toolbarItemView("fontSize") as? NSComboBox {
                     combo.stringValue = "14"
                     controller.fontSizeChosen(combo)
                     NSLog("toolbar: font size %@", sheet.formatOfCell(atColumn: 2, row: 2).fontSize ?? -1)
@@ -2197,15 +2221,15 @@ enum Snapshot {
                 // the format extras: indent, superscript, an outside border, red text, a yellow fill
                 sheet.selectCell(atColumn: 2, row: 2)
                 for identifier in ["indentMore", "superscript"] { controller.performToolbarItemForTesting(identifier) }
-                if let popUp = window.toolbar?.items.first(where: { $0.itemIdentifier.rawValue == "borders" })?.view as? NSPopUpButton,
+                if let popUp = controller.toolbarItemView("borders") as? NSPopUpButton,
                    let outside = popUp.menu?.items.first(where: { $0.title == "Outside" }) {
                     controller.borderPresetChosen(outside)
                 }
-                if let well = window.toolbar?.items.first(where: { $0.itemIdentifier.rawValue == "textColor" })?.view as? NSColorWell {
+                if let well = controller.toolbarItemView("textColor") as? NSColorWell {
                     well.color = .systemRed
                     controller.textColorChosen(well)
                 }
-                if let well = window.toolbar?.items.first(where: { $0.itemIdentifier.rawValue == "fillColor" })?.view as? NSColorWell {
+                if let well = controller.toolbarItemView("fillColor") as? NSColorWell {
                     well.color = .systemYellow
                     controller.fillColorChosen(well)
                 }
@@ -2216,7 +2240,7 @@ enum Snapshot {
                 controller.performToolbarItemForTesting("autosum")
                 NSLog("toolbar: autosum editing=%d text='%@'", controller.gridView.isEditing ? 1 : 0, controller.gridView.editorTextForTesting)
                 controller.gridView.cancelEditing()
-                if let zoom = window.toolbar?.items.first(where: { $0.itemIdentifier.rawValue == "zoom" })?.view as? NSPopUpButton {
+                if let zoom = controller.toolbarItemView("zoom") as? NSPopUpButton {
                     zoom.selectItem(withTitle: "150%")
                     controller.zoomChosen(zoom)
                     NSLog("toolbar: zoom %g state %@", sheet.zoomFactor, controller.toolbarStateForTesting)
@@ -2938,7 +2962,7 @@ enum Snapshot {
                 let breakItem = NSMenuItem(title: "", action: #selector(WorkbookWindowController.toggleColumnPageBreak(_:)), keyEquivalent: "")
                 _ = controller.validateUserInterfaceItem(breakItem)
                 NSLog("menus: pagebreak='%@'", breakItem.title)
-                let toolbarLabels: [String] = controller.window?.toolbar?.items.map { $0.label } ?? []
+                let toolbarLabels: [String] = controller.toolbarLabelsForTesting
                 NSLog("menus: toolbar=%@", toolbarLabels.joined(separator: " | "))
                 let buttons: [String] = ["Cancel", "OK", "Yes", "Paste Link", "Delete Comment", "Save as Image…", "Fewer Decimals"].map { Localization.title($0) }
                 let about: String = NSApp.mainMenu?.items.first?.submenu?.items.first?.title ?? "nil"
